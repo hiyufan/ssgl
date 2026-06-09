@@ -1,0 +1,357 @@
+/* ═══════════════════════════════════════
+   STUDENT PORTAL · Aurora + Bento Design
+   ═══════════════════════════════════════ */
+
+/* ─── Design Tokens (Dark) ───────────────────── */
+.student-root {
+  --s-bg:           #0A0B14;
+  --s-surface:      rgba(255, 255, 255, 0.04);
+  --s-surface-hover: rgba(255, 255, 255, 0.07);
+  --s-border:       rgba(255, 255, 255, 0.08);
+  --s-border-hover: rgba(167, 139, 250, 0.25);
+
+  --s-text-1:  #EDF0F9;
+  --s-text-2:  #8693B0;
+  --s-text-3:  #4E5C78;
+
+  --s-purple:      #A78BFA;
+  --s-purple-deep: #8B5CF6;
+  --s-amber:       #F0A832;
+  --s-green:       #4ADE80;
+  --s-red:         #F87171;
+  --s-orange:      #FB923C;
+
+  --s-gradient:    linear-gradient(135deg, #A78BFA, #F0A832);
+  --s-gradient-r:  linear-gradient(135deg, #F0A832, #A78BFA);
+
+  --s-radius:      20px;
+  --s-radius-btn:  14px;
+  --s-radius-sm:   10px;
+
+  --s-shadow:      0 4px 24px rgba(0, 0, 0, 0.2);
+  --s-shadow-hover: 0 12px 40px rgba(167, 139, 250, 0.12),
+                    0 0 0 1px rgba(167, 139, 250, 0.1);
+  --s-shadow-glow: 0 2px 8px rgba(167, 139, 250, 0.2);
+
+  --s-blur:        blur(24px) saturate(1.4);
+
+  --s-font-body:   'Plus Jakarta Sans', -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --s-font-hand:   'Caveat', cursive;
+  --s-font-mono:   'JetBrains Mono', 'Fira Code', monospace;
+
+  --s-sidebar-w:   232px;
+  --s-topbar-h:    56px;
+
+  --s-aurora-opacity: 1;
+
+  /* ── Override FORGE tokens ── */
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --bg:           #0A0B14;
+  --surface:      rgba(255, 255, 255, 0.04);
+  --surface-2:    rgba(255, 255, 255, 0.06);
+  --surface-3:    rgba(255, 255, 255, 0.08);
+  --border:       rgba(255, 255, 255, 0.08);
+  --border-2:     rgba(255, 255, 255, 0.12);
+  --text:         #EDF0F9;
+  --text-2:       #8693B0;
+  --text-3:       #4E5C78;
+  --amber:        #F0A832;
+  --amber-bg:     rgba(240, 168, 50, 0.12);
+  --amber-border: rgba(240, 168, 50, 0.25);
+  --purple:       #A78BFA;
+  --purple-bg:    rgba(167, 139, 250, 0.12);
+  --teal:         #2DD4BF;
+  --teal-bg:      rgba(45, 212, 191, 0.12);
+  --teal-border:  rgba(45, 212, 191, 0.25);
+  --green:        #4ADE80;
+  --green-bg:     rgba(74, 222, 128, 0.12);
+  --red:          #F87171;
+  --red-bg:       rgba(248, 113, 113, 0.12);
+  --orange:       #FB923C;
+  --orange-bg:    rgba(251, 146, 60, 0.12);
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow:       0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg:    0 20px 48px rgba(0, 0, 0, 0.55);
+  --radius:       16px;
+  --radius-lg:    20px;
+}
+
+/* ─── Light Theme ────────────────────────────── */
+.student-root[data-theme="light"],
+[data-theme="light"] .student-root {
+  --s-bg:           #F8F7FF;
+  --s-surface:      rgba(255, 255, 255, 0.7);
+  --s-surface-hover: rgba(255, 255, 255, 0.85);
+  --s-border:       rgba(167, 139, 250, 0.12);
+  --s-border-hover: rgba(167, 139, 250, 0.3);
+
+  --s-text-1:  #1A1632;
+  --s-text-2:  #5B5479;
+  --s-text-3:  #8E86A5;
+
+  --s-purple:      #7C3AED;
+  --s-purple-deep: #6D28D9;
+  --s-amber:       #D97706;
+  --s-green:       #16A34A;
+  --s-red:         #DC2626;
+  --s-orange:      #EA580C;
+
+  --s-shadow:      0 4px 24px rgba(109, 40, 217, 0.08);
+  --s-shadow-hover: 0 12px 40px rgba(109, 40, 217, 0.12),
+                    0 0 0 1px rgba(167, 139, 250, 0.15);
+  --s-shadow-glow: 0 2px 8px rgba(109, 40, 217, 0.15);
+
+  --s-aurora-opacity: 0.4;
+
+  /* FORGE overrides for light */
+  --bg:           #F8F7FF;
+  --surface:      rgba(255, 255, 255, 0.75);
+  --surface-2:    rgba(255, 255, 255, 0.9);
+  --surface-3:    rgba(240, 237, 255, 0.8);
+  --border:       rgba(167, 139, 250, 0.12);
+  --border-2:     rgba(167, 139, 250, 0.2);
+  --text:         #1A1632;
+  --text-2:       #5B5479;
+  --text-3:       #8E86A5;
+  --amber:        #D97706;
+  --amber-bg:     rgba(217, 119, 6, 0.1);
+  --amber-border: rgba(217, 119, 6, 0.2);
+  --purple:       #7C3AED;
+  --purple-bg:    rgba(124, 58, 237, 0.1);
+  --teal:         #0D9488;
+  --teal-bg:      rgba(13, 148, 136, 0.1);
+  --teal-border:  rgba(13, 148, 136, 0.2);
+  --green:        #16A34A;
+  --green-bg:     rgba(22, 163, 74, 0.1);
+  --red:          #DC2626;
+  --red-bg:       rgba(220, 38, 38, 0.1);
+  --orange:       #EA580C;
+  --orange-bg:    rgba(234, 88, 12, 0.1);
+  --shadow-sm:    0 1px 3px rgba(109, 40, 217, 0.06);
+  --shadow:       0 4px 16px rgba(109, 40, 217, 0.08);
+  --shadow-lg:    0 20px 48px rgba(109, 40, 217, 0.12);
+}
+
+/* ─── Aurora Keyframes ──────────────────────── */
+@keyframes s-aurora-drift-1 {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+  33%  { transform: translate(100px, -60px) rotate(120deg) scale(1.1); }
+  66%  { transform: translate(-50px, 80px) rotate(240deg) scale(0.95); }
+  100% { transform: translate(0, 0) rotate(360deg) scale(1); }
+}
+@keyframes s-aurora-drift-2 {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+  33%  { transform: translate(-80px, 50px) rotate(-120deg) scale(1.05); }
+  66%  { transform: translate(60px, -70px) rotate(-240deg) scale(0.9); }
+  100% { transform: translate(0, 0) rotate(-360deg) scale(1); }
+}
+@keyframes s-aurora-drift-3 {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  50%  { transform: translate(70px, 40px) rotate(180deg); }
+  100% { transform: translate(0, 0) rotate(360deg); }
+}
+
+/* ─── Card Entry Animation ──────────────────── */
+@keyframes s-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* ─── Wave Animation ────────────────────────── */
+@keyframes s-wave {
+  0%, 100% { d: path('M0,4 Q10,0 20,4 Q30,8 40,4'); }
+  50%      { d: path('M0,4 Q10,8 20,4 Q30,0 40,4'); }
+}
+
+/* ─── Breathe Animation ─────────────────────── */
+@keyframes s-breathe {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.05); }
+}
+
+/* ─── Page Enter ────────────────────────────── */
+@keyframes s-page-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Glass Card Hover ──────────────────────── */
+.s-glass-hover {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s,
+              border-color 0.3s;
+}
+.s-glass-hover:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: rgba(167, 139, 250, 0.25);
+  box-shadow: 0 12px 40px rgba(167, 139, 250, 0.12),
+              0 0 0 1px rgba(167, 139, 250, 0.1);
+}
+[data-theme="light"] .s-glass-hover:hover {
+  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 12px 40px rgba(109, 40, 217, 0.1),
+              0 0 0 1px rgba(167, 139, 250, 0.15);
+}
+
+/* ── Override FORGE .card to glass inside student layout ── */
+.student-root .card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+}
+.student-root .card-2 {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+}
+.student-root[data-theme="light"] .card,
+[data-theme="light"] .student-root .card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(167, 139, 250, 0.1);
+  box-shadow: 0 2px 12px rgba(109, 40, 217, 0.06);
+}
+.student-root[data-theme="light"] .card-2,
+[data-theme="light"] .student-root .card-2 {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(167, 139, 250, 0.1);
+}
+
+/* ── Override FORGE .btn-primary to gradient ── */
+.student-root .btn-primary {
+  background: linear-gradient(135deg, #A78BFA, #F0A832);
+  color: #0F1523;
+  border-color: transparent;
+  border-radius: 14px;
+}
+.student-root .btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(167, 139, 250, 0.3);
+}
+.student-root[data-theme="light"] .btn-primary,
+[data-theme="light"] .student-root .btn-primary {
+  background: linear-gradient(135deg, #7C3AED, #D97706);
+  color: #fff;
+}
+
+/* ── Override FORGE .btn-outline to glass ── */
+.student-root .btn-outline {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--s-text-2);
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+}
+.student-root .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--s-text-1);
+  border-color: rgba(167, 139, 250, 0.25);
+}
+.student-root[data-theme="light"] .btn-outline,
+[data-theme="light"] .student-root .btn-outline {
+  background: rgba(167, 139, 250, 0.06);
+  color: var(--s-text-2);
+  border-color: rgba(167, 139, 250, 0.15);
+}
+.student-root[data-theme="light"] .btn-outline:hover,
+[data-theme="light"] .student-root .btn-outline:hover {
+  background: rgba(167, 139, 250, 0.12);
+  color: var(--s-text-1);
+}
+
+/* ── Override FORGE .btn-ghost ── */
+.student-root .btn-ghost {
+  border-radius: 14px;
+}
+
+/* ── Override FORGE .forge-input to glass ── */
+.student-root .forge-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: var(--s-text-1);
+}
+.student-root .forge-input:focus {
+  border-color: #A78BFA;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Override FORGE .badge styles ── */
+.student-root .badge-amber {
+  background: rgba(240, 168, 50, 0.12);
+  color: #F0A832;
+}
+.student-root .badge-purple {
+  background: rgba(167, 139, 250, 0.12);
+  color: #A78BFA;
+}
+.student-root .badge-teal {
+  background: rgba(45, 212, 191, 0.12);
+  color: #2DD4BF;
+}
+.student-root .badge-green {
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ADE80;
+}
+.student-root .badge-red {
+  background: rgba(248, 113, 113, 0.12);
+  color: #F87171;
+}
+
+/* ── Override FORGE .forge-page ── */
+.student-root .forge-page {
+  padding: 0;
+  max-width: none;
+  animation: none;
+}
+
+/* ── Override FORGE table ── */
+.student-root .forge-table th {
+  color: var(--s-text-3);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+.student-root .forge-table td {
+  color: var(--s-text-1);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+.student-root .forge-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Card Entry Animation Utility ──────────── */
+.s-card-enter {
+  animation: s-card-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.s-card-enter-d1 { animation-delay: 0.05s; }
+.s-card-enter-d2 { animation-delay: 0.10s; }
+.s-card-enter-d3 { animation-delay: 0.15s; }
+.s-card-enter-d4 { animation-delay: 0.20s; }
+.s-card-enter-d5 { animation-delay: 0.25s; }
+.s-card-enter-d6 { animation-delay: 0.30s; }
+
+/* ─── Reduced Motion ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .student-root *,
+  .student-root *::before,
+  .student-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

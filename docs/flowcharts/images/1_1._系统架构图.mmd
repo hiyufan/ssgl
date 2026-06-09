@@ -1,0 +1,46 @@
+flowchart TB
+    subgraph FE[前端 - React + TypeScript + Vite]
+        SP[学生端 Portal]
+        TP[教师端 Portal]
+        AP[管理员端 Portal]
+        AI[AI 助手]
+    end
+
+    subgraph BE[后端 - Go + Gin/Fiber]
+        AUTH[Auth 模块]
+        WF[Workflow 引擎]
+        COMP[Competition 模块]
+        AWD[Award 模块]
+        EVAL[Student Evaluation]
+        STAT[Stats Analytics]
+        AIGW[AI Gateway]
+    end
+
+    subgraph AIS[AI 服务 - Python + FastAPI]
+        RAG[RAG 检索]
+        LLM[LLM 调用]
+        EMB[Embeddings]
+    end
+
+    subgraph STORE[数据层]
+        PG[(PostgreSQL + pgvector)]
+        RD[(Redis 缓存)]
+        OSS[(MinIO/OSS 文件存储)]
+    end
+
+    FE -->|REST/JSON| BE
+    AIGW -->|内部 REST API| AIS
+    AUTH --> PG
+    WF --> PG
+    COMP --> PG
+    AWD --> PG
+    EVAL --> PG
+    STAT --> PG
+    AUTH --> RD
+    WF --> RD
+    AIGW --> RD
+    COMP --> OSS
+    AWD --> OSS
+    PG <-->|向量检索| RAG
+    RAG --> EMB
+    RAG --> LLM

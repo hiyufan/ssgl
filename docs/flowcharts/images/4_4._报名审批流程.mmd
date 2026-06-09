@@ -1,0 +1,13 @@
+flowchart TD
+    A[学生/团队申请报名] --> B[选择竞赛<br/>填写报名信息]
+    B --> C[创建 APPROVAL_WORKFLOW<br/>type=registration]
+    C --> D[通知管理员]
+    D --> E{管理员审核}
+    E -->|通过| F[状态: approved]
+    E -->|驳回| G[填写驳回理由]
+    F --> H[学生可参加竞赛]
+    G --> I[状态: rejected<br/>通知学生]
+    I --> J{是否重新申请?}
+    J -->|是| B
+    J -->|否| K[流程结束]
+    H --> K

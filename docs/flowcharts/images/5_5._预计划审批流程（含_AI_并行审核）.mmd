@@ -1,0 +1,21 @@
+flowchart TD
+    A[团队提交预计划] --> B[写入 PRE_PLAN]
+    B --> C[创建 APPROVAL_WORKFLOW<br/>type=pre_plan<br/>steps=2]
+    B --> D[异步触发 AI 审核]
+    D --> D1[RAG 检索往届相似项目]
+    D1 --> D2[LLM 分析可行性/创新/完整度]
+    D2 --> D3[生成评分 0-100<br/>+ 详细意见]
+    D3 --> D4[写入 AI_ANALYSIS_LOG]
+    D4 --> E
+    C --> E[教师初审]
+    E --> E1{教师审核}
+    E1 -->|通过| F[进入下一步]
+    E1 -->|驳回| G1[填写驳回意见]
+    E -->|参考 AI 评分| F
+    F --> H[管理员终审]
+    H --> H1{终审决定}
+    H1 -->|通过| I[状态: approved]
+    H1 -->|驳回| G1
+    I --> J[预计划审批通过<br/>通知团队]
+    G1 --> K[通知团队修改]
+    K --> A

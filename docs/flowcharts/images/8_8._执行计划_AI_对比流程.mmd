@@ -1,0 +1,15 @@
+flowchart TD
+    A[提交执行计划] --> B[写入 EXECUTION_PLAN]
+    B --> C[读取对应 PRE_PLAN]
+    C --> D[技术栈对比]
+    C --> E[进度里程碑对比]
+    C --> F[交付物对比]
+    D --> G[LLM 综合分析]
+    E --> G
+    F --> G
+    G --> H[识别偏差项]
+    H --> I[生成偏差原因分析]
+    I --> J[输出匹配度评分<br/>match_score 0-100]
+    J --> K[生成改进建议]
+    K --> L[写入 ai_match_score<br/>+ 偏差分析]
+    L --> M[展示给用户]

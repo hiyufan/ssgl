@@ -1,0 +1,19 @@
+flowchart TD
+    subgraph INGEST[入库流程]
+        A1[往届项目文档] --> A2[文本提取<br/>PDF/Word/MD]
+        A2 --> A3[分块 Chunk<br/>512 tokens]
+        A3 --> A4[Embedding 向量化]
+        A4 --> A5[(pgvector<br/>HNSW 索引)]
+    end
+
+    subgraph QUERY[检索流程]
+        B1[用户 Query] --> B2[Query Embedding]
+        B2 --> B3[余弦相似度检索]
+        A5 --> B3
+        B3 --> B4{相似度 ≥ 0.7?}
+        B4 -->|否| B5[扩大检索 top-k]
+        B5 --> B3
+        B4 -->|是| B6[取 Top-5 Chunks]
+        B6 --> B7[Context 拼接]
+        B7 --> B8[LLM 生成回答]
+    end

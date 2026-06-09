@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__codegraph__codegraph_files",
+      "Bash(xcopy \"C:\\\\Users\\\\Legion\\\\Downloads\\\\赛事项目管理全流程系统\\\\platform\" \"D:\\\\Code\\\\ssgl\\\\frontend\\\\platform\\\\\" /E /I /Y)"
+    ]
+  }
+}

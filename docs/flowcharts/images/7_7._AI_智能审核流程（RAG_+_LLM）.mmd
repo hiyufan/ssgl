@@ -1,0 +1,26 @@
+flowchart LR
+    subgraph IN[输入]
+        A1[预计划文本]
+        A2[竞赛规则文档]
+    end
+
+    IN --> B[文档分块<br/>chunk_size=512<br/>overlap=50]
+    B --> C[Embedding<br/>text-embedding-3-small<br/>或 bge-large-zh-v1.5]
+    C --> D[(pgvector 存储<br/>HNSW 索引)]
+
+    A1 --> E[Query Embedding]
+    D --> F[相似度检索<br/>top-k=5<br/>阈值 0.7]
+    E --> F
+    F --> G[Context 拼接]
+    G --> H[LLM 生成<br/>Anthropic / OpenAI]
+    H --> I[结构化输出]
+
+    subgraph OUT[输出]
+        I1[综合评分 0-100]
+        I2[分项评分]
+        I3[改进建议]
+        I4[相似项目参考]
+    end
+
+    I --> OUT
+    I --> J[写入 AI_ANALYSIS_LOG]

@@ -1,0 +1,119 @@
+package router
+
+import (
+	"log"
+
+	"github.com/gin-gonic/gin"
+	"github.com/ssgl/competition-platform/internal/config"
+	"github.com/ssgl/competition-platform/internal/handlers"
+	"github.com/ssgl/competition-platform/internal/middleware"
+	"github.com/ssgl/competition-platform/internal/middleware/security"
+	"github.com/ssgl/competition-platform/internal/services"
+)
+
+// Setup creates and configures the gin.Engine with all routes.
+func Setup(cfg *config.Config) *gin.Engine {
+	r := gin.Default()
+
+	// Apply security middleware
+	securityConfig := security.DefaultSecurityConfig()
+	securityConfig.AllowedOrigins = []string{
+		"http://localhost:3000",
+		"http://localhost:3001",
+		"http://localhost:5173",
+	}
+
+	// TODO: Connect to Redis for distributed rate limiting
+	// redisClient := redis.NewClient(&redis.Options{Addr: cfg.Redis.Host + ":" + cfg.Redis.Port})
+	// securityConfig.UseRedis = true
+	// securityConfig.RedisClient = redisClient
+
+	security.ApplySecurity(r, securityConfig)
+
+	// Create services.
+	authService := services.NewAuthService(&cfg.JWT)
+	workflowService := services.NewWorkflowService()
+
+	// Create handlers.
+	authHandler := handlers.NewAuthHandler(authService)
+	compHandler := handlers.NewCompetitionHandler()
+	teamHandler := handlers.NewTeamHandler()
+	workflowHandler := handlers.NewWorkflowHandler(workflowService)
+	preplanHandler := handlers.NewPrePlanHandler()
+	awardHandler := handlers.NewAwardHandler()
+	evalHandler := handlers.NewEvaluationHandler()
+	statsHandler := handlers.NewStatsHandler()
+	auditHandler := handlers.NewAuditHandler(nil) // TODO: pass db
+
+	v1 := r.Group("/api/v1")
+
+	// Public routes with strict rate limiting.
+	auth := v1.Group("/auth")
+	security.ApplyAuthSecurity(auth, securityConfig)
+	{
+		auth.POST("/login", authHandler.Login)
+		auth.POST("/register", authHandler.Register)
+		auth.POST("/refresh", authHandler.Refresh)
+	}
+
+	// Protected routes.
+	protected := v1.Group("")
+	protected.Use(middleware.AuthMiddleware(&cfg.JWT))
+	{
+		// Users.
+		protected.GET("/users/me", authHandler.GetMe)
+
+		// Competitions.
+		protected.GET("/competitions", compHandler.List)
+		protected.POST("/competitions", compHandler.Create)
+		protected.GET("/competitions/:id", compHandler.Get)
+		protected.PUT("/competitions/:id", compHandler.Update)
+		protected.DELETE("/competitions/:id", compHandler.Delete)
+		protected.POST("/competitions/:id/publish", compHandler.Publish)
+
+		// Teams.
+		protected.GET("/teams", teamHandler.List)
+		protected.POST("/teams", teamHandler.Create)
+		protected.GET("/teams/:id", teamHandler.Get)
+		protected.POST("/teams/:id/join", teamHandler.Join)
+		protected.DELETE("/teams/:id/leave", teamHandler.Leave)
+
+		// Workflows.
+		protected.GET("/workflows", workflowHandler.List)
+		protected.GET("/workflows/:id", workflowHandler.Get)
+		protected.POST("/workflows/:id/approve", workflowHandler.Approve)
+		protected.POST("/workflows/:id/reject", workflowHandler.Reject)
+
+		// Pre-plans.
+		protected.GET("/pre-plans", preplanHandler.List)
+		protected.POST("/pre-plans", preplanHandler.Create)
+		protected.GET("/pre-plans/:id", preplanHandler.Get)
+
+		// Awards.
+		protected.GET("/awards", awardHandler.List)
+
+		// Evaluations.
+		protected.GET("/evaluations", evalHandler.List)
+		protected.POST("/evaluations", evalHandler.Create)
+
+		// Stats.
+		protected.GET("/stats/overview", statsHandler.Overview)
+		protected.GET("/stats/competitions", statsHandler.Competitions)
+		protected.GET("/stats/teachers", statsHandler.Teachers)
+	}
+
+	// Admin-only routes.
+	admin := v1.Group("")
+	admin.Use(middleware.AuthMiddleware(&cfg.JWT))
+	admin.Use(middleware.RequireRole("admin"))
+	{
+		admin.POST("/awards/:id/settle", awardHandler.Settle)
+
+		// Audit logs
+		admin.GET("/audit-logs", auditHandler.List)
+		admin.GET("/audit-logs/stats", auditHandler.GetStats)
+	}
+
+	log.Println("✅ Security middleware applied")
+	return r
+}
