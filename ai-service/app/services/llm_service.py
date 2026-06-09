@@ -16,7 +16,10 @@ class LLMService:
         if provider == "openai":
             from openai import OpenAI
 
-            self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            kwargs = {"api_key": settings.OPENAI_API_KEY}
+            if settings.OPENAI_BASE_URL:
+                kwargs["base_url"] = settings.OPENAI_BASE_URL
+            self._client = OpenAI(**kwargs)
             self._model = settings.OPENAI_MODEL
         elif provider == "anthropic":
             import anthropic

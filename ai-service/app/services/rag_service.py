@@ -171,13 +171,13 @@ class RAGService:
                     result = conn.execute(
                         text(
                             "INSERT INTO documents (content, metadata, embedding) "
-                            "VALUES (:content, :metadata, :embedding) "
+                            "VALUES (:content, :metadata, CAST(:embedding AS vector)) "
                             "RETURNING id"
                         ),
                         {
                             "content": chunk.content,
                             "metadata": metadata_json,
-                            "embedding": embedding,
+                            "embedding": str(embedding),
                         },
                     )
                     all_ids.append(result.scalar_one())
@@ -212,7 +212,7 @@ class RAGService:
         # Build query with optional metadata filter
         where_clause = ""
         params = {
-            "query_embedding": query_embedding,
+            "query_embedding": str(query_embedding),
             "threshold": threshold,
             "top_k": top_k,
         }
@@ -231,11 +231,11 @@ class RAGService:
             rows = conn.execute(
                 text(
                     f"SELECT id, content, metadata, "
-                    f"  1 - (embedding <=> :query_embedding) AS similarity "
+                    f"  1 - (embedding <=> CAST(:query_embedding AS vector)) AS similarity "
                     f"FROM documents "
                     f"{where_clause} "
-                    f"WHERE 1 - (embedding <=> :query_embedding) >= :threshold "
-                    f"ORDER BY embedding <=> :query_embedding "
+                    f"WHERE 1 - (embedding <=> CAST(:query_embedding AS vector)) >= :threshold "
+                    f"ORDER BY embedding <=> CAST(:query_embedding AS vector) "
                     f"LIMIT :top_k"
                 ),
                 params,
