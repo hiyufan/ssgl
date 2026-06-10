@@ -1,10 +1,10 @@
 """Review service for pre-plan evaluation and execution-plan matching."""
 
 import json
-import re
 
 from app.services.llm_service import llm_service
 from app.services.rag_service import rag_service
+from app.utils.json_parse import parse_json
 from app.utils.prompts import EXECUTION_MATCH_SYSTEM, PRE_PLAN_REVIEW_SYSTEM
 
 
@@ -49,7 +49,7 @@ class ReviewService:
         )
 
         # 4. Parse JSON (handle markdown code fences if present)
-        result = _parse_json(raw_response)
+        result = parse_json(raw_response)
 
         # 5. Attach similar projects metadata
         result["similar_projects"] = [
@@ -85,33 +85,7 @@ class ReviewService:
             user_message=user_message,
         )
 
-        return _parse_json(raw_response)
-
-
-# ------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------
-
-def _parse_json(text: str) -> dict:
-    """Extract a JSON object from *text*, stripping markdown fences if present."""
-
-    # Try direct parse first
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-
-    # Strip ```json ... ``` or ``` ... ``` fences
-    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if match:
-        return json.loads(match.group(1))
-
-    # Last resort: find first { ... } block
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        return json.loads(match.group(0))
-
-    raise ValueError(f"Could not parse JSON from LLM response:\n{text}")
+        return parse_json(raw_response)
 
 
 # Module-level singleton

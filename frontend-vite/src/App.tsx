@@ -16,6 +16,7 @@ import { AwardsPage } from '@/pages/awards';
 import { EvaluationsPage } from '@/pages/evaluations';
 import { StatsPage } from '@/pages/stats';
 import { AIToolsPage } from '@/pages/aitools';
+import { CoachPage } from '@/pages/coach';
 import { KnowledgeBasePage } from '@/pages/knowledge-base';
 import { AuditLogsPage } from '@/pages/audit-logs';
 
@@ -37,6 +38,7 @@ function AppRoutes() {
         <Route path="/teams" element={<TeamsPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />
         <Route path="/aitools" element={<AIToolsPage />} />
+        <Route path="/coach" element={<CoachPage />} />
 
         {/* teacher + admin */}
         <Route path="/approvals" element={<RequireRole roles={['teacher', 'admin']}><ApprovalsPage /></RequireRole>} />
