@@ -47,3 +47,40 @@ def test_chat_messages_passes_system_then_messages():
     assert sent[1:] == msgs
     assert client.captured["temperature"] == 0.5
     assert client.captured["model"] == "test-model"
+
+
+def test_chat_messages_stream_yields_content_and_skips_empty():
+    class _Delta:
+        def __init__(self, content):
+            self.content = content
+
+    class _Choice:
+        def __init__(self, content):
+            self.delta = _Delta(content)
+
+    class _Chunk:
+        def __init__(self, content):
+            self.choices = [_Choice(content)]
+
+    class _StreamingClient:
+        def __init__(self):
+            self.captured = None
+            self.chat = self
+            self.completions = self
+
+        def create(self, **kwargs):
+            self.captured = kwargs
+            return iter([_Chunk("Hello "), _Chunk(None), _Chunk("world")])
+
+    client = _StreamingClient()
+    svc = LLMService.__new__(LLMService)
+    svc._provider = "openai"
+    svc._client = client
+    svc._model = "test-model"
+
+    chunks = list(svc.chat_messages_stream(
+        system_prompt="SYS", messages=[{"role": "user", "content": "hi"}]
+    ))
+    assert chunks == ["Hello ", "world"]  # None chunk skipped by the guard
+    assert client.captured["stream"] is True
+    assert client.captured["messages"][0] == {"role": "system", "content": "SYS"}

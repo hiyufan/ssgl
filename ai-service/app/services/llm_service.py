@@ -1,6 +1,6 @@
 """Unified LLM service supporting OpenAI and Anthropic backends."""
 
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Generator
 
 from app.config import get_settings
 
@@ -102,7 +102,7 @@ class LLMService:
         system_prompt: str,
         messages: list[dict],
         temperature: float = 0.7,
-    ):
+    ) -> Generator[str, None, None]:
         """Yield text chunks given a multi-turn message array (sync generator)."""
 
         if self._provider == "openai":
