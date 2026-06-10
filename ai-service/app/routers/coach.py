@@ -1,5 +1,6 @@
 """Pitch-coach (模拟答辩) router."""
 
+import json
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -68,7 +69,7 @@ async def answer(body: AnswerRequest):
                 question_id=body.question_id,
                 answer=body.answer,
             ):
-                yield f"data: {chunk}\n\n"
+                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
         except SessionExpiredError:
             yield "data: [EXPIRED]\n\n"

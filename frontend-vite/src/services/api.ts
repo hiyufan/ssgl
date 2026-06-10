@@ -386,8 +386,7 @@ export const coachAPI = {
       const decoder = new TextDecoder();
       let buffer = '';
 
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
+      for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
@@ -400,7 +399,11 @@ export const coachAPI = {
           if (data === '[DONE]') { handlers.onDone(); return; }
           if (data === '[EXPIRED]') { handlers.onExpired(); return; }
           if (data === '[ERROR]') { handlers.onError('回答生成失败'); return; }
-          handlers.onChunk(data);
+          try {
+            handlers.onChunk(JSON.parse(data) as string);
+          } catch {
+            handlers.onChunk(data); // defensive fallback for non-JSON frames
+          }
         }
       }
       handlers.onDone();
