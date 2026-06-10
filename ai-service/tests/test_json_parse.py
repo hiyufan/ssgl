@@ -1,3 +1,5 @@
+import pytest
+
 from app.utils.json_parse import parse_json
 
 
@@ -16,6 +18,10 @@ def test_finds_first_brace_block_as_last_resort():
 
 
 def test_raises_on_no_json():
-    import pytest
     with pytest.raises(ValueError):
         parse_json("totally not json")
+
+
+def test_strips_fence_with_nested_object():
+    raw = '```json\n{"score": 88, "breakdown": {"a": 1, "b": 2}}\n```'
+    assert parse_json(raw) == {"score": 88, "breakdown": {"a": 1, "b": 2}}
