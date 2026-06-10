@@ -3,6 +3,42 @@ import { awardsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
 import { PageHeader, SectionLabel } from '@/components/ui/page-helpers';
 import type { Award } from '@/types';
+import { useRole } from '@/hooks/use-role';
+import { Button } from '@/components/ui/button';
+import { FormModal, Field, NumberInput } from '@/components/ui/form';
+import { toast } from '@/components/ui/toast';
+import { getApiError } from '@/lib/form-utils';
+
+function SettleAwardModal({ award, onClose, onSettled }: {
+  award: Award;
+  onClose: () => void;
+  onSettled: (a: Award) => void;
+}) {
+  const [amount, setAmount] = useState<string>(() => String(Number(award.prize_amount || 0)));
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setSubmitting(true); setError(null);
+    try {
+      const res = await awardsAPI.settle(award.id, Number(amount) || 0);
+      toast.success('奖项已结算');
+      onSettled(res.award);
+      onClose();
+    } catch (err) {
+      setError(getApiError(err, '结算失败'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <FormModal open={true} onClose={onClose} title={`结算奖项 · ${award.team?.name || ''}`} onSubmit={submit} submitting={submitting} error={error} submitLabel="确认结算" width={440}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{award.competition?.title || ''} · {award.rank_name || `第 ${award.rank} 名`}</div>
+      <Field label="结算奖金（元）"><NumberInput min={0} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
+    </FormModal>
+  );
+}
 
 export function AwardsPage() {
   const [awards, setAwards] = useState<Award[]>([]);
@@ -12,6 +48,10 @@ export function AwardsPage() {
   useEffect(() => {
     awardsAPI.list().then(res => setAwards(res.awards || [])).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  const role = useRole();
+  const [settling, setSettling] = useState<Award | null>(null);
+  const onSettled = (a: Award) => setAwards((prev) => prev.map((x) => (x.id === a.id ? a : x)));
 
   const filtered = tab === 'all' ? awards : awards.filter(a => a.status === tab);
   const top3 = awards.slice(0, 3);
@@ -92,7 +132,7 @@ export function AwardsPage() {
           ))}
         </div>
         <table className="forge-table">
-          <thead><tr><th>排名</th><th>团队</th><th>赛事</th><th>奖项</th><th>奖金</th><th>状态</th></tr></thead>
+          <thead><tr><th>排名</th><th>团队</th><th>赛事</th><th>奖项</th><th>奖金</th><th>状态</th><th>操作</th></tr></thead>
           <tbody>
             {filtered.map((award) => (
               <tr key={award.id}>
@@ -102,11 +142,17 @@ export function AwardsPage() {
                 <td><span style={{ fontWeight: 700, color: award.rank === 1 ? 'var(--amber)' : award.rank === 2 ? 'var(--text-2)' : 'var(--orange)' }}>{award.rank_name || '—'}</span></td>
                 <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--green)' }}>¥{Number(award.prize_amount || 0).toLocaleString()}</span></td>
                 <td><StatusBadge status={award.status}/></td>
+                <td>
+                  {role === 'admin' && award.status !== 'settled'
+                    ? <Button variant="outline" size="sm" onClick={() => setSettling(award)}>结算</Button>
+                    : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {settling && <SettleAwardModal award={settling} onClose={() => setSettling(null)} onSettled={onSettled} />}
     </div>
   );
 }
