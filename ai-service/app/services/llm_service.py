@@ -65,6 +65,69 @@ class LLMService:
         return response.content[0].text
 
     # ------------------------------------------------------------------
+    # Multi-turn chat (message array)
+    # ------------------------------------------------------------------
+
+    def chat_messages(
+        self,
+        system_prompt: str,
+        messages: list[dict],
+        temperature: float = 0.7,
+    ) -> str:
+        """Return a single text response given a multi-turn message array.
+
+        ``messages`` items are ``{"role": "user"|"assistant", "content": str}``.
+        """
+
+        if self._provider == "openai":
+            response = self._client.chat.completions.create(
+                model=self._model,
+                temperature=temperature,
+                messages=[{"role": "system", "content": system_prompt}, *messages],
+            )
+            return response.choices[0].message.content or ""
+
+        # Anthropic
+        response = self._client.messages.create(
+            model=self._model,
+            max_tokens=4096,
+            temperature=temperature,
+            system=system_prompt,
+            messages=messages,
+        )
+        return response.content[0].text
+
+    def chat_messages_stream(
+        self,
+        system_prompt: str,
+        messages: list[dict],
+        temperature: float = 0.7,
+    ):
+        """Yield text chunks given a multi-turn message array (sync generator)."""
+
+        if self._provider == "openai":
+            stream = self._client.chat.completions.create(
+                model=self._model,
+                temperature=temperature,
+                stream=True,
+                messages=[{"role": "system", "content": system_prompt}, *messages],
+            )
+            for chunk in stream:
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+        else:
+            with self._client.messages.stream(
+                model=self._model,
+                max_tokens=4096,
+                temperature=temperature,
+                system=system_prompt,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
+
+    # ------------------------------------------------------------------
     # Streaming chat
     # ------------------------------------------------------------------
 
