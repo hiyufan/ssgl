@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
-import { useAppStore } from '@/stores/app';
+import { useNavigate } from 'react-router-dom';
 import { statsAPI, workflowsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
@@ -10,7 +10,7 @@ import type { StatsOverview, ApprovalWorkflow } from '@/types';
 
 export function AdminDashboard() {
   const { user } = useAuthStore();
-  const { navigate } = useAppStore();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<StatsOverview | null>(null);
   const [pending, setPending] = useState<ApprovalWorkflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +125,7 @@ export function AdminDashboard() {
         <div data-bento className="bento-item bento-wide card card-magnetic" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <SectionLabel label={`待审批 (${pending.length})`}/>
-            <button className="btn btn-outline btn-sm" onClick={() => navigate('approvals')}>查看全部</button>
+            <button className="btn btn-outline btn-sm" onClick={() => navigate('/approvals')}>查看全部</button>
           </div>
           <div>
             {pending.length === 0 ? (
@@ -143,7 +143,7 @@ export function AdminDashboard() {
                   </div>
                 </div>
                 <StatusBadge status={a.type} />
-                <button className="btn btn-primary btn-sm" onClick={() => navigate('approvals')}>处理</button>
+                <button className="btn btn-primary btn-sm" onClick={() => navigate('/approvals')}>处理</button>
               </div>
             ))}
           </div>

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { teamsAPI, competitionsAPI } from '@/services/api';
-import { useAppStore } from '@/stores/app';
+import { useRole } from '@/hooks/use-role';
 import { StatusBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
-import { Avatar, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
+import { Avatar, PageHeader } from '@/components/ui/page-helpers';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Team, Competition } from '@/types';
 
 export function TeamsPage() {
-  const { role } = useAppStore();
+  const role = useRole();
   const [teams, setTeams] = useState<Team[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);

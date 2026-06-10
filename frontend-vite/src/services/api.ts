@@ -6,9 +6,9 @@ import type {
   AuditLog, AuditStats, RAGDocument, RAGStats,
 } from '@/types';
 
-// API Base URLs
-const API_BASE = '/api/v1';
-const AI_BASE = 'http://localhost:8000/ai/api/v1';
+// API Base URLs (configurable via Vite env; sensible dev defaults).
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const AI_BASE = import.meta.env.VITE_AI_BASE_URL || 'http://localhost:8000/ai/api/v1';
 
 // Token management
 const getToken = (): string | null => localStorage.getItem('access_token');
@@ -271,6 +271,27 @@ export const auditAPI = {
 export const aiToolsAPI = {
   call: async (tool: string, input: string, extra?: string): Promise<{ result: string }> => {
     const response = await aiApi.post<{ result: string }>(`/tools/${tool}`, { input, extra });
+    return response.data;
+  },
+};
+
+// AI Assistant API — routed through the authenticated aiApi instance so the
+// Bearer token is attached automatically (the AI service validates it).
+export interface AssistantReply {
+  reply: string;
+  suggestions?: string[];
+  tool_calls?: { call: string }[];
+  data?: unknown;
+}
+
+export const assistantAPI = {
+  chat: async (payload: {
+    message: string;
+    role?: string;
+    context?: string;
+    page?: string;
+  }): Promise<AssistantReply> => {
+    const response = await aiApi.post<AssistantReply>('/assistant/chat', payload);
     return response.data;
   },
 };

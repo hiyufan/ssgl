@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
-import { useAppStore } from '@/stores/app';
+import { useNavigate } from 'react-router-dom';
 import { teamsAPI, workflowsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
@@ -10,7 +10,7 @@ import type { Team, ApprovalWorkflow } from '@/types';
 
 export function TeacherDashboard() {
   const { user } = useAuthStore();
-  const { navigate } = useAppStore();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
   const [pending, setPending] = useState<ApprovalWorkflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +122,7 @@ export function TeacherDashboard() {
         <div data-bento className="bento-item bento-wide card card-magnetic" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <SectionLabel label="我的指导团队"/>
-            <button className="btn btn-outline btn-sm" onClick={() => navigate('teams')}>全部团队</button>
+            <button className="btn btn-outline btn-sm" onClick={() => navigate('/teams')}>全部团队</button>
           </div>
           <div>
             {teams.length === 0 ? (
@@ -165,7 +165,7 @@ export function TeacherDashboard() {
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title || a.type}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{a.submitter?.name}</div>
               </div>
-              <button className="btn btn-primary btn-sm" onClick={() => navigate('approvals')}>审核</button>
+              <button className="btn btn-primary btn-sm" onClick={() => navigate('/approvals')}>审核</button>
             </div>
           ))}
         </div>

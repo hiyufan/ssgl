@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { workflowsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
-import { Avatar, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
+import { PageHeader, SectionLabel } from '@/components/ui/page-helpers';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import type { ApprovalWorkflow } from '@/types';

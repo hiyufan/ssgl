@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { competitionsAPI } from '@/services/api';
-import { useAppStore } from '@/stores/app';
+import { useRole } from '@/hooks/use-role';
 import { StatusBadge, TypeBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
-import { PageHeader, SectionLabel } from '@/components/ui/page-helpers';
+import { PageHeader } from '@/components/ui/page-helpers';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Competition } from '@/types';
 
@@ -11,7 +11,7 @@ const TYPE_ICONS: Record<string, string> = { hackathon: 'trophy', innovation: 'z
 const STATUS_ORDER = ['ongoing', 'published', 'completed', 'draft', 'cancelled'];
 
 export function CompetitionsPage() {
-  const { role } = useAppStore();
+  const role = useRole();
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');

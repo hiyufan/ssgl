@@ -101,7 +101,7 @@ export function KnowledgeBasePage() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon="file" title="暂无文档" subtitle="点击上方「上传文档」添加第一份知识库文档"/>
+        <EmptyState icon="file" title="暂无文档" desc="点击上方「上传文档」添加第一份知识库文档"/>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
           {filtered.map((doc, i) => {

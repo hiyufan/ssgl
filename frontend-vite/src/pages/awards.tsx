@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { awardsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
-import { Icon } from '@/components/ui/icon';
-import { Avatar, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
+import { PageHeader, SectionLabel } from '@/components/ui/page-helpers';
 import type { Award } from '@/types';
 
 export function AwardsPage() {

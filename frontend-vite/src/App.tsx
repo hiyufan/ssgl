@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth';
-import { useAppStore } from '@/stores/app';
+import { useRole, type Role } from '@/hooks/use-role';
 import { Spinner } from '@/components/ui/spinner';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { LoginPage } from '@/pages/login';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { PageTransition } from '@/components/layout/page-transition';
@@ -17,9 +19,44 @@ import { AIToolsPage } from '@/pages/aitools';
 import { KnowledgeBasePage } from '@/pages/knowledge-base';
 import { AuditLogsPage } from '@/pages/audit-logs';
 
+/** Restricts a route to one or more roles; otherwise redirects to the dashboard. */
+function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
+  const role = useRole();
+  if (!roles.includes(role)) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
+
+function AppRoutes() {
+  const location = useLocation();
+  return (
+    <PageTransition page={location.pathname}>
+      <Routes location={location}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/competitions" element={<CompetitionsPage />} />
+        <Route path="/teams" element={<TeamsPage />} />
+        <Route path="/approvals" element={<ApprovalsPage />} />
+        <Route path="/preplans" element={<PrePlansPage />} />
+        <Route path="/awards" element={<AwardsPage />} />
+        <Route path="/evaluations" element={<EvaluationsPage />} />
+        <Route path="/stats" element={<StatsPage />} />
+        <Route path="/aitools" element={<AIToolsPage />} />
+        <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+        <Route
+          path="/audit-logs"
+          element={
+            <RequireRole roles={['admin']}>
+              <AuditLogsPage />
+            </RequireRole>
+          }
+        />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </PageTransition>
+  );
+}
+
 function App() {
   const { isAuthenticated, loading, checkAuth } = useAuthStore();
-  const { page } = useAppStore();
 
   useEffect(() => {
     checkAuth();
@@ -37,28 +74,11 @@ function App() {
     return <LoginPage />;
   }
 
-  const renderPage = () => {
-    switch (page) {
-      case 'dashboard':     return <Dashboard />;
-      case 'competitions':  return <CompetitionsPage />;
-      case 'teams':         return <TeamsPage />;
-      case 'approvals':     return <ApprovalsPage />;
-      case 'preplans':      return <PrePlansPage />;
-      case 'awards':        return <AwardsPage />;
-      case 'evaluations':   return <EvaluationsPage />;
-      case 'stats':         return <StatsPage />;
-      case 'aitools':       return <AIToolsPage />;
-      case 'knowledge-base':return <KnowledgeBasePage />;
-      case 'audit-logs':    return <AuditLogsPage />;
-      default:              return <Dashboard />;
-    }
-  };
-
   return (
     <DashboardLayout>
-      <PageTransition page={page}>
-        {renderPage()}
-      </PageTransition>
+      <ErrorBoundary>
+        <AppRoutes />
+      </ErrorBoundary>
     </DashboardLayout>
   );
 }

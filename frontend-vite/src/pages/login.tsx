@@ -207,6 +207,7 @@ export function LoginPage() {
             </div>
           </form>
 
+          {import.meta.env.DEV && (
           <div data-anim style={{ marginTop: 32 }}>
             <button onClick={() => setShowDemos(!showDemos)} style={{
               display: 'flex', alignItems: 'center', gap: 6,
@@ -253,6 +254,7 @@ export function LoginPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>

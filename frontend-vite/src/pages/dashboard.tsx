@@ -1,10 +1,10 @@
-import { useAppStore } from '@/stores/app';
+import { useRole } from '@/hooks/use-role';
 import { AdminDashboard } from './dashboard/admin';
 import { TeacherDashboard } from './dashboard/teacher';
 import { StudentDashboard } from './dashboard/student';
 
 export function Dashboard() {
-  const { role } = useAppStore();
+  const role = useRole();
 
   switch (role) {
     case 'admin':

@@ -43,15 +43,3 @@ export function Icon({ name, size = 16 }: { name: string; size?: number }) {
     </span>
   );
 }
-
-/* Clone element to set width/height */
-function _Icon({ name, size = 16 }: { name: string; size?: number }) {
-  const ic = IC[name] || IC.sparkles;
-  if (!ic || typeof ic !== 'object') return null;
-  const el = ic as React.ReactElement;
-  return (
-    <span style={{ width: size, height: size, display: 'block', flexShrink: 0 }}>
-      {el}
-    </span>
-  );
-}

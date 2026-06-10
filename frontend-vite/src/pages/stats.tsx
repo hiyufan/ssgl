@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { statsAPI } from '@/services/api';
 import { StatCard } from '@/components/ui/stat-card';
-import { BarChart, AreaChart, DonutChart } from '@/components/ui/charts';
+import { DonutChart } from '@/components/ui/charts';
 import { Avatar, Stars, ProgressBar, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
-import { Icon } from '@/components/ui/icon';
 import type { StatsOverview, TeacherStat } from '@/types';
 
 export function StatsPage() {

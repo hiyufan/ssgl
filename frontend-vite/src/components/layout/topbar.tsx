@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAppStore } from '@/stores/app';
 import { useAuthStore } from '@/stores/auth';
+import { useRole } from '@/hooks/use-role';
 import { Icon } from '@/components/ui/icon';
 import { ROLE_META } from './sidebar';
 
@@ -16,17 +18,20 @@ interface TopBarProps {
 }
 
 export function TopBar({ onToggleSidebar }: TopBarProps) {
-  const { page, theme, toggleTheme, role } = useAppStore();
+  const { theme, toggleTheme } = useAppStore();
   const { user } = useAuthStore();
+  const role = useRole();
+  const location = useLocation();
   const [searchFocused, setSearchFocused] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const meta = ROLE_META[role] || {};
-  const title = PAGE_TITLES[page] || page;
+  const pageKey = location.pathname.replace(/^\//, '') || 'dashboard';
+  const title = PAGE_TITLES[pageKey] || pageKey;
 
-  // Close notification dropdown on page change
+  // Close notification dropdown on route change
   useEffect(() => {
     setNotifOpen(false);
-  }, [page]);
+  }, [location.pathname]);
 
   return (
     <header className="forge-topbar glass">

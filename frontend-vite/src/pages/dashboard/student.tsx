@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
-import { useAppStore } from '@/stores/app';
+import { useNavigate } from 'react-router-dom';
 import { teamsAPI, prePlansAPI, competitionsAPI } from '@/services/api';
 import { SectionLabel } from '@/components/ui/page-helpers';
 import { Avatar } from '@/components/ui/page-helpers';
@@ -9,7 +9,7 @@ import type { Team, PrePlan, Competition } from '@/types';
 
 export function StudentDashboard() {
   const { user } = useAuthStore();
-  const { navigate } = useAppStore();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
   const [preplans, setPreplans] = useState<PrePlan[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -198,7 +198,7 @@ export function StudentDashboard() {
           </div>
         </div>
 
-        <div data-bento className="card card-magnetic" style={{ cursor: 'pointer' }} onClick={() => navigate('aitools')}>
+        <div data-bento className="card card-magnetic" style={{ cursor: 'pointer' }} onClick={() => navigate('/aitools')}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
             <SectionLabel label="AI 助手" />
           </div>
@@ -209,7 +209,7 @@ export function StudentDashboard() {
           </div>
         </div>
 
-        <div data-bento className="card card-magnetic" style={{ overflow: 'hidden', cursor: 'pointer' }} onClick={() => navigate('preplans')}>
+        <div data-bento className="card card-magnetic" style={{ overflow: 'hidden', cursor: 'pointer' }} onClick={() => navigate('/preplans')}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
             <SectionLabel label="预计划详情" />
           </div>
@@ -233,7 +233,7 @@ export function StudentDashboard() {
         <div data-bento className="card" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <SectionLabel label="我的团队" />
-            <button className="btn btn-outline btn-sm" onClick={() => navigate('teams')}>查看</button>
+            <button className="btn btn-outline btn-sm" onClick={() => navigate('/teams')}>查看</button>
           </div>
           <div style={{ padding: '14px 20px' }}>
             {myTeam ? (
@@ -255,13 +255,13 @@ export function StudentDashboard() {
         <div data-bento className="card" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <SectionLabel label={`开放赛事 (${openComps.length})`} />
-            <button className="btn btn-outline btn-sm" onClick={() => navigate('competitions')}>查看全部</button>
+            <button className="btn btn-outline btn-sm" onClick={() => navigate('/competitions')}>查看全部</button>
           </div>
           <div>
             {openComps.length === 0 ? (
               <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>暂无开放赛事</div>
             ) : openComps.slice(0, 4).map((c) => (
-              <div key={c.id} onClick={() => navigate('competitions')} style={{
+              <div key={c.id} onClick={() => navigate('/competitions')} style={{
                 padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12,
                 borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.15s',
               }}

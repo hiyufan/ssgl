@@ -1,31 +1,25 @@
 import type { ReactNode } from 'react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from './sidebar';
 import { TopBar } from './topbar';
 import { CustomCursor } from '../effects/custom-cursor';
 import { useAppStore } from '@/stores/app';
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
-  const { theme, toggleTheme, page } = useAppStore();
+  const { theme } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
 
-  // Apply theme on mount
+  // Apply theme on mount / change
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Smooth theme toggle — no page reload
-  const handleToggleTheme = useCallback(() => {
-    const html = document.documentElement;
-    html.classList.add('theme-transitioning');
-    toggleTheme();
-    setTimeout(() => html.classList.remove('theme-transitioning'), 600);
-  }, [toggleTheme]);
-
-  // Close sidebar on page change (mobile)
+  // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
-  }, [page]);
+  }, [location.pathname]);
 
   return (
     <>

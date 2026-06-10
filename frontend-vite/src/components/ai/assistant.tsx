@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAppStore } from '@/stores/app';
+import { useLocation } from 'react-router-dom';
+import { useRole } from '@/hooks/use-role';
+import { assistantAPI } from '@/services/api';
 import { cn } from '@/lib/utils';
 import {
   Sparkles, Send, X, Minimize2, Maximize2,
@@ -25,7 +27,9 @@ interface AIAssistantProps {
 }
 
 export function AIAssistant({ context, placeholder, floating = true }: AIAssistantProps) {
-  const { role, page } = useAppStore();
+  const role = useRole();
+  const location = useLocation();
+  const pageKey = location.pathname.replace(/^\//, '') || 'dashboard';
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -101,22 +105,12 @@ export function AIAssistant({ context, placeholder, floating = true }: AIAssista
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/ai/api/v1/assistant/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageText,
-          role: role,
-          context: context || `当前页面: ${page}`,
-          page: page,
-        }),
+      const data = await assistantAPI.chat({
+        message: messageText,
+        role,
+        context: context || `当前页面: ${pageKey}`,
+        page: pageKey,
       });
-
-      if (!response.ok) {
-        throw new Error('AI 服务暂时不可用');
-      }
-
-      const data = await response.json();
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -128,7 +122,7 @@ export function AIAssistant({ context, placeholder, floating = true }: AIAssista
         data: data.data,
       };
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -354,7 +348,7 @@ export function AIAssistant({ context, placeholder, floating = true }: AIAssista
             按 Enter 发送 · Shift + Enter 换行
           </span>
           <span className="text-[10px] text-text-muted">
-            当前页面: {page || '未知'}
+            当前页面: {pageKey}
           </span>
         </div>
       </div>

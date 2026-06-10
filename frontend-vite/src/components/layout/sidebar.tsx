@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
-import { useAppStore } from '@/stores/app';
 import { useAuthStore } from '@/stores/auth';
+import { useRole } from '@/hooks/use-role';
 import { Icon } from '@/components/ui/icon';
 
 /* ─── Nav Config ──────────────────────────────────────── */
@@ -62,9 +63,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen }: SidebarProps) {
-  const { role, setRole, page, navigate } = useAppStore();
-  const { user } = useAuthStore();
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const role = useRole();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeId = location.pathname.replace(/^\//, '') || 'dashboard';
   const nav = NAV[role] || [];
   const meta = ROLE_META[role];
 
@@ -80,14 +83,14 @@ export function Sidebar({ isOpen }: SidebarProps) {
 
   // Animate indicator to active item
   useEffect(() => {
-    const activeBtn = btnRefs.current.get(page);
+    const activeBtn = btnRefs.current.get(activeId);
     const indicator = indicatorRef.current;
-    const nav = navRef.current;
-    if (!activeBtn || !indicator || !nav) return;
+    const navEl = navRef.current;
+    if (!activeBtn || !indicator || !navEl) return;
 
-    const navRect = nav.getBoundingClientRect();
+    const navRect = navEl.getBoundingClientRect();
     const btnRect = activeBtn.getBoundingClientRect();
-    const top = btnRect.top - navRect.top + nav.scrollTop;
+    const top = btnRect.top - navRect.top + navEl.scrollTop;
     const height = btnRect.height;
 
     gsap.to(indicator, {
@@ -96,7 +99,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
       duration: 0.35,
       ease: 'power3.out',
     });
-  }, [page]);
+  }, [activeId]);
 
   // Hover effect on nav items
   const handleNavHover = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -161,13 +164,13 @@ export function Sidebar({ isOpen }: SidebarProps) {
           if (item.section) {
             return <div key={i} className="nav-section">{item.section}</div>;
           }
-          const active = page === item.id;
+          const active = activeId === item.id;
           return (
             <button
               key={item.id}
               ref={setBtnRef(item.id!)}
               className={`nav-item${active ? ' active' : ''}`}
-              onClick={() => navigate(item.id!)}
+              onClick={() => navigate(`/${item.id}`)}
               onMouseEnter={handleNavHover}
               onMouseLeave={handleNavLeave}
             >
@@ -188,55 +191,18 @@ export function Sidebar({ isOpen }: SidebarProps) {
         })}
       </nav>
 
-      {/* Role Switcher */}
+      {/* User + logout */}
       <div style={{ padding: 8, borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-        {pickerOpen && (
-          <div className="card anim-in" style={{ marginBottom: 6, overflow: 'hidden', padding: 4 }}>
-            {(['admin', 'teacher', 'student'] as const).map((r) => {
-              const m = ROLE_META[r];
-              const isActive = r === role;
-              return (
-                <button key={r} onClick={() => { setRole(r); setPickerOpen(false); navigate('dashboard'); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px',
-                    borderRadius: 4, background: isActive ? 'var(--amber-bg)' : 'transparent',
-                    border: 'none', cursor: 'pointer', transition: 'background 0.15s',
-                  }}
-                >
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 4, background: m.bg,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700, color: m.color,
-                  }}>
-                    {r === 'admin' ? 'A' : r === 'teacher' ? 'T' : 'S'}
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? 'var(--amber)' : 'var(--text-2)', flex: 1, textAlign: 'left' }}>
-                    {m.label}
-                  </span>
-                  {isActive && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        <button onClick={() => setPickerOpen(!pickerOpen)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 10px',
-            borderRadius: 6, background: 'var(--surface-2)', border: 'none', cursor: 'pointer',
-            transition: 'background 0.15s',
-          }}
-        >
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px',
+          borderRadius: 6, background: 'var(--surface-2)',
+        }}>
           <div style={{
             width: 28, height: 28, borderRadius: 4, background: meta.bg,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 12, fontWeight: 700, color: meta.color, flexShrink: 0,
           }}>
-            {(user?.name || role)[0]}
+            {(user?.name || meta.label)[0]}
           </div>
           <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -244,8 +210,23 @@ export function Sidebar({ isOpen }: SidebarProps) {
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{meta.label}</div>
           </div>
-          <Icon name={pickerOpen ? 'up' : 'down'} size={13}/>
-        </button>
+          <button
+            onClick={logout}
+            title="退出登录"
+            style={{
+              width: 30, height: 30, borderRadius: 6, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', border: '1px solid var(--border)',
+              color: 'var(--text-3)', cursor: 'pointer',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </aside>
   );

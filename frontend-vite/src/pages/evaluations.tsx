@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { evaluationsAPI } from '@/services/api';
-import { useAppStore } from '@/stores/app';
+import { useRole } from '@/hooks/use-role';
 import { Icon } from '@/components/ui/icon';
-import { Avatar, Stars, ProgressBar, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
+import { Avatar, Stars, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
 import type { StudentEvaluation } from '@/types';
 
 export function EvaluationsPage() {
-  const { role } = useAppStore();
+  const role = useRole();
   const [evaluations, setEvaluations] = useState<StudentEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
 

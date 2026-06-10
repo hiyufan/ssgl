@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { prePlansAPI, aiToolsAPI } from '@/services/api';
-import { useAppStore } from '@/stores/app';
+import { prePlansAPI } from '@/services/api';
+import { useRole } from '@/hooks/use-role';
 import { StatusBadge } from '@/components/ui/badge';
 import { ScoreGauge } from '@/components/ui/charts';
 import { Icon } from '@/components/ui/icon';
@@ -86,7 +86,7 @@ function AIReviewPanel({ plan }: { plan: PrePlan }) {
 }
 
 export function PrePlansPage() {
-  const { role } = useAppStore();
+  const role = useRole();
   const [preplans, setPreplans] = useState<PrePlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PrePlan | null>(null);
