@@ -498,6 +498,69 @@ input, textarea, select { font-family: inherit; font-size: inherit; outline: non
 }
 
 /* ═══════════════════════════════════════
+   React Grid Layout — drag + resize
+   ═══════════════════════════════════════ */
+
+.react-grid-layout {
+  position: relative;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+  will-change: transform;
+  opacity: 0.9;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-lg);
+}
+
+.react-grid-placeholder {
+  background: var(--amber-bg) !important;
+  border: 2px dashed var(--amber) !important;
+  border-radius: var(--radius-lg) !important;
+  opacity: 0.5;
+}
+
+/* Resize handle — show on hover */
+.react-grid-item .grid-resize-handle {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.react-grid-item:hover .grid-resize-handle {
+  opacity: 0.5;
+}
+
+.react-grid-item:hover .grid-resize-handle:hover {
+  opacity: 1;
+}
+
+/* Drag handle — show on hover */
+.react-grid-item .grid-drag-handle {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.react-grid-item:hover .grid-drag-handle {
+  opacity: 0.4;
+}
+
+.react-grid-item:hover .grid-drag-handle:hover {
+  opacity: 0.8;
+  cursor: grab;
+}
+
+.react-grid-item.react-draggable-dragging .grid-drag-handle {
+  opacity: 0.8;
+  cursor: grabbing;
+}
+
+/* ═══════════════════════════════════════
    Bento Grid — Apple-style asymmetric layout
    ═══════════════════════════════════════ */
 
