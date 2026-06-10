@@ -74,6 +74,13 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
         }
       }
 
+      // 403 Forbidden — 后端 RBAC 拒绝，全局 toast 提示
+      if (error.response?.status === 403) {
+        import('@/components/ui/toast').then(({ toast }) => {
+          toast.error('权限不足');
+        }).catch(() => {});
+      }
+
       return Promise.reject(error);
     }
   );

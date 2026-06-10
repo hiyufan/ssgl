@@ -31,24 +31,25 @@ function AppRoutes() {
   return (
     <PageTransition page={location.pathname}>
       <Routes location={location}>
+        {/* 任意已登录角色 */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/competitions" element={<CompetitionsPage />} />
         <Route path="/teams" element={<TeamsPage />} />
-        <Route path="/approvals" element={<ApprovalsPage />} />
-        <Route path="/preplans" element={<PrePlansPage />} />
-        <Route path="/awards" element={<AwardsPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />
-        <Route path="/stats" element={<StatsPage />} />
         <Route path="/aitools" element={<AIToolsPage />} />
-        <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
-        <Route
-          path="/audit-logs"
-          element={
-            <RequireRole roles={['admin']}>
-              <AuditLogsPage />
-            </RequireRole>
-          }
-        />
+
+        {/* teacher + admin */}
+        <Route path="/approvals" element={<RequireRole roles={['teacher', 'admin']}><ApprovalsPage /></RequireRole>} />
+        <Route path="/awards" element={<RequireRole roles={['teacher', 'admin']}><AwardsPage /></RequireRole>} />
+        <Route path="/stats" element={<RequireRole roles={['teacher', 'admin']}><StatsPage /></RequireRole>} />
+        <Route path="/knowledge-base" element={<RequireRole roles={['teacher', 'admin']}><KnowledgeBasePage /></RequireRole>} />
+
+        {/* student only */}
+        <Route path="/preplans" element={<RequireRole roles={['student']}><PrePlansPage /></RequireRole>} />
+
+        {/* admin only */}
+        <Route path="/audit-logs" element={<RequireRole roles={['admin']}><AuditLogsPage /></RequireRole>} />
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </PageTransition>
