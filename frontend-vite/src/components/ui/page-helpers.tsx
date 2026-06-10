@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /* ─── Avatar ──────────────────────────────────────────── */
-const AVATAR_COLORS = ['#C8820A', '#0A8F7E', '#6D28D9', '#C0392B', '#15803D', '#0369A1'];
+const AVATAR_COLORS = ['#b8860b', '#2a7a6d', '#5a3d8a', '#a63d2f', '#3a7d44', '#a85e10'];
 export function Avatar({ name = '?', size = 32, index = 0 }: { name?: string; size?: number; index?: number }) {
   const bg = AVATAR_COLORS[index % AVATAR_COLORS.length];
   return (
@@ -25,7 +25,7 @@ export function Stars({ value, max = 5 }: { value: number; max?: number }) {
 }
 
 /* ─── ProgressBar ─────────────────────────────────────── */
-export function ProgressBar({ value, max = 100, color = 'var(--amber)', height = 6 }: {
+export function ProgressBar({ value, max = 100, color = 'var(--amber)', height = 4 }: {
   value: number; max?: number; color?: string; height?: number;
 }) {
   return (
@@ -35,31 +35,43 @@ export function ProgressBar({ value, max = 100, color = 'var(--amber)', height =
   );
 }
 
-/* ─── PageHeader ──────────────────────────────────────── */
+/* ─── PageHeader — Editorial serif style ───────────────── */
 export function PageHeader({ title, subtitle, actions }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16 }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 32, gap: 16 }}>
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>{title}</h1>
-        {subtitle && <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>{subtitle}</p>}
+        <h1 style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 28, fontWeight: 900,
+          color: 'var(--text)',
+          letterSpacing: '-0.02em',
+          lineHeight: 1.1,
+        }}>{title}</h1>
+        {subtitle && <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6, fontWeight: 400 }}>{subtitle}</p>}
       </div>
       {actions && <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>{actions}</div>}
     </div>
   );
 }
 
-/* ─── SectionLabel ────────────────────────────────────── */
+/* ─── SectionLabel — Editorial uppercase label ────────── */
 export function SectionLabel({ label, count }: { label: string; count?: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      <div style={{ width: 3, height: 14, background: 'var(--amber)', borderRadius: 2 }}/>
-      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)' }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+      <span style={{
+        fontSize: 10, fontWeight: 700,
+        letterSpacing: '0.15em', textTransform: 'uppercase',
+        color: 'var(--text-3)',
+      }}>{label}</span>
       {count !== undefined && (
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-3)' }}>({count})</span>
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: 10,
+          color: 'var(--text-3)', opacity: 0.6,
+        }}>({count})</span>
       )}
     </div>
   );

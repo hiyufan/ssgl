@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/auth';
 import { useAppStore } from '@/stores/app';
-import { AuroraBg } from '@/components/student-ui/aurora-bg';
 import '@/styles/student.css';
 
 export function LoginPage() {
@@ -28,80 +27,102 @@ export function LoginPage() {
 
   const fill = (u: string, p: string) => { setUsername(u); setPassword(p); };
 
+  const isDark = theme === 'dark';
+
   return (
-    <div className="student-root" data-theme={theme} style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <AuroraBg />
+    <div className="student-root" data-theme={theme} style={{
+      display: 'flex', height: '100vh', overflow: 'hidden',
+      background: 'var(--s-bg)',
+    }}>
+      {/* Left — Editorial branding */}
       <div style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative', zIndex: 1, padding: 24,
+        flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+        padding: '0 64px 80px',
+        position: 'relative',
       }}>
-        {/* Theme toggle — top right */}
+        {/* Theme toggle */}
         <button onClick={() => {
-          const next = theme === 'dark' ? 'light' : 'dark';
+          const next = isDark ? 'light' : 'dark';
           document.documentElement.setAttribute('data-theme', next);
           localStorage.setItem('forge-theme', next);
           window.location.reload();
         }} style={{
-          position: 'absolute', top: 24, right: 24,
-          width: 36, height: 36, borderRadius: 10,
-          background: 'var(--s-surface)', border: '1px solid var(--s-border)',
+          position: 'absolute', top: 32, right: 32,
+          width: 36, height: 36, borderRadius: 6,
+          background: 'transparent', border: '1px solid var(--s-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'var(--s-text-2)', cursor: 'pointer', fontSize: 16,
-          backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-        }} title={theme === 'dark' ? '切换亮色' : '切换暗色'}>
-          {theme === 'dark' ? '☀️' : '🌙'}
+          color: 'var(--s-text-3)', cursor: 'pointer', fontSize: 14,
+        }} title={isDark ? '切换亮色' : '切换暗色'}>
+          {isDark ? '☀' : '☾'}
         </button>
 
-        {/* Login card */}
         <div style={{
-          width: '100%', maxWidth: 400,
-          background: 'var(--s-surface)',
-          backdropFilter: 'blur(24px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
-          border: '1px solid var(--s-border)',
-          borderRadius: 24,
-          padding: '40px 36px',
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.2em',
+          textTransform: 'uppercase', color: 'var(--s-text-3)', marginBottom: 24,
+        }}>
+          AI-Powered Competition Platform
+        </div>
+        <h1 style={{
+          fontFamily: 'var(--s-font-hand)',
+          fontSize: 'clamp(48px, 7vw, 88px)',
+          fontWeight: 900,
+          lineHeight: 0.95,
+          letterSpacing: '-0.03em',
+          color: 'var(--s-text-1)',
+          marginBottom: 24,
+        }}>
+          让每<br />一次<br /><em style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--s-amber)' }}>竞赛</em>
+        </h1>
+        <p style={{
+          fontSize: 14, lineHeight: 1.8,
+          color: 'var(--s-text-3)', maxWidth: 360,
+        }}>
+          面向高校的 AI 竞赛管理平台<br />
+          整合赛事信息 · 团队协作 · 智能推荐
+        </p>
+      </div>
+
+      {/* Right — Login form */}
+      <div style={{
+        width: 440, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 48,
+        borderLeft: '1px solid var(--s-border)',
+        background: 'var(--s-surface)',
+      }}>
+        <div style={{
+          width: '100%', maxWidth: 320,
           animation: 's-card-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both',
-          boxShadow: 'var(--s-shadow)',
         }}>
           {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36, justifyContent: 'center' }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: 'linear-gradient(135deg, var(--s-purple), var(--s-amber))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
-                <rect x="1" y="7" width="4" height="6" fill="#0F1523" rx="1"/>
-                <rect x="5" y="4" width="4" height="9" fill="#0F1523" rx="1"/>
-                <rect x="9" y="1" width="4" height="12" fill="#0F1523" rx="1"/>
-              </svg>
-            </div>
-            <span style={{
-              fontFamily: 'var(--s-font-body)', fontWeight: 700, fontSize: 15,
-              letterSpacing: '0.04em', color: 'var(--s-text-1)',
-            }}>
-              FORGE
-            </span>
+          <div style={{
+            fontFamily: 'var(--s-font-hand)',
+            fontSize: 22, fontWeight: 900,
+            letterSpacing: '0.08em',
+            color: 'var(--s-text-1)',
+            marginBottom: 48,
+          }}>
+            SSGL
           </div>
 
           {/* Greeting */}
-          <div style={{
-            fontFamily: 'var(--s-font-hand)', fontSize: 32, fontWeight: 500,
-            color: 'var(--s-text-1)', textAlign: 'center', marginBottom: 8,
+          <h2 style={{
+            fontFamily: 'var(--s-font-hand)',
+            fontSize: 28, fontWeight: 700,
+            color: 'var(--s-text-1)',
+            marginBottom: 6,
           }}>
-            你好 👋
-          </div>
+            登录
+          </h2>
           <p style={{
-            fontSize: 14, color: 'var(--s-text-3)', textAlign: 'center', marginBottom: 32,
+            fontSize: 13, color: 'var(--s-text-3)', marginBottom: 36,
           }}>
-            登录竞赛管理平台
+            竞赛管理平台
           </p>
 
           {error && (
             <div style={{
-              marginBottom: 20, padding: '10px 14px', borderRadius: 12,
-              background: 'var(--red-bg)', border: '1px solid rgba(248, 113, 113, 0.2)',
+              marginBottom: 20, padding: '10px 14px', borderRadius: 6,
+              background: 'var(--red-bg)', border: '1px solid rgba(166,61,47,0.15)',
               fontSize: 13, color: 'var(--s-red)',
             }}>
               {error}
@@ -110,106 +131,109 @@ export function LoginPage() {
 
           <form onSubmit={handle}>
             <div style={{ marginBottom: 16 }}>
+              <label style={{
+                display: 'block', fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.12em', textTransform: 'uppercase',
+                color: 'var(--s-text-3)', marginBottom: 6,
+              }}>用户名</label>
               <input
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="用户名"
+                placeholder="输入用户名"
                 autoComplete="username"
                 style={{
-                  width: '100%', padding: '12px 16px',
-                  background: 'var(--s-surface)',
+                  width: '100%', padding: '10px 14px',
+                  background: 'var(--s-bg)',
                   border: '1px solid var(--s-border)',
-                  borderRadius: 12, color: 'var(--s-text-1)', fontSize: 14,
+                  borderRadius: 6, color: 'var(--s-text-1)', fontSize: 14,
                   outline: 'none',
-                  transition: 'border-color 0.3s, box-shadow 0.3s',
+                  transition: 'border-color 0.2s',
                 }}
-                onFocus={e => {
-                  e.target.style.borderColor = 'var(--s-purple)';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(167, 139, 250, 0.1)';
-                }}
-                onBlur={e => {
-                  e.target.style.borderColor = 'var(--s-border)';
-                  e.target.style.boxShadow = 'none';
-                }}
+                onFocus={e => { e.target.style.borderColor = 'var(--s-amber)'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--s-border)'; }}
               />
             </div>
 
-            <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 28 }}>
+              <label style={{
+                display: 'block', fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.12em', textTransform: 'uppercase',
+                color: 'var(--s-text-3)', marginBottom: 6,
+              }}>密码</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="密码"
+                placeholder="输入密码"
                 autoComplete="current-password"
                 style={{
-                  width: '100%', padding: '12px 16px',
-                  background: 'var(--s-surface)',
+                  width: '100%', padding: '10px 14px',
+                  background: 'var(--s-bg)',
                   border: '1px solid var(--s-border)',
-                  borderRadius: 12, color: 'var(--s-text-1)', fontSize: 14,
+                  borderRadius: 6, color: 'var(--s-text-1)', fontSize: 14,
                   outline: 'none',
-                  transition: 'border-color 0.3s, box-shadow 0.3s',
+                  transition: 'border-color 0.2s',
                 }}
-                onFocus={e => {
-                  e.target.style.borderColor = 'var(--s-purple)';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(167, 139, 250, 0.1)';
-                }}
-                onBlur={e => {
-                  e.target.style.borderColor = 'var(--s-border)';
-                  e.target.style.boxShadow = 'none';
-                }}
+                onFocus={e => { e.target.style.borderColor = 'var(--s-amber)'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--s-border)'; }}
               />
             </div>
 
             <button type="submit" disabled={loading} style={{
-              width: '100%', padding: '14px 0',
-              background: 'linear-gradient(135deg, var(--s-purple), var(--s-amber))',
-              border: 'none', borderRadius: 14,
-              color: '#fff', fontSize: 15, fontWeight: 700,
+              width: '100%', padding: '12px 0',
+              background: 'var(--s-text-1)',
+              border: 'none', borderRadius: 6,
+              color: 'var(--s-bg)', fontSize: 13, fontWeight: 700,
+              letterSpacing: '0.08em',
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.7 : 1,
-              transition: 'transform 0.15s, opacity 0.15s',
-            }}
-              onMouseDown={e => { if (!loading) e.currentTarget.style.transform = 'scale(0.97)'; }}
-              onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-            >
+              transition: 'opacity 0.15s',
+            }}>
               {loading ? (
-                <svg width={18} height={18} viewBox="0 0 24 24" style={{ animation: 'forge-spin 0.7s linear infinite', display: 'inline-block', verticalAlign: 'middle' }}>
+                <svg width={16} height={16} viewBox="0 0 24 24" style={{ animation: 'forge-spin 0.7s linear infinite', display: 'inline-block', verticalAlign: 'middle' }}>
                   <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2.5" opacity={0.3}/>
                   <path d="M12 2a10 10 0 0110 10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
                 </svg>
-              ) : '登录'}
+              ) : '登录 →'}
             </button>
           </form>
 
           {/* Demo accounts */}
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 32 }}>
             <button onClick={() => setShowDemos(!showDemos)} style={{
-              display: 'flex', alignItems: 'center', gap: 6, margin: '0 auto',
+              display: 'flex', alignItems: 'center', gap: 6,
               background: 'none', border: 'none', color: 'var(--s-text-3)',
-              fontSize: 12, cursor: 'pointer', padding: '4px 0',
+              fontSize: 11, cursor: 'pointer', padding: '4px 0',
+              fontWeight: 600, letterSpacing: '0.05em',
             }}>
-              <span style={{ transition: 'transform 0.2s', transform: showDemos ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block' }}>▸</span>
+              <span style={{
+                transition: 'transform 0.2s',
+                transform: showDemos ? 'rotate(90deg)' : 'rotate(0deg)',
+                display: 'inline-block', fontSize: 10,
+              }}>▸</span>
               演示账号
             </button>
             {showDemos && (
               <div style={{
-                marginTop: 12, padding: 12, borderRadius: 12,
-                background: 'var(--s-surface)',
+                marginTop: 12, padding: 12, borderRadius: 6,
+                background: 'var(--s-bg)',
                 border: '1px solid var(--s-border)',
                 animation: 's-card-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
               }}>
-                <div style={{ fontSize: 10, color: 'var(--s-text-3)', marginBottom: 8, textAlign: 'center' }}>
+                <div style={{
+                  fontSize: 10, color: 'var(--s-text-3)', marginBottom: 8,
+                  letterSpacing: '0.05em',
+                }}>
                   密码均为 password123
                 </div>
                 {[
                   { role: '管理员', user: 'liuzy', color: 'var(--s-amber)' },
-                  { role: '教师', user: 'wangjg', color: 'var(--s-teal, #2DD4BF)' },
+                  { role: '教师', user: 'wangjg', color: 'var(--teal)' },
                   { role: '学生', user: 'zhangm', color: 'var(--s-purple)' },
                 ].map(({ role, user: u, color }) => (
                   <button key={u} onClick={() => fill(u, 'password123')} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', padding: '8px 10px', borderRadius: 8,
+                    width: '100%', padding: '8px 10px', borderRadius: 4,
                     border: '1px solid var(--s-border)',
                     background: 'transparent', cursor: 'pointer',
                     marginBottom: 4, transition: 'background 0.15s',
@@ -218,10 +242,10 @@ export function LoginPage() {
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: color }}/>
+                      <div style={{ width: 4, height: 4, borderRadius: 1, background: color }}/>
                       <span style={{ fontSize: 12, color: 'var(--s-text-2)' }}>{role}</span>
                     </div>
-                    <span style={{ fontFamily: 'var(--s-font-mono)', fontSize: 12, color }}>{u}</span>
+                    <span style={{ fontFamily: 'var(--s-font-mono)', fontSize: 11, color }}>{u}</span>
                   </button>
                 ))}
               </div>

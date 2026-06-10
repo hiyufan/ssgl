@@ -65,28 +65,24 @@ export function Sidebar() {
 
   return (
     <aside className="forge-sidebar">
-      {/* Logo */}
+      {/* Logo — Editorial */}
       <div style={{
         height: 'var(--topbar-h)', display: 'flex', alignItems: 'center', gap: 10,
         padding: '0 18px', borderBottom: '1px solid var(--border)', flexShrink: 0,
       }}>
         <div style={{
-          width: 28, height: 28, borderRadius: 6, background: 'var(--amber)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          fontFamily: 'var(--font-display)',
+          fontWeight: 900, fontSize: 18,
+          letterSpacing: '0.08em',
+          color: 'var(--text)',
         }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <rect x="1" y="7" width="4" height="6" fill="#0F1523" rx="1"/>
-            <rect x="5" y="4" width="4" height="9" fill="#0F1523" rx="1"/>
-            <rect x="9" y="1" width="4" height="12" fill="#0F1523" rx="1"/>
-          </svg>
+          SSGL
         </div>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', color: 'var(--text)' }}>
-            FORGE
-          </div>
-          <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginTop: 1 }}>
-            竞赛管理平台
-          </div>
+        <div style={{
+          fontSize: 9, fontWeight: 600, letterSpacing: '0.12em',
+          color: 'var(--text-3)', textTransform: 'uppercase', marginTop: 2,
+        }}>
+          竞赛管理
         </div>
       </div>
 
@@ -105,8 +101,8 @@ export function Sidebar() {
               <span style={{ flex: 1 }}>{item.label}</span>
               {item.badge && (
                 <span style={{
-                  minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: active ? 'rgba(255,255,255,0.2)' : 'var(--red)',
+                  minWidth: 18, height: 18, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: active ? 'rgba(184,134,11,0.2)' : 'var(--red)',
                   color: active ? 'var(--amber)' : '#fff',
                   fontSize: 10, fontWeight: 700, padding: '0 5px',
                 }}>
@@ -129,11 +125,15 @@ export function Sidebar() {
                 <button key={r} onClick={() => { setRole(r); setPickerOpen(false); navigate('dashboard'); }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px',
-                    borderRadius: 8, background: isActive ? 'var(--amber-bg)' : 'transparent',
+                    borderRadius: 4, background: isActive ? 'var(--amber-bg)' : 'transparent',
                     border: 'none', cursor: 'pointer', transition: 'background 0.15s',
                   }}
                 >
-                  <div style={{ width: 28, height: 28, borderRadius: 6, background: m.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: m.color }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 4, background: m.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700, color: m.color,
+                  }}>
                     {r === 'admin' ? 'A' : r === 'teacher' ? 'T' : 'S'}
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? 'var(--amber)' : 'var(--text-2)', flex: 1, textAlign: 'left' }}>
@@ -153,12 +153,12 @@ export function Sidebar() {
         <button onClick={() => setPickerOpen(!pickerOpen)}
           style={{
             display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 10px',
-            borderRadius: 10, background: 'var(--surface-2)', border: 'none', cursor: 'pointer',
+            borderRadius: 6, background: 'var(--surface-2)', border: 'none', cursor: 'pointer',
             transition: 'background 0.15s',
           }}
         >
           <div style={{
-            width: 30, height: 30, borderRadius: 8, background: meta.bg,
+            width: 28, height: 28, borderRadius: 4, background: meta.bg,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 12, fontWeight: 700, color: meta.color, flexShrink: 0,
           }}>

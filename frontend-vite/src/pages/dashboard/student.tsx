@@ -74,10 +74,10 @@ export function StudentDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{
-                fontFamily: 'var(--s-font-hand)', fontSize: 32, fontWeight: 500,
-                color: 'var(--s-text-1)', lineHeight: 1.2, marginBottom: 8,
+                fontFamily: 'var(--s-font-hand)', fontSize: 28, fontWeight: 700,
+                color: 'var(--s-text-1)', lineHeight: 1.1, marginBottom: 8,
               }}>
-                加油，{user?.name || '同学'}！
+                加油，{user?.name || '同学'}
               </div>
               <div style={{ fontSize: 14, color: 'var(--s-text-2)' }}>
                 {myTeam ? `团队：${myTeam.name}` : '还没有加入团队'}
@@ -152,22 +152,21 @@ export function StudentDashboard() {
                     width: 28, height: 28, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: step.done
-                      ? 'linear-gradient(135deg, #A78BFA, #F0A832)'
+                      ? 'var(--s-text-1)'
                       : step.active
-                        ? 'rgba(240, 168, 50, 0.2)'
-                        : 'rgba(255, 255, 255, 0.06)',
-                    border: step.active ? '2px solid rgba(240, 168, 50, 0.5)' : 'none',
+                        ? 'var(--amber-bg)'
+                        : 'var(--s-surface-hover)',
+                    border: step.active ? '1.5px solid var(--s-amber)' : '1px solid var(--s-border)',
                     fontSize: 11, fontWeight: 700,
-                    color: step.done ? '#0F1523' : step.active ? '#F0A832' : 'var(--s-text-3)',
+                    color: step.done ? 'var(--s-bg)' : step.active ? 'var(--s-amber)' : 'var(--s-text-3)',
                     flexShrink: 0,
-                    boxShadow: step.active ? '0 0 12px rgba(240, 168, 50, 0.3)' : 'none',
                   }}>
                     {step.done ? '✓' : i + 1}
                   </div>
                   {!isLast && (
                     <div style={{
                       flex: 1, height: 2, borderRadius: 2,
-                      background: step.done ? 'linear-gradient(90deg, #A78BFA, #F0A832)' : 'rgba(255, 255, 255, 0.06)',
+                      background: step.done ? 'var(--s-text-1)' : 'var(--s-border)',
                     }} />
                   )}
                 </div>
@@ -228,19 +227,17 @@ export function StudentDashboard() {
             {openComps.slice(0, 6).map((c) => (
               <div key={c.id} onClick={() => navigate('competitions')} style={{
                 minWidth: 200, padding: '14px 16px', borderRadius: 12,
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                background: 'var(--s-surface-hover)',
+                border: '1px solid var(--s-border)',
                 cursor: 'pointer',
                 transition: 'border-color 0.2s, background 0.2s',
                 flexShrink: 0,
               }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.2)';
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.borderColor = 'var(--s-border-hover)';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.borderColor = 'var(--s-border)';
                 }}
               >
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--s-text-1)', marginBottom: 6 }}>

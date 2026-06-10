@@ -24,15 +24,15 @@ export function GlassCard({
       className={`s-glass-card ${hoverable ? 's-glass-hover' : ''} ${className}`}
       style={{
         background: 'var(--s-surface)',
-        backdropFilter: 'blur(24px) saturate(1.4)',
-        WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
         border: '1px solid var(--s-border)',
-        borderRadius: 20,
+        borderRadius: 10,
         padding: 24,
         cursor: onClick ? 'pointer' : undefined,
         gridColumn: span ? `span ${span}` : undefined,
         gridRow: rowSpan ? `span ${rowSpan}` : undefined,
-        transition: 'background 0.5s ease, border-color 0.5s ease',
+        transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
         ...style,
       }}
       onClick={onClick}
