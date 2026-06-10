@@ -44,3 +44,5 @@ __pycache__/
 *.pyo
 venv/
 .venv/
+ssgl-server
+backend/ssgl-server

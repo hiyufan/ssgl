@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/ssgl/competition-platform/internal/models"
+	"github.com/ssgl/competition-platform/internal/middleware/security"
 )
 
 // Migrate auto-migrates all database models.
@@ -26,6 +27,7 @@ func Migrate() {
 		&models.StudentEvaluation{},
 		&models.Notification{},
 		&models.AIAnalysisLog{},
+		&security.AuditLog{},
 	); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}

@@ -21,6 +21,8 @@ type StudentEvaluation struct {
 	Feedback      string    `json:"feedback" gorm:"type:text"`
 	SubmittedAt   time.Time `json:"submitted_at"`
 	Status        string    `json:"status" gorm:"size:16;not null;default:draft"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 
 	// Relations — use references:ID to tell GORM the FK column points to users.id
 	Student     User        `json:"student" gorm:"foreignKey:StudentID;references:ID"`
