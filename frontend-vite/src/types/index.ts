@@ -166,6 +166,44 @@ export interface TeacherStat {
   eval_count: number;
 }
 
+// Audit Log types
+export interface AuditLog {
+  id: number;
+  user_id: number;
+  username: string;
+  action: string;
+  resource: string;
+  method: string;
+  path: string;
+  ip: string;
+  user_agent: string;
+  request_id: string;
+  status: number;
+  duration: number;
+  body: string;
+  created_at: string;
+}
+
+export interface AuditStats {
+  total_logs: number;
+  today_logs: number;
+  failed_logins: number;
+  top_actions: { action: string; count: number }[];
+}
+
+// RAG types
+export interface RAGDocument {
+  filename: string;
+  chunk_count: number;
+  created_at: string;
+}
+
+export interface RAGStats {
+  total_chunks: number;
+  total_documents: number;
+  recent_documents: RAGDocument[];
+}
+
 // API Response types
 export interface ApiResponse<T> {
   data?: T;

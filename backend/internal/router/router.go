@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ssgl/competition-platform/internal/config"
+	"github.com/ssgl/competition-platform/internal/database"
 	"github.com/ssgl/competition-platform/internal/handlers"
 	"github.com/ssgl/competition-platform/internal/middleware"
 	"github.com/ssgl/competition-platform/internal/middleware/security"
@@ -43,7 +44,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	awardHandler := handlers.NewAwardHandler()
 	evalHandler := handlers.NewEvaluationHandler()
 	statsHandler := handlers.NewStatsHandler()
-	auditHandler := handlers.NewAuditHandler(nil) // TODO: pass db
+	auditHandler := handlers.NewAuditHandler(database.GetDB())
 
 	v1 := r.Group("/api/v1")
 
@@ -59,6 +60,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	// Protected routes.
 	protected := v1.Group("")
 	protected.Use(middleware.AuthMiddleware(&cfg.JWT))
+	protected.Use(security.AuditMiddleware(database.GetDB()))
 	{
 		// Users.
 		protected.GET("/users/me", authHandler.GetMe)
@@ -105,6 +107,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	// Admin-only routes.
 	admin := v1.Group("")
 	admin.Use(middleware.AuthMiddleware(&cfg.JWT))
+	admin.Use(security.AuditMiddleware(database.GetDB()))
 	admin.Use(middleware.RequireRole("admin"))
 	{
 		admin.POST("/awards/:id/settle", awardHandler.Settle)

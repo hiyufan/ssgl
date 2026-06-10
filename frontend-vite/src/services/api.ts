@@ -3,6 +3,7 @@ import type {
   User, Competition, Team, ApprovalWorkflow, PrePlan, Award,
   StudentEvaluation, StatsOverview, TeacherStat,
   LoginRequest, LoginResponse, TokenPair,
+  AuditLog, AuditStats, RAGDocument, RAGStats,
 } from '@/types';
 
 // API Base URLs
@@ -253,6 +254,19 @@ export const statsAPI = {
   },
 };
 
+// Audit Logs API
+export const auditAPI = {
+  list: async (params?: { page?: number; page_size?: number; action?: string; user_id?: number }): Promise<{ logs: AuditLog[]; total: number; page: number; page_size: number; total_pages: number }> => {
+    const response = await api.get('/audit-logs', { params });
+    return response.data;
+  },
+
+  stats: async (): Promise<AuditStats> => {
+    const response = await api.get<AuditStats>('/audit-logs/stats');
+    return response.data;
+  },
+};
+
 // AI Tools API
 export const aiToolsAPI = {
   call: async (tool: string, input: string, extra?: string): Promise<{ result: string }> => {
@@ -280,6 +294,30 @@ export const ragAPI = {
     const response = await aiApi.post<{ results: unknown[] }>('/rag/search', {
       question,
       top_k: topK || 5,
+    });
+    return response.data;
+  },
+
+  listDocuments: async (limit?: number, offset?: number): Promise<{ documents: RAGDocument[]; total_chunks: number; total_documents: number }> => {
+    const response = await aiApi.get('/rag/documents', { params: { limit, offset } });
+    return response.data;
+  },
+
+  deleteDocument: async (filename: string): Promise<{ message: string; chunks_deleted: number }> => {
+    const response = await aiApi.delete(`/rag/documents/${encodeURIComponent(filename)}`);
+    return response.data;
+  },
+
+  getStats: async (): Promise<RAGStats> => {
+    const response = await aiApi.get<RAGStats>('/rag/stats');
+    return response.data;
+  },
+
+  uploadFile: async (file: File): Promise<{ message: string; filename: string; chunk_count: number }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await aiApi.post('/rag/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
