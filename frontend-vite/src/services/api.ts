@@ -217,8 +217,10 @@ export const awardsAPI = {
     return response.data;
   },
 
-  settle: async (id: number): Promise<{ award: Award }> => {
-    const response = await api.post<{ award: Award }>(`/awards/${id}/settle`);
+  settle: async (id: number, prizeAmount?: number): Promise<{ award: Award }> => {
+    const response = await api.post<{ award: Award }>(`/awards/${id}/settle`, {
+      prize_amount: prizeAmount ?? 0,
+    });
     return response.data;
   },
 };
