@@ -189,6 +189,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; outline: non
   background: var(--surface);
   border-right: 1px solid var(--border);
   overflow: hidden;
+  position: relative;
+  z-index: 150;
 }
 
 .forge-main {
@@ -207,6 +209,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; outline: non
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   gap: 12px;
+  position: relative;
+  z-index: 100;
 }
 
 .forge-content {
