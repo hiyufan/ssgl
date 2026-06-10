@@ -32,6 +32,11 @@ yarn-error.log*
 # Misc
 *.log
 .cache/
+*.exe
+
+# Tooling
+.codegraph/
+.cursor/
 
 # Python
 __pycache__/
