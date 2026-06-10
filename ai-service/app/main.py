@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from app.database import init_db
 from app.middleware.security import setup_security
-from app.routers import health, rag, review, tools, assistant
+from app.routers import health, rag, review, tools, assistant, coach
 
 SERVICE_NAME = "ai-service"
 SERVICE_VERSION = "1.0.0"
@@ -35,6 +35,7 @@ app.include_router(rag.router, prefix="/ai/api/v1/rag")
 app.include_router(review.router, prefix="/ai/api/v1/review")
 app.include_router(tools.router, prefix="/ai/api/v1/tools")
 app.include_router(assistant.router, prefix="/ai/api/v1/assistant")
+app.include_router(coach.router, prefix="/ai/api/v1/coach")
 
 
 @app.get("/", tags=["root"])
