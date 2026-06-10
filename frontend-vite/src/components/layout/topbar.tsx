@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '@/stores/app';
 import { useAuthStore } from '@/stores/auth';
 import { Icon } from '@/components/ui/icon';
@@ -22,6 +22,11 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const meta = ROLE_META[role] || {};
   const title = PAGE_TITLES[page] || page;
+
+  // Close notification dropdown on page change
+  useEffect(() => {
+    setNotifOpen(false);
+  }, [page]);
 
   return (
     <header className="forge-topbar glass">
