@@ -12,6 +12,10 @@ from app.utils.prompts import (
     COACH_TURN_SYSTEM,
 )
 
+class SessionExpiredError(Exception):
+    """Raised when a coach session is missing or has expired."""
+
+
 PERSONA_LABEL = {"tech": "技术评委", "business": "商业评委", "product": "产品评委"}
 
 
@@ -206,13 +210,13 @@ class CoachService:
     def answer_stream(self, *, session_id: str, question_id: int, answer: str):
         """Yield reaction text chunks; records transcript when complete.
 
-        Raises KeyError if the session is missing/expired.
+        Raises SessionExpiredError if the session is missing/expired.
         """
         from app.services.llm_service import llm_service
 
         session = self.store.get(session_id)
         if session is None:
-            raise KeyError("session not found")
+            raise SessionExpiredError("session not found")
 
         question = next((q for q in session.questions if q.get("id") == question_id),
                         {"id": question_id, "question": "(追问)"})
@@ -246,14 +250,14 @@ class CoachService:
     def final(self, *, session_id: str) -> dict:
         """Produce the final scorecard.
 
-        Raises KeyError if the session is gone, or ValueError if the LLM
+        Raises SessionExpiredError if the session is gone, or ValueError if the LLM
         returns unparseable JSON.
         """
         from app.services.llm_service import llm_service
 
         session = self.store.get(session_id)
         if session is None:
-            raise KeyError("session not found")
+            raise SessionExpiredError("session not found")
 
         transcript_text = "\n".join(
             (f"评委提问：{it['content']}" if it["type"] == "question"

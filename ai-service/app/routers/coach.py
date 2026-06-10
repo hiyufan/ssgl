@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 
-from app.services.coach_service import coach_service
+from app.services.coach_service import coach_service, SessionExpiredError
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,9 @@ async def start(body: StartRequest) -> dict:
 
 @router.post("/answer")
 async def answer(body: AnswerRequest):
+    # generate() is a SYNC function on purpose: coach_service.answer_stream is a
+    # plain sync generator (unlike assistant's async chat_stream). Starlette runs
+    # a sync StreamingResponse iterator in a threadpool.
     def generate():
         try:
             for chunk in coach_service.answer_stream(
@@ -67,7 +70,7 @@ async def answer(body: AnswerRequest):
             ):
                 yield f"data: {chunk}\n\n"
             yield "data: [DONE]\n\n"
-        except KeyError:
+        except SessionExpiredError:
             yield "data: [EXPIRED]\n\n"
         except Exception as e:
             logger.error(f"coach.answer stream error: {e}")
@@ -84,7 +87,7 @@ async def answer(body: AnswerRequest):
 async def final(body: FinalRequest) -> dict:
     try:
         return coach_service.final(session_id=body.session_id)
-    except KeyError:
+    except SessionExpiredError:
         raise HTTPException(status_code=404, detail="答辩会话已过期")
     except Exception as e:
         logger.error(f"coach.final failed: {e}")

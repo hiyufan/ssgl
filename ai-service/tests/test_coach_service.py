@@ -1,7 +1,11 @@
 import time
 
+import pytest
+
 from app.services.coach_service import (
+    CoachService,
     CoachSession,
+    SessionExpiredError,
     SessionStore,
     build_opening_user_message,
     build_turn_messages,
@@ -85,3 +89,15 @@ def test_build_turn_messages_no_consecutive_same_role_with_reaction():
     # The reaction, current question and current answer all survive the merge.
     joined = "\n".join(m["content"] for m in msgs)
     assert "R1" in joined and "Q2" in joined and "A2" in joined
+
+
+def test_answer_stream_missing_session_raises():
+    svc = CoachService(SessionStore())
+    with pytest.raises(SessionExpiredError):
+        list(svc.answer_stream(session_id="nope", question_id=1, answer="x"))
+
+
+def test_final_missing_session_raises():
+    svc = CoachService(SessionStore())
+    with pytest.raises(SessionExpiredError):
+        svc.final(session_id="nope")
