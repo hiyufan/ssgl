@@ -11,7 +11,11 @@ const PAGE_TITLES: Record<string, string> = {
   'audit-logs': '审计日志', preplans: '预计划',
 };
 
-export function TopBar() {
+interface TopBarProps {
+  onToggleSidebar?: () => void;
+}
+
+export function TopBar({ onToggleSidebar }: TopBarProps) {
   const { page, theme, toggleTheme, role } = useAppStore();
   const { user } = useAuthStore();
   const [searchFocused, setSearchFocused] = useState(false);
@@ -20,7 +24,12 @@ export function TopBar() {
   const title = PAGE_TITLES[page] || page;
 
   return (
-    <header className="forge-topbar">
+    <header className="forge-topbar glass">
+      {/* Mobile menu button */}
+      <button className="mobile-menu-btn" onClick={onToggleSidebar}>
+        <Icon name="filter" size={15}/>
+      </button>
+
       {/* Title */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>{title}</span>

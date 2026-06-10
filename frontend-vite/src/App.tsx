@@ -4,7 +4,7 @@ import { useAppStore } from '@/stores/app';
 import { Spinner } from '@/components/ui/spinner';
 import { LoginPage } from '@/pages/login';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { StudentLayout } from '@/components/student-ui/student-layout';
+import { PageTransition } from '@/components/layout/page-transition';
 import { Dashboard } from '@/pages/dashboard';
 import { CompetitionsPage } from '@/pages/competitions';
 import { TeamsPage } from '@/pages/teams';
@@ -19,7 +19,7 @@ import { AuditLogsPage } from '@/pages/audit-logs';
 
 function App() {
   const { isAuthenticated, loading, checkAuth } = useAuthStore();
-  const { page, role } = useAppStore();
+  const { page } = useAppStore();
 
   useEffect(() => {
     checkAuth();
@@ -54,19 +54,11 @@ function App() {
     }
   };
 
-  const content = (
-    <div key={page} className={role === 'student' ? '' : 'forge-page-wrapper'}>
-      {renderPage()}
-    </div>
-  );
-
-  if (role === 'student') {
-    return <StudentLayout>{content}</StudentLayout>;
-  }
-
   return (
     <DashboardLayout>
-      {content}
+      <PageTransition page={page}>
+        {renderPage()}
+      </PageTransition>
     </DashboardLayout>
   );
 }

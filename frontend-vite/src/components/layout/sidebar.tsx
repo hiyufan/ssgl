@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import gsap from 'gsap';
 import { useAppStore } from '@/stores/app';
 import { useAuthStore } from '@/stores/auth';
 import { Icon } from '@/components/ui/icon';
@@ -56,15 +57,68 @@ const ROLE_META: Record<string, { label: string; color: string; bg: string }> = 
   student: { label: '参赛学生', color: 'var(--purple)', bg: 'var(--purple-bg)' },
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+}
+
+export function Sidebar({ isOpen }: SidebarProps) {
   const { role, setRole, page, navigate } = useAppStore();
   const { user } = useAuthStore();
   const [pickerOpen, setPickerOpen] = useState(false);
   const nav = NAV[role] || [];
   const meta = ROLE_META[role];
 
+  // Sliding indicator
+  const navRef = useRef<HTMLElement>(null);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const btnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  const setBtnRef = useCallback((id: string) => (el: HTMLButtonElement | null) => {
+    if (el) btnRefs.current.set(id, el);
+    else btnRefs.current.delete(id);
+  }, []);
+
+  // Animate indicator to active item
+  useEffect(() => {
+    const activeBtn = btnRefs.current.get(page);
+    const indicator = indicatorRef.current;
+    const nav = navRef.current;
+    if (!activeBtn || !indicator || !nav) return;
+
+    const navRect = nav.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    const top = btnRect.top - navRect.top + nav.scrollTop;
+    const height = btnRect.height;
+
+    gsap.to(indicator, {
+      top,
+      height,
+      duration: 0.35,
+      ease: 'power3.out',
+    });
+  }, [page]);
+
+  // Hover effect on nav items
+  const handleNavHover = (e: React.MouseEvent<HTMLButtonElement>) => {
+    gsap.to(e.currentTarget, {
+      scale: 1.03,
+      x: 2,
+      duration: 0.25,
+      ease: 'back.out(2)',
+    });
+  };
+
+  const handleNavLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    gsap.to(e.currentTarget, {
+      scale: 1,
+      x: 0,
+      duration: 0.3,
+      ease: 'elastic.out(1, 0.5)',
+    });
+  };
+
   return (
-    <aside className="forge-sidebar">
+    <aside className={`forge-sidebar${isOpen ? ' is-open' : ''}`}>
       {/* Logo — Editorial */}
       <div style={{
         height: 'var(--topbar-h)', display: 'flex', alignItems: 'center', gap: 10,
@@ -87,15 +141,35 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
+      <nav ref={navRef} style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', position: 'relative' }}>
+        {/* Sliding active indicator */}
+        <div
+          ref={indicatorRef}
+          style={{
+            position: 'absolute',
+            left: 0,
+            width: 2,
+            background: 'var(--amber)',
+            borderRadius: '0 1px 1px 0',
+            zIndex: 1,
+            pointerEvents: 'none',
+            transition: 'none',
+          }}
+        />
+
         {nav.map((item, i) => {
           if (item.section) {
             return <div key={i} className="nav-section">{item.section}</div>;
           }
           const active = page === item.id;
           return (
-            <button key={item.id} className={`nav-item${active ? ' active' : ''}`}
+            <button
+              key={item.id}
+              ref={setBtnRef(item.id!)}
+              className={`nav-item${active ? ' active' : ''}`}
               onClick={() => navigate(item.id!)}
+              onMouseEnter={handleNavHover}
+              onMouseLeave={handleNavLeave}
             >
               <Icon name={item.icon!} size={15}/>
               <span style={{ flex: 1 }}>{item.label}</span>

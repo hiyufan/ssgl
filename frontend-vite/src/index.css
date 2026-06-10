@@ -1,10 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@400;700;900&display=swap');
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════
    FORGE · Obys Editorial Design Tokens
    ═══════════════════════════════════════ */
-
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@400;700;900&display=swap');
 
 :root {
   /* Warm cream palette — Obys inspired */
@@ -477,3 +476,318 @@ input, textarea, select { font-family: inherit; font-size: inherit; outline: non
 .text-dim { color: var(--text-3); }
 .text-gold { color: var(--amber); }
 .letter-wide { letter-spacing: 0.12em; text-transform: uppercase; font-size: 10px; font-weight: 700; }
+
+/* ═══════════════════════════════════════
+   Custom Cursor — hide default on desktop
+   ═══════════════════════════════════════ */
+
+.custom-cursor-active,
+.custom-cursor-active * {
+  cursor: none !important;
+}
+
+@media (hover: none) {
+  .custom-cursor-active,
+  .custom-cursor-active * {
+    cursor: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════
+   Bento Grid — Apple-style asymmetric layout
+   ═══════════════════════════════════════ */
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(110px, auto);
+  gap: 16px;
+}
+
+.bento-item {
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
+}
+
+/* Span variants */
+.bento-lg   { grid-column: span 2; grid-row: span 2; }
+.bento-wide { grid-column: span 2; }
+.bento-tall { grid-row: span 2; }
+
+/* Named grid areas for each dashboard — defined inline via style */
+
+/* ═══════════════════════════════════════
+   Magnetic Card — Hover glow + tilt
+   ═══════════════════════════════════════ */
+
+.card-magnetic {
+  position: relative;
+  transition: box-shadow 0.35s ease;
+  will-change: transform;
+}
+
+.card-magnetic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    var(--amber-bg),
+    transparent 40%
+  );
+  z-index: 0;
+}
+
+.card-magnetic:hover::after { opacity: 1; }
+
+.card-magnetic:hover {
+  box-shadow: 0 4px 24px rgba(184, 134, 11, 0.08), 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.card-magnetic > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark mode glow */
+[data-theme="dark"] .card-magnetic::after {
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(212, 168, 67, 0.08),
+    transparent 40%
+  );
+}
+
+[data-theme="dark"] .card-magnetic:hover {
+  box-shadow: 0 4px 24px rgba(212, 168, 67, 0.1), 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* ═══════════════════════════════════════
+   Login Page — Particle background
+   ═══════════════════════════════════════ */
+
+.login-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.login-hero-content {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.login-hero-content > * {
+  pointer-events: auto;
+}
+
+/* ═══════════════════════════════════════
+   Glassmorphism — frosted glass effect
+   ═══════════════════════════════════════ */
+
+.glass {
+  background: rgba(250, 248, 244, 0.72);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(221, 214, 202, 0.5);
+}
+
+[data-theme="dark"] .glass {
+  background: rgba(36, 35, 32, 0.72);
+  border: 1px solid rgba(61, 59, 54, 0.5);
+}
+
+/* Topbar glassmorphism */
+.forge-topbar.glass {
+  background: rgba(250, 248, 244, 0.82);
+}
+
+[data-theme="dark"] .forge-topbar.glass {
+  background: rgba(36, 35, 32, 0.82);
+}
+
+/* Card hover glassmorphism boost */
+.card-glass:hover {
+  background: rgba(250, 248, 244, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme="dark"] .card-glass:hover {
+  background: rgba(36, 35, 32, 0.8);
+}
+
+/* ═══════════════════════════════════════
+   Theme Transition — smooth color morphing
+   ═══════════════════════════════════════ */
+
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: background-color 0.5s ease,
+              color 0.4s ease,
+              border-color 0.4s ease,
+              box-shadow 0.4s ease,
+              fill 0.4s ease,
+              stroke 0.4s ease !important;
+}
+
+/* ═══════════════════════════════════════
+   Responsive — Mobile / Tablet
+   ═══════════════════════════════════════ */
+
+/* Tablet: collapse sidebar to icons */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-w: 60px;
+  }
+
+  .forge-sidebar .nav-item span,
+  .forge-sidebar .nav-section,
+  .forge-sidebar div[style*="fontSize: 9"],
+  .forge-sidebar div[style*="fontSize: 11"][style*="marginTop: 1"] {
+    display: none;
+  }
+
+  .forge-sidebar .nav-item {
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .forge-sidebar .nav-item::before {
+    display: none;
+  }
+
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bento-wide {
+    grid-column: span 2;
+  }
+}
+
+/* Mobile: sidebar becomes overlay */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-w: 0px;
+  }
+
+  .forge-app {
+    position: relative;
+  }
+
+  .forge-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 260px;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .forge-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  /* Overlay backdrop */
+  .forge-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .forge-sidebar-overlay.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .forge-page {
+    padding: 20px 16px;
+  }
+
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bento-wide {
+    grid-column: span 1;
+  }
+
+  .forge-topbar {
+    padding: 0 16px;
+  }
+
+  /* Mobile menu button */
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+}
+
+/* Mobile menu button — hidden by default */
+.mobile-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════════
+   Login Page — Responsive
+   ═══════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .login-page {
+    flex-direction: column !important;
+  }
+
+  .login-hero-side {
+    flex: none !important;
+    height: 40vh !important;
+    padding: 0 24px 32px !important;
+  }
+
+  .login-hero-side h1 {
+    font-size: 36px !important;
+  }
+
+  .login-form-side {
+    width: 100% !important;
+    flex: 1 !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border) !important;
+    padding: 32px 24px !important;
+  }
+}
+
+/* ═══════════════════════════════════════
+   Scrollbar — themed for dark mode
+   ═══════════════════════════════════════ */
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+}
+
