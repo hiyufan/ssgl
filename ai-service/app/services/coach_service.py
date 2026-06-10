@@ -5,9 +5,6 @@ import time
 import uuid
 from dataclasses import dataclass, field
 
-from app.services.ai_tools import ai_tools
-from app.services.llm_service import llm_service
-from app.services.rag_service import rag_service
 from app.utils.json_parse import parse_json
 from app.utils.prompts import (
     COACH_FINAL_SYSTEM,
@@ -150,6 +147,15 @@ class CoachService:
     # -- Act 1: opening review -------------------------------------------
     def start(self, *, role: str, source: str, pre_plan_id: int | None,
               pitch_text: str | None, num_questions: int) -> dict:
+        """Run the opening review.
+
+        Raises ValueError if the pre-plan is missing or if the LLM returns
+        unparseable JSON (the router maps these to HTTP responses).
+        """
+        from app.services.ai_tools import ai_tools
+        from app.services.llm_service import llm_service
+        from app.services.rag_service import rag_service
+
         # 1. Resolve the plan dict
         if source == "pre_plan":
             plan = ai_tools.get_pre_plan_detail(pre_plan_id)
@@ -202,6 +208,8 @@ class CoachService:
 
         Raises KeyError if the session is missing/expired.
         """
+        from app.services.llm_service import llm_service
+
         session = self.store.get(session_id)
         if session is None:
             raise KeyError("session not found")
@@ -236,6 +244,13 @@ class CoachService:
 
     # -- Act 3: final scorecard ------------------------------------------
     def final(self, *, session_id: str) -> dict:
+        """Produce the final scorecard.
+
+        Raises KeyError if the session is gone, or ValueError if the LLM
+        returns unparseable JSON.
+        """
+        from app.services.llm_service import llm_service
+
         session = self.store.get(session_id)
         if session is None:
             raise KeyError("session not found")
