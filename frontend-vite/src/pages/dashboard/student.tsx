@@ -7,17 +7,17 @@ import { Avatar } from '@/components/ui/page-helpers';
 import { DraggableGrid, GridDragHandle } from '@/components/ui/draggable-grid';
 import type { Team, PrePlan, Competition } from '@/types';
 
-/* Default layout — 4 columns */
+/* Default layout — 4 columns, rowHeight=30px */
 const DEFAULT_LAYOUT = [
-  { i: 'open-comps',   x: 0, y: 0, w: 1, h: 1 },
-  { i: 'my-team',      x: 1, y: 0, w: 1, h: 1 },
-  { i: 'preplan',      x: 2, y: 0, w: 1, h: 1 },
-  { i: 'ai-score',     x: 3, y: 0, w: 1, h: 1 },
-  { i: 'progress',     x: 0, y: 1, w: 2, h: 1 },
-  { i: 'ai-helper',    x: 2, y: 1, w: 1, h: 1 },
-  { i: 'preplan-detail', x: 3, y: 1, w: 1, h: 1 },
-  { i: 'team-detail',  x: 0, y: 2, w: 2, h: 2 },
-  { i: 'open-list',    x: 2, y: 2, w: 2, h: 2 },
+  { i: 'open-comps',     x: 0, y: 0, w: 1, h: 5 },
+  { i: 'my-team',        x: 1, y: 0, w: 1, h: 5 },
+  { i: 'preplan',        x: 2, y: 0, w: 1, h: 5 },
+  { i: 'ai-score',       x: 3, y: 0, w: 1, h: 5 },
+  { i: 'progress',       x: 0, y: 5, w: 2, h: 5 },
+  { i: 'ai-helper',      x: 2, y: 5, w: 1, h: 5 },
+  { i: 'preplan-detail', x: 3, y: 5, w: 1, h: 5 },
+  { i: 'team-detail',    x: 0, y: 10, w: 2, h: 8 },
+  { i: 'open-list',      x: 2, y: 10, w: 2, h: 8 },
 ];
 
 export function StudentDashboard() {
@@ -302,7 +302,7 @@ export function StudentDashboard() {
 
       {/* Draggable + Resizable Grid */}
       <DraggableGrid
-        storageKey="student-dashboard"
+        storageKey="student-dash-v2"
         defaultLayout={DEFAULT_LAYOUT}
         cols={4}
         rowHeight={120}

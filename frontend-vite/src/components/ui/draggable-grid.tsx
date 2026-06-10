@@ -4,7 +4,7 @@ import 'react-grid-layout/css/styles.css';
 
 /* ═══════════════════════════════════════
    DraggableGrid — dashboard card layout
-   Supports drag-to-reorder + resize
+   Drag to reorder + resize from bottom-right
    Layout persisted to localStorage
    ═══════════════════════════════════════ */
 
@@ -23,8 +23,6 @@ interface DraggableGridProps {
   cols?: number;
   rowHeight?: number;
   gap?: number;
-  isDraggable?: boolean;
-  isResizable?: boolean;
 }
 
 export function DraggableGrid({
@@ -32,10 +30,8 @@ export function DraggableGrid({
   defaultLayout,
   children,
   cols = 4,
-  rowHeight = 120,
+  rowHeight = 30,
   gap = 16,
-  isDraggable = true,
-  isResizable = true,
 }: DraggableGridProps) {
   const { width, containerRef } = useContainerWidth();
 
@@ -61,19 +57,18 @@ export function DraggableGrid({
   }, [storageKey]);
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="draggable-grid-container">
       {width > 0 && (
         <GridLayout
           layout={layout}
           width={width}
           gridConfig={{ cols, rowHeight, margin: [gap, gap], containerPadding: [0, 0] }}
-          dragConfig={{ enabled: isDraggable }}
-          resizeConfig={{ enabled: isResizable, handles: ['se'] }}
+          dragConfig={{ enabled: true, handle: '.grid-drag-handle' }}
+          resizeConfig={{ enabled: true, handles: ['se'] }}
           onLayoutChange={handleLayoutChange}
-          style={{ position: 'relative' }}
         >
           {Object.entries(children).map(([key, node]) => (
-            <div key={key} className="grid-item-wrapper">{node}</div>
+            <div key={key} className="grid-item">{node}</div>
           ))}
         </GridLayout>
       )}
@@ -81,27 +76,17 @@ export function DraggableGrid({
   );
 }
 
-/* ─── Drag handle for cards ─────────────── */
+/* ─── Drag handle — grab dots icon ──────── */
 export function GridDragHandle({ className = '' }: { className?: string }) {
   return (
-    <div className={`grid-drag-handle ${className}`} style={{
-      cursor: 'grab',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 20,
-      height: 20,
-      opacity: 0.3,
-      transition: 'opacity 0.2s',
-      flexShrink: 0,
-    }}>
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="var(--text-3)">
-        <circle cx="3" cy="2" r="1.2" />
-        <circle cx="9" cy="2" r="1.2" />
-        <circle cx="3" cy="6" r="1.2" />
-        <circle cx="9" cy="6" r="1.2" />
-        <circle cx="3" cy="10" r="1.2" />
-        <circle cx="9" cy="10" r="1.2" />
+    <div className={`grid-drag-handle ${className}`} title="拖拽移动">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="var(--text-3)">
+        <circle cx="2" cy="2" r="1" />
+        <circle cx="8" cy="2" r="1" />
+        <circle cx="2" cy="5" r="1" />
+        <circle cx="8" cy="5" r="1" />
+        <circle cx="2" cy="8" r="1" />
+        <circle cx="8" cy="8" r="1" />
       </svg>
     </div>
   );
