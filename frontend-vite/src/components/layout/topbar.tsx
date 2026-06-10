@@ -9,7 +9,7 @@ import { ROLE_META } from './sidebar';
 const PAGE_TITLES: Record<string, string> = {
   dashboard: '概览', competitions: '赛事管理', teams: '团队管理',
   approvals: '审批中心', awards: '获奖管理', evaluations: '评价中心',
-  stats: '统计分析', aitools: 'AI 工具箱', 'knowledge-base': '知识库管理',
+  stats: '统计分析', aitools: 'AI 工具箱', coach: '赛事陪练', 'knowledge-base': '知识库管理',
   'audit-logs': '审计日志', preplans: '预计划',
 };
 
