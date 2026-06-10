@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { prePlansAPI } from '@/services/api';
+import { prePlansAPI, teamsAPI } from '@/services/api';
 import { useRole } from '@/hooks/use-role';
 import { StatusBadge } from '@/components/ui/badge';
 import { ScoreGauge } from '@/components/ui/charts';
 import { Icon } from '@/components/ui/icon';
 import { ProgressBar, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
-import type { PrePlan } from '@/types';
+import { Button } from '@/components/ui/button';
+import { FormModal, Field, TextInput, TextArea, Select } from '@/components/ui/form';
+import { toast } from '@/components/ui/toast';
+import { getApiError } from '@/lib/form-utils';
+import type { PrePlan, Team } from '@/types';
 
 function AIReviewPanel({ plan }: { plan: PrePlan }) {
   const [text, setText] = useState('');
@@ -85,6 +89,76 @@ function AIReviewPanel({ plan }: { plan: PrePlan }) {
   );
 }
 
+type PrePlanFormState = {
+  team_id: string; title: string; tech_stack: string; target_audience: string;
+  market_analysis: string; innovation: string; expected_outcome: string; timeline: string;
+};
+function emptyPrePlanForm(): PrePlanFormState {
+  return { team_id: '', title: '', tech_stack: '', target_audience: '', market_analysis: '', innovation: '', expected_outcome: '', timeline: '' };
+}
+
+function PrePlanForm({ onClose, teams, onCreated }: {
+  onClose: () => void;
+  teams: Team[];
+  onCreated: (plan: PrePlan) => void;
+}) {
+  const [form, setForm] = useState<PrePlanFormState>(emptyPrePlanForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const set = (k: keyof PrePlanFormState) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const teamOptions = teams.map((t) => ({ value: String(t.id), label: t.competition?.title ? `${t.name} · ${t.competition.title}` : t.name }));
+
+  const submit = async () => {
+    if (!form.team_id) { setError('请选择团队'); return; }
+    if (!form.title.trim()) { setError('请填写方案标题'); return; }
+    const team = teams.find((t) => String(t.id) === form.team_id);
+    if (!team) { setError('团队无效'); return; }
+    setSubmitting(true); setError(null);
+    try {
+      const res = await prePlansAPI.create({
+        competition_id: team.competition_id,
+        team_id: team.id,
+        title: form.title.trim(),
+        tech_stack: form.tech_stack,
+        target_audience: form.target_audience,
+        market_analysis: form.market_analysis,
+        innovation: form.innovation,
+        expected_outcome: form.expected_outcome,
+        timeline: form.timeline,
+      });
+      toast.success('预计划已提交');
+      onCreated(res.pre_plan);
+      onClose();
+    } catch (err) {
+      setError(getApiError(err, '提交失败'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <FormModal open={true} onClose={onClose} title="新建预计划" onSubmit={submit} submitting={submitting} error={error} submitLabel="提交" width={640}>
+      {teams.length === 0 ? (
+        <div style={{ fontSize: 13, color: 'var(--text-3)', padding: '12px 0' }}>你还没有团队，请先到「团队管理」创建团队。</div>
+      ) : (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="团队" required><Select value={form.team_id} onChange={set('team_id')} options={teamOptions} placeholder="选择团队" /></Field>
+            <Field label="方案标题" required><TextInput value={form.title} onChange={(e) => set('title')(e.target.value)} placeholder="项目名称" /></Field>
+          </div>
+          <Field label="技术栈"><TextArea value={form.tech_stack} onChange={(e) => set('tech_stack')(e.target.value)} /></Field>
+          <Field label="目标用户"><TextArea value={form.target_audience} onChange={(e) => set('target_audience')(e.target.value)} /></Field>
+          <Field label="市场分析"><TextArea value={form.market_analysis} onChange={(e) => set('market_analysis')(e.target.value)} /></Field>
+          <Field label="创新点"><TextArea value={form.innovation} onChange={(e) => set('innovation')(e.target.value)} /></Field>
+          <Field label="预期成果"><TextArea value={form.expected_outcome} onChange={(e) => set('expected_outcome')(e.target.value)} /></Field>
+          <Field label="时间规划"><TextArea value={form.timeline} onChange={(e) => set('timeline')(e.target.value)} /></Field>
+        </>
+      )}
+    </FormModal>
+  );
+}
+
 export function PrePlansPage() {
   const role = useRole();
   const [preplans, setPreplans] = useState<PrePlan[]>([]);
@@ -99,6 +173,16 @@ export function PrePlansPage() {
       if (plans.length > 0) setSelected(plans[0]);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  const [myTeams, setMyTeams] = useState<Team[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  useEffect(() => { teamsAPI.list().then((r) => setMyTeams(r.teams || [])).catch(() => {}); }, []);
+
+  const onCreated = (plan: PrePlan) => {
+    setPreplans((prev) => [plan, ...prev]);
+    setSelected(plan);
+    setTab('detail');
+  };
 
   if (loading) {
     return (
@@ -116,7 +200,7 @@ export function PrePlansPage() {
       <PageHeader
         title="预计划管理"
         subtitle="提交预计划，获取 AI 智能评审报告"
-        actions={role === 'student' ? <button className="btn btn-primary"><Icon name="plus" size={13}/>新建预计划</button> : undefined}
+        actions={role === 'student' ? <Button variant="primary" icon={<Icon name="plus" size={13}/>} onClick={() => setCreateOpen(true)}>新建预计划</Button> : undefined}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, height: 'calc(100vh - 180px)', overflow: 'hidden' }}>
@@ -204,6 +288,7 @@ export function PrePlansPage() {
           </div>
         )}
       </div>
+      {createOpen && <PrePlanForm onClose={() => setCreateOpen(false)} teams={myTeams} onCreated={onCreated} />}
     </div>
   );
 }
