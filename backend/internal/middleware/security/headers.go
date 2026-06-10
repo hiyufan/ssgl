@@ -6,27 +6,37 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SecurityHeaders returns a middleware that adds security headers to responses
+// SecurityHeaders returns a middleware that adds security headers to responses.
+//
+// NOTE: this backend serves only JSON API responses, so the CSP below is the
+// strict policy appropriate for an API (resources should never be loaded from
+// an API response). It does NOT protect the SPA against XSS — the frontend
+// document must set its own CSP where its HTML is served (Vite dev server /
+// reverse proxy / hosting), since that is where script execution happens.
 func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Prevent XSS attacks
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
-		c.Header("X-XSS-Protection", "1; mode=block")
 
-		// Strict Transport Security (HTTPS only)
-		// c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		// Strict, API-appropriate CSP: forbid loading any resource and disallow
+		// embedding this response in a frame.
+		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
 
-		// Content Security Policy
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;")
+		// Isolate this origin's browsing context and restrict legacy policies.
+		c.Header("Cross-Origin-Opener-Policy", "same-origin")
+		c.Header("X-Permitted-Cross-Domain-Policies", "none")
 
-		// Referrer Policy
+		// Don't leak full URLs (which may contain ids) to other origins.
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 
-		// Permissions Policy
+		// Restrict powerful browser features.
 		c.Header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 
-		// Remove server info
+		// Strict Transport Security: enable in production at the TLS-terminating
+		// proxy (not here) to avoid pinning HSTS on http://localhost during dev.
+		// c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
+		// Don't advertise the server implementation.
 		c.Header("Server", "")
 
 		c.Next()

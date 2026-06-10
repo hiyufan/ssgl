@@ -1,7 +1,10 @@
 package database
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"log"
+	"os"
 	"time"
 
 	"github.com/ssgl/competition-platform/internal/models"
@@ -23,23 +26,35 @@ func Seed() {
 
 	log.Println("seeding database...")
 
-	// Hash the common password.
-	hashed, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
-	if err != nil {
-		log.Fatalf("failed to hash seed password: %v", err)
+	// Demo (teacher/student) accounts share a password, configurable via
+	// SEED_PASSWORD for local convenience.
+	demoPw := os.Getenv("SEED_PASSWORD")
+	if demoPw == "" {
+		demoPw = "password123"
 	}
-	pw := string(hashed)
+
+	// The admin account must never get a publicly-known password. Use
+	// SEED_ADMIN_PASSWORD if provided, otherwise generate a random one and
+	// print it once.
+	adminPw := os.Getenv("SEED_ADMIN_PASSWORD")
+	if adminPw == "" {
+		adminPw = randomPassword()
+		log.Printf("⚠️  SEED_ADMIN_PASSWORD not set — generated admin password: %s  (save it now, it will not be shown again)", adminPw)
+	}
+
+	demoHash := mustHashPassword(demoPw)
+	adminHash := mustHashPassword(adminPw)
 
 	// --- Users ---
 	users := []models.User{
-		{Username: "liuzy", Email: "liuzy@example.com", Password: pw, Role: models.RoleAdmin, Name: "刘志远", Status: models.StatusActive},
-		{Username: "wangjg", Email: "wangjg@example.com", Password: pw, Role: models.RoleTeacher, Name: "王建国", Dept: "计算机学院", Status: models.StatusActive},
-		{Username: "chenxm", Email: "chenxm@example.com", Password: pw, Role: models.RoleTeacher, Name: "陈晓明", Dept: "计算机学院", Status: models.StatusActive},
-		{Username: "limy", Email: "limy@example.com", Password: pw, Role: models.RoleTeacher, Name: "李明远", Dept: "信息学院", Status: models.StatusActive},
-		{Username: "zhangm", Email: "zhangm@example.com", Password: pw, Role: models.RoleStudent, Name: "张明", StudentNo: "2021001", Dept: "计算机学院", Status: models.StatusActive},
-		{Username: "liyun", Email: "liyun@example.com", Password: pw, Role: models.RoleStudent, Name: "李云", StudentNo: "2021002", Dept: "计算机学院", Status: models.StatusActive},
-		{Username: "zhaox", Email: "zhaox@example.com", Password: pw, Role: models.RoleStudent, Name: "赵雪", StudentNo: "2021003", Dept: "信息学院", Status: models.StatusActive},
-		{Username: "chenyu", Email: "chenyu@example.com", Password: pw, Role: models.RoleStudent, Name: "陈宇", StudentNo: "2021004", Dept: "信息学院", Status: models.StatusActive},
+		{Username: "liuzy", Email: "liuzy@example.com", Password: adminHash, Role: models.RoleAdmin, Name: "刘志远", Status: models.StatusActive},
+		{Username: "wangjg", Email: "wangjg@example.com", Password: demoHash, Role: models.RoleTeacher, Name: "王建国", Dept: "计算机学院", Status: models.StatusActive},
+		{Username: "chenxm", Email: "chenxm@example.com", Password: demoHash, Role: models.RoleTeacher, Name: "陈晓明", Dept: "计算机学院", Status: models.StatusActive},
+		{Username: "limy", Email: "limy@example.com", Password: demoHash, Role: models.RoleTeacher, Name: "李明远", Dept: "信息学院", Status: models.StatusActive},
+		{Username: "zhangm", Email: "zhangm@example.com", Password: demoHash, Role: models.RoleStudent, Name: "张明", StudentNo: "2021001", Dept: "计算机学院", Status: models.StatusActive},
+		{Username: "liyun", Email: "liyun@example.com", Password: demoHash, Role: models.RoleStudent, Name: "李云", StudentNo: "2021002", Dept: "计算机学院", Status: models.StatusActive},
+		{Username: "zhaox", Email: "zhaox@example.com", Password: demoHash, Role: models.RoleStudent, Name: "赵雪", StudentNo: "2021003", Dept: "信息学院", Status: models.StatusActive},
+		{Username: "chenyu", Email: "chenyu@example.com", Password: demoHash, Role: models.RoleStudent, Name: "陈宇", StudentNo: "2021004", Dept: "信息学院", Status: models.StatusActive},
 	}
 	for i := range users {
 		if err := db.Create(&users[i]).Error; err != nil {
@@ -137,4 +152,22 @@ func Seed() {
 	}
 
 	log.Println("database seeding completed")
+}
+
+// mustHashPassword bcrypt-hashes a password or aborts seeding on failure.
+func mustHashPassword(pw string) string {
+	h, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("failed to hash seed password: %v", err)
+	}
+	return string(h)
+}
+
+// randomPassword returns a URL-safe random password for the seeded admin account.
+func randomPassword() string {
+	b := make([]byte, 12)
+	if _, err := rand.Read(b); err != nil {
+		log.Fatalf("failed to generate random admin password: %v", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(b)
 }

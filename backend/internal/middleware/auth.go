@@ -35,6 +35,12 @@ func AuthMiddleware(cfg *config.JWTConfig) gin.HandlerFunc {
 			return
 		}
 
+		// Reject refresh tokens (or any non-access token) on protected routes.
+		if claims.TokenType != services.TokenTypeAccess {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token type"})
+			return
+		}
+
 		c.Set("user_id", claims.UserID)
 		c.Set("role", claims.Role)
 		c.Next()

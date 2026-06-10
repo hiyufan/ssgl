@@ -19,10 +19,18 @@ type TokenPair struct {
 	ExpiresIn    int64  `json:"expires_in"` // seconds
 }
 
+// Token type values distinguish access tokens from refresh tokens so that one
+// cannot be used in place of the other.
+const (
+	TokenTypeAccess  = "access"
+	TokenTypeRefresh = "refresh"
+)
+
 // Claims is the JWT claims structure used for both access and refresh tokens.
 type Claims struct {
-	UserID uint   `json:"user_id"`
-	Role   string `json:"role"`
+	UserID    uint   `json:"user_id"`
+	Role      string `json:"role"`
+	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
@@ -112,6 +120,9 @@ func (s *AuthService) RefreshToken(refreshToken string) (*TokenPair, error) {
 	if err != nil || !token.Valid {
 		return nil, errors.New("invalid refresh token")
 	}
+	if claims.TokenType != TokenTypeRefresh {
+		return nil, errors.New("invalid refresh token")
+	}
 
 	return s.generateTokenPair(claims.UserID, claims.Role)
 }
@@ -136,8 +147,9 @@ func (s *AuthService) generateTokenPair(userID uint, role string) (*TokenPair, e
 	refreshExpiry := now.Add(7 * 24 * time.Hour) // 7 days
 
 	accessClaims := &Claims{
-		UserID: userID,
-		Role:   role,
+		UserID:    userID,
+		Role:      role,
+		TokenType: TokenTypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(accessExpiry),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -150,8 +162,9 @@ func (s *AuthService) generateTokenPair(userID uint, role string) (*TokenPair, e
 	}
 
 	refreshClaims := &Claims{
-		UserID: userID,
-		Role:   role,
+		UserID:    userID,
+		Role:      role,
+		TokenType: TokenTypeRefresh,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(refreshExpiry),
 			IssuedAt:  jwt.NewNumericDate(now),

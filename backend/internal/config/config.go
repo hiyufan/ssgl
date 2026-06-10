@@ -2,12 +2,18 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
 )
+
+// defaultJWTSecret is the placeholder secret used only for local development.
+// The server refuses to start in release mode while this (or an empty/short)
+// secret is configured.
+const defaultJWTSecret = "change-me-in-production"
 
 // Config holds all application configuration.
 type Config struct {
@@ -69,7 +75,7 @@ func Load() *Config {
 	// Load .env file if present; ignore error if it doesn't exist.
 	_ = godotenv.Load()
 
-	return &Config{
+	cfg := &Config{
 		DB: DBConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),
@@ -86,7 +92,7 @@ func Load() *Config {
 			DB:       getEnvInt("REDIS_DB", 0),
 		},
 		JWT: JWTConfig{
-			Secret:     getEnv("JWT_SECRET", "change-me-in-production"),
+			Secret:     getEnv("JWT_SECRET", defaultJWTSecret),
 			Expiration: parseDuration("JWT_EXPIRATION", 24*time.Hour),
 		},
 		Server: ServerConfig{
@@ -98,6 +104,24 @@ func Load() *Config {
 			BaseURL: getEnv("AI_BASE_URL", ""),
 			Model:   getEnv("AI_MODEL", ""),
 		},
+	}
+
+	cfg.validate()
+	return cfg
+}
+
+// validate enforces critical security invariants. In release mode it aborts
+// startup on an unsafe JWT secret; in other modes it warns.
+func (c *Config) validate() {
+	if c.Server.Mode == "release" {
+		switch {
+		case c.JWT.Secret == "" || c.JWT.Secret == defaultJWTSecret:
+			log.Fatal("FATAL: JWT_SECRET must be set to a strong, unique value when GIN_MODE=release")
+		case len(c.JWT.Secret) < 32:
+			log.Fatal("FATAL: JWT_SECRET must be at least 32 characters when GIN_MODE=release")
+		}
+	} else if c.JWT.Secret == defaultJWTSecret {
+		log.Println("⚠️  WARNING: using the default JWT_SECRET — set a strong JWT_SECRET before deploying to production")
 	}
 }
 

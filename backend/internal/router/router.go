@@ -9,6 +9,7 @@ import (
 	"github.com/ssgl/competition-platform/internal/handlers"
 	"github.com/ssgl/competition-platform/internal/middleware"
 	"github.com/ssgl/competition-platform/internal/middleware/security"
+	"github.com/ssgl/competition-platform/internal/models"
 	"github.com/ssgl/competition-platform/internal/services"
 )
 
@@ -65,13 +66,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Users.
 		protected.GET("/users/me", authHandler.GetMe)
 
-		// Competitions.
+		// Competitions (read — any authenticated user).
 		protected.GET("/competitions", compHandler.List)
-		protected.POST("/competitions", compHandler.Create)
 		protected.GET("/competitions/:id", compHandler.Get)
-		protected.PUT("/competitions/:id", compHandler.Update)
-		protected.DELETE("/competitions/:id", compHandler.Delete)
-		protected.POST("/competitions/:id/publish", compHandler.Publish)
 
 		// Teams.
 		protected.GET("/teams", teamHandler.List)
@@ -102,6 +99,16 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/overview", statsHandler.Overview)
 		protected.GET("/stats/competitions", statsHandler.Competitions)
 		protected.GET("/stats/teachers", statsHandler.Teachers)
+	}
+
+	// Competition management — teacher/admin only (inherits auth + audit from protected).
+	staff := protected.Group("")
+	staff.Use(middleware.RequireRole(models.RoleTeacher, models.RoleAdmin))
+	{
+		staff.POST("/competitions", compHandler.Create)
+		staff.PUT("/competitions/:id", compHandler.Update)
+		staff.DELETE("/competitions/:id", compHandler.Delete)
+		staff.POST("/competitions/:id/publish", compHandler.Publish)
 	}
 
 	// Admin-only routes.

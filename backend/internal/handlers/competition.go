@@ -21,34 +21,34 @@ func NewCompetitionHandler() *CompetitionHandler {
 
 // CreateCompetitionRequest is the payload for creating a competition.
 type CreateCompetitionRequest struct {
-	Title               string `json:"title" binding:"required,max=256"`
-	Description         string `json:"description"`
-	Type                string `json:"type" binding:"required,oneof=hackathon innovation research"`
-	MaxTeamSize         int    `json:"max_team_size" binding:"required,min=1"`
-	MinTeamSize         int    `json:"min_team_size" binding:"required,min=1"`
+	Title                string `json:"title" binding:"required,max=256"`
+	Description          string `json:"description"`
+	Type                 string `json:"type" binding:"required,oneof=hackathon innovation research"`
+	MaxTeamSize          int    `json:"max_team_size" binding:"required,min=1"`
+	MinTeamSize          int    `json:"min_team_size" binding:"required,min=1"`
 	RegistrationDeadline string `json:"registration_deadline"`
-	StartDate           string `json:"start_date" binding:"required"`
-	EndDate             string `json:"end_date" binding:"required"`
-	Location            string `json:"location" binding:"max=256"`
-	RulesDocURL         string `json:"rules_doc_url" binding:"max=512"`
-	Prize               string `json:"prize" binding:"max=256"`
-	Tags                string `json:"tags" binding:"max=512"`
+	StartDate            string `json:"start_date" binding:"required"`
+	EndDate              string `json:"end_date" binding:"required"`
+	Location             string `json:"location" binding:"max=256"`
+	RulesDocURL          string `json:"rules_doc_url" binding:"max=512"`
+	Prize                string `json:"prize" binding:"max=256"`
+	Tags                 string `json:"tags" binding:"max=512"`
 }
 
 // UpdateCompetitionRequest is the payload for updating a competition.
 type UpdateCompetitionRequest struct {
-	Title               string `json:"title" binding:"max=256"`
-	Description         string `json:"description"`
-	Type                string `json:"type" binding:"omitempty,oneof=hackathon innovation research"`
-	MaxTeamSize         int    `json:"max_team_size" binding:"min=1"`
-	MinTeamSize         int    `json:"min_team_size" binding:"min=1"`
+	Title                string `json:"title" binding:"max=256"`
+	Description          string `json:"description"`
+	Type                 string `json:"type" binding:"omitempty,oneof=hackathon innovation research"`
+	MaxTeamSize          int    `json:"max_team_size" binding:"min=1"`
+	MinTeamSize          int    `json:"min_team_size" binding:"min=1"`
 	RegistrationDeadline string `json:"registration_deadline"`
-	StartDate           string `json:"start_date"`
-	EndDate             string `json:"end_date"`
-	Location            string `json:"location" binding:"max=256"`
-	RulesDocURL         string `json:"rules_doc_url" binding:"max=512"`
-	Prize               string `json:"prize" binding:"max=256"`
-	Tags                string `json:"tags" binding:"max=512"`
+	StartDate            string `json:"start_date"`
+	EndDate              string `json:"end_date"`
+	Location             string `json:"location" binding:"max=256"`
+	RulesDocURL          string `json:"rules_doc_url" binding:"max=512"`
+	Prize                string `json:"prize" binding:"max=256"`
+	Tags                 string `json:"tags" binding:"max=512"`
 }
 
 // List handles GET /competitions with filtering, search, and pagination.
@@ -166,19 +166,19 @@ func (h *CompetitionHandler) Create(c *gin.Context) {
 	}
 
 	competition := models.Competition{
-		Title:               req.Title,
-		Description:         req.Description,
-		Type:                req.Type,
-		Status:              models.CompStatusDraft,
-		MaxTeamSize:         req.MaxTeamSize,
-		MinTeamSize:         req.MinTeamSize,
-		StartDate:           startDate,
-		EndDate:             endDate,
-		Location:            req.Location,
-		OrganizerID:         organizerID.(uint),
-		RulesDocURL:         req.RulesDocURL,
-		Prize:               req.Prize,
-		Tags:                req.Tags,
+		Title:       req.Title,
+		Description: req.Description,
+		Type:        req.Type,
+		Status:      models.CompStatusDraft,
+		MaxTeamSize: req.MaxTeamSize,
+		MinTeamSize: req.MinTeamSize,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		Location:    req.Location,
+		OrganizerID: organizerID.(uint),
+		RulesDocURL: req.RulesDocURL,
+		Prize:       req.Prize,
+		Tags:        req.Tags,
 	}
 	if regDeadline != nil {
 		competition.RegistrationDeadline = *regDeadline
@@ -212,6 +212,11 @@ func (h *CompetitionHandler) Update(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competition"})
+		return
+	}
+
+	if !canManageCompetition(c, competition.OrganizerID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you can only modify your own competitions"})
 		return
 	}
 
@@ -301,13 +306,23 @@ func (h *CompetitionHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	result := db.Delete(&models.Competition{}, id)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete competition"})
+	var competition models.Competition
+	if err := db.First(&competition, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "competition not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competition"})
 		return
 	}
-	if result.RowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "competition not found"})
+
+	if !canManageCompetition(c, competition.OrganizerID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you can only delete your own competitions"})
+		return
+	}
+
+	if err := db.Delete(&competition).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete competition"})
 		return
 	}
 
@@ -334,6 +349,11 @@ func (h *CompetitionHandler) Publish(c *gin.Context) {
 		return
 	}
 
+	if !canManageCompetition(c, competition.OrganizerID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you can only publish your own competitions"})
+		return
+	}
+
 	if competition.Status != models.CompStatusDraft {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "only draft competitions can be published"})
 		return
@@ -353,4 +373,19 @@ func (h *CompetitionHandler) Publish(c *gin.Context) {
 // parseTimeField parses an RFC3339 time string.
 func parseTimeField(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
+}
+
+// canManageCompetition reports whether the current user may modify a competition
+// owned by organizerID. Admins may manage any competition; other staff may only
+// manage their own.
+func canManageCompetition(c *gin.Context, organizerID uint) bool {
+	if role, _ := c.Get("role"); role == models.RoleAdmin {
+		return true
+	}
+	uid, exists := c.Get("user_id")
+	if !exists {
+		return false
+	}
+	id, ok := uid.(uint)
+	return ok && id == organizerID
 }

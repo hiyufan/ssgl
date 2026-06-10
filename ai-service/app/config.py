@@ -33,7 +33,10 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSIONS: int = 1024
 
     # Security
-    API_KEY: str = ""  # API key for service authentication (empty = no auth)
+    API_KEY: str = ""  # Shared API key for service-to-service auth (empty = disabled)
+    # Shared secret with the Go backend; when set, the AI service validates the
+    # Bearer JWT issued by the backend (HS256). Empty = no JWT check (dev only).
+    JWT_SECRET: str = ""
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:5173"
 
     # Server
