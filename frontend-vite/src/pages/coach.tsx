@@ -78,6 +78,10 @@ export function CoachPage() {
         pitch_text: source === 'text' ? pitchText : undefined,
         num_questions: numQuestions,
       });
+      if (!data.questions || data.questions.length === 0) {
+        toast.error('AI 未能生成答辩问题，请重试');
+        return;
+      }
       setOpeningData(data);
       setQIndex(0);
       setTranscript([]);
@@ -124,6 +128,9 @@ export function CoachPage() {
     );
   };
 
+  // Follow-up detection mirrors the backend in-band protocol: the judge's
+  // reaction may end with a line starting with 「追问：」 (see coach_service /
+  // COACH_TURN_SYSTEM). Keep this prefix in sync with the backend.
   const handleFollowup = (qid: number, reactionText: string) => {
     const m = reactionText.split('\n').map((l) => l.trim()).find((l) => l.startsWith('追问：'));
     const used = followupCount.current[qid] ?? 0;
