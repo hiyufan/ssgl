@@ -62,3 +62,26 @@ def test_build_turn_messages_shape():
     assert msgs[-1]["role"] == "user"
     assert "我的回答" in msgs[-1]["content"]
     assert all(m["role"] in ("user", "assistant") for m in msgs)
+
+
+def test_build_turn_messages_no_consecutive_same_role_with_reaction():
+    session = CoachSession(
+        session_id="s1",
+        created_at=time.time(),
+        role="student",
+        grounding={"plan": {"title": "T"}, "similar_projects": []},
+        questions=[],
+        transcript=[
+            {"type": "question", "question_id": 1, "content": "Q1"},
+            {"type": "answer", "question_id": 1, "content": "A1"},
+            {"type": "reaction", "question_id": 1, "content": "R1"},
+        ],
+        opening_scores={},
+    )
+    msgs = build_turn_messages(session, question={"id": 2, "question": "Q2"}, answer="A2")
+    # No two adjacent messages share a role (Anthropic strict alternation).
+    for prev, cur in zip(msgs, msgs[1:]):
+        assert prev["role"] != cur["role"]
+    # The reaction, current question and current answer all survive the merge.
+    joined = "\n".join(m["content"] for m in msgs)
+    assert "R1" in joined and "Q2" in joined and "A2" in joined

@@ -91,6 +91,18 @@ def build_opening_user_message(plan: dict, similar_projects: list[dict],
     )
 
 
+def _merge_consecutive(messages: list[dict]) -> list[dict]:
+    """Collapse adjacent same-role messages (Anthropic requires strict alternation)."""
+    merged: list[dict] = []
+    for m in messages:
+        if merged and merged[-1]["role"] == m["role"]:
+            merged[-1] = {"role": m["role"],
+                          "content": merged[-1]["content"] + "\n\n" + m["content"]}
+        else:
+            merged.append(dict(m))
+    return merged
+
+
 def build_turn_messages(session: CoachSession, question: dict, answer: str) -> list[dict]:
     """Construct the multi-turn message array for one answer turn."""
     messages: list[dict] = [
@@ -106,12 +118,12 @@ def build_turn_messages(session: CoachSession, question: dict, answer: str) -> l
             messages.append({"role": "assistant", "content": item["content"]})
     messages.append({"role": "assistant", "content": f"评委提问：{question['question']}"})
     messages.append({"role": "user", "content": f"参赛者回答：{answer}"})
-    return messages
+    return _merge_consecutive(messages)
 
 
 def extract_followup(reaction_text: str) -> str | None:
     """Return the follow-up question if the reaction ends with a 「追问：」line."""
-    for line in reaction_text.splitlines():
+    for line in reversed(reaction_text.splitlines()):
         stripped = line.strip()
         if stripped.startswith("追问："):
             q = stripped[len("追问："):].strip()
