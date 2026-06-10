@@ -153,6 +153,28 @@ class AITools:
 
         return {"pre_plans": [dict(r) for r in rows]}
 
+    def get_pre_plan_detail(self, pre_plan_id: int) -> dict:
+        """Get a single pre-plan's full content (read-only) for the pitch coach."""
+        with engine.begin() as conn:
+            row = conn.execute(
+                text("""
+                    SELECT pp.id, pp.title, pp.tech_stack, pp.target_audience,
+                           pp.market_analysis, pp.innovation, pp.expected_outcome,
+                           pp.timeline, pp.status, pp.ai_review_score,
+                           t.name AS team_name,
+                           c.title AS competition_name
+                    FROM pre_plans pp
+                    LEFT JOIN teams t ON pp.team_id = t.id
+                    LEFT JOIN competitions c ON pp.competition_id = c.id
+                    WHERE pp.id = :id
+                """),
+                {"id": pre_plan_id},
+            ).mappings().first()
+
+        if not row:
+            return {"error": "Pre-plan not found"}
+        return dict(row)
+
     def get_evaluations(self, teacher_id: int = None, limit: int = 20) -> dict:
         """Get student evaluations."""
         query = """
