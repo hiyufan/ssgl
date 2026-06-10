@@ -305,6 +305,111 @@ export const assistantAPI = {
   },
 };
 
+// AI Pitch Coach (模拟答辩) API
+export interface CoachScores {
+  innovation: number;
+  feasibility: number;
+  business: number;
+  delivery: number;
+  completeness: number;
+}
+
+export interface CoachQuestion {
+  id: number;
+  persona: 'tech' | 'business' | 'product';
+  question: string;
+  rationale: string;
+}
+
+export interface CoachStart {
+  session_id: string;
+  scores: CoachScores;
+  overall: number;
+  verdict: string;
+  similar_projects: { id: number; preview: string; similarity: number }[];
+  questions: CoachQuestion[];
+}
+
+export interface CoachFinal {
+  scores: CoachScores;
+  overall: number;
+  highlights: string[];
+  improvements: { priority: 'high' | 'medium'; content: string }[];
+  closing: string;
+}
+
+export interface CoachStartPayload {
+  role?: string;
+  source: 'pre_plan' | 'text';
+  pre_plan_id?: number;
+  pitch_text?: string;
+  num_questions?: number;
+}
+
+export const coachAPI = {
+  start: async (payload: CoachStartPayload): Promise<CoachStart> => {
+    const response = await aiApi.post<CoachStart>('/coach/start', payload);
+    return response.data;
+  },
+
+  final: async (sessionId: string): Promise<CoachFinal> => {
+    const response = await aiApi.post<CoachFinal>('/coach/final', { session_id: sessionId });
+    return response.data;
+  },
+
+  // Streaming answer turn — manual SSE read (axios can't stream in-browser).
+  answerStream: async (
+    payload: { session_id: string; question_id: number; answer: string },
+    handlers: {
+      onChunk: (text: string) => void;
+      onDone: () => void;
+      onExpired: () => void;
+      onError: (msg: string) => void;
+    },
+  ): Promise<void> => {
+    const token = getToken();
+    try {
+      const res = await fetch(`${AI_BASE}/coach/answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok || !res.body) {
+        handlers.onError('AI 服务暂时不可用');
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? ''; // keep incomplete trailing event
+        for (const evt of events) {
+          if (!evt.startsWith('data:')) continue;
+          const data = evt.slice(5).replace(/^ /, ''); // strip "data:" + one optional space
+          if (data === '[DONE]') { handlers.onDone(); return; }
+          if (data === '[EXPIRED]') { handlers.onExpired(); return; }
+          if (data === '[ERROR]') { handlers.onError('回答生成失败'); return; }
+          handlers.onChunk(data);
+        }
+      }
+      handlers.onDone();
+    } catch {
+      handlers.onError('AI 服务暂时不可用，请确保已启动（端口 8000）');
+    }
+  },
+};
+
 // RAG API
 export const ragAPI = {
   query: async (question: string, topK?: number): Promise<{ answer: string; sources: unknown[] }> => {
