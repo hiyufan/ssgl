@@ -8,7 +8,7 @@ import type {
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-const AI_BASE = import.meta.env.VITE_AI_BASE_URL || 'http://localhost:8000/ai/api/v1';
+const AI_BASE = import.meta.env.VITE_AI_BASE_URL || '/ai/api/v1';
 
 // Token management
 const getToken = (): string | null => localStorage.getItem('access_token');
