@@ -12,6 +12,9 @@ import { FormModal, Field, TextInput, TextArea, NumberInput, Select, DateTimeInp
 import { toast } from '@/components/ui/toast';
 import { getApiError } from '@/lib/form-utils';
 import { TeamForm } from '@/pages/teams';
+import axios from 'axios';
+
+const AI_BASE = import.meta.env.VITE_AI_BASE_URL || '/ai/api/v1';
 
 const TYPE_ICONS: Record<string, string> = { hackathon: 'trophy', innovation: 'zap', research: 'target' };
 const STATUS_ORDER = ['ongoing', 'published', 'completed', 'draft', 'cancelled'];
@@ -48,8 +51,45 @@ function CompetitionForm({ onClose, initial, onSaved, onDeleted }: {
   } : emptyCompForm());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showParse, setShowParse] = useState(false);
+  const [parseText, setParseText] = useState('');
+  const [parsing, setParsing] = useState(false);
 
   const set = (k: keyof CompFormState) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleAIParse = async () => {
+    if (!parseText.trim()) { toast.error('请粘贴赛事信息'); return; }
+    setParsing(true);
+    try {
+      const resp = await axios.post(`${AI_BASE}/tools/parse-competition`, { content: parseText });
+      if (resp.data.success && resp.data.data) {
+        const d = resp.data.data;
+        setForm((f) => ({
+          ...f,
+          title: d.title || f.title,
+          type: d.type || f.type,
+          description: d.description || f.description,
+          max_team_size: d.max_team_size ? String(d.max_team_size) : f.max_team_size,
+          min_team_size: d.min_team_size ? String(d.min_team_size) : f.min_team_size,
+          registration_deadline: d.registration_deadline || f.registration_deadline,
+          start_date: d.start_date || f.start_date,
+          end_date: d.end_date || f.end_date,
+          location: d.location || f.location,
+          prize: d.prize || f.prize,
+          tags: d.tags || f.tags,
+        }));
+        setShowParse(false);
+        setParseText('');
+        toast.success('AI 已自动填充，请检查并补充');
+      } else {
+        toast.error(resp.data.error || '解析失败');
+      }
+    } catch (err) {
+      toast.error('AI 解析失败，请检查网络');
+    } finally {
+      setParsing(false);
+    }
+  };
 
   const submit = async () => {
     if (!form.title.trim()) { setError('请填写赛事名称'); return; }
@@ -84,6 +124,31 @@ function CompetitionForm({ onClose, initial, onSaved, onDeleted }: {
 
   return (
     <FormModal open={true} onClose={onClose} title={isEdit ? '编辑赛事' : '创建赛事'} onSubmit={submit} submitting={submitting} error={error} submitLabel={isEdit ? '保存' : '创建'} width={620}>
+      {!isEdit && (
+        <div style={{ marginBottom: 8 }}>
+          {!showParse ? (
+            <button type="button" onClick={() => setShowParse(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px dashed var(--border-2)', background: 'var(--bg-2)', color: 'var(--text-2)', cursor: 'pointer', fontSize: 13, width: '100%', justifyContent: 'center' }}>
+              <Icon name="sparkles" size={14} /> AI 智能解析 — 粘贴赛事信息一键填充
+            </button>
+          ) : (
+            <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 14, background: 'var(--bg-2)' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>粘贴赛事通知、文档内容或简介，AI 自动解析填充表单：</div>
+              <textarea
+                value={parseText}
+                onChange={(e) => setParseText(e.target.value)}
+                placeholder="例如：蓝桥杯全国软件和信息技术专业人才大赛，由工信部主办，每年4月省赛，6月国赛，个人赛，C/C++/Java/Python四个赛道..."
+                style={{ width: '100%', minHeight: 100, padding: 10, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, resize: 'vertical', fontFamily: 'inherit' }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setShowParse(false); setParseText(''); }}>取消</Button>
+                <Button type="button" variant="primary" size="sm" loading={parsing} onClick={handleAIParse}>
+                  <Icon name="sparkles" size={13} /> 解析填充
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       <Field label="赛事名称" required><TextInput value={form.title} onChange={(e) => set('title')(e.target.value)} placeholder="例如：2026 校园创新马拉松" /></Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <Field label="类型" required><Select value={form.type} onChange={set('type')} options={TYPE_OPTIONS} /></Field>

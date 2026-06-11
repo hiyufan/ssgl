@@ -179,3 +179,49 @@ class ToolService:
 
 # Module-level singleton
 tool_service = ToolService()
+
+
+# ---------------------------------------------------------------------------
+# 7. Parse Competition (standalone function, not on ToolService)
+# ---------------------------------------------------------------------------
+
+import json as _json
+import re as _re
+
+_PARSE_SYSTEM_PROMPT = """你是一个赛事信息提取助手。从用户提供的文本中提取赛事信息，返回严格的JSON格式（不要markdown代码块，直接返回JSON）。
+
+字段说明：
+- title: 赛事名称（string，必填）
+- description: 赛事简介，50-200字（string，必填）
+- type: 赛事类型，只能是 "hackathon"（编程/开发/设计类）、"innovation"（创新创业类）、"research"（学术/科研类）之一
+- max_team_size: 最大团队人数（int，默认5）
+- min_team_size: 最小团队人数（int，默认1）
+- registration_deadline: 报名截止日期，ISO 8601格式，如 "2026-04-15T00:00:00Z"。如果文本中没有明确提到，设为null
+- start_date: 开始日期，ISO 8601格式（必填，如果无法确定用当年合理日期）
+- end_date: 结束日期，ISO 8601格式（必填）
+- location: 举办地点（string）
+- tags: 标签，逗号分隔（string）
+- prize: 奖项设置描述（string）
+
+如果某个字段信息不足，用合理默认值填充。type必须是三个值之一，根据内容判断。"""
+
+
+def parse_competition_text(text: str) -> dict:
+    """Use LLM to extract structured competition info from raw text."""
+    result = llm_service.chat(
+        system_prompt=_PARSE_SYSTEM_PROMPT,
+        user_message=text,
+        temperature=0.1,
+    )
+    # Strip markdown code fences if present
+    cleaned = result.strip()
+    cleaned = _re.sub(r'^```(?:json)?\s*', '', cleaned)
+    cleaned = _re.sub(r'\s*```$', '', cleaned)
+    try:
+        return _json.loads(cleaned)
+    except _json.JSONDecodeError:
+        # Try to find JSON object in the response
+        match = _re.search(r'\{.*\}', cleaned, _re.DOTALL)
+        if match:
+            return _json.loads(match.group())
+        raise ValueError(f"LLM did not return valid JSON: {result[:200]}")

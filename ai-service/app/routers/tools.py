@@ -1,9 +1,11 @@
 """Tools router — six domain-specific AI generation endpoints."""
 
 from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import Optional
 
 from app.models.schemas import ToolRequest
-from app.services.tool_service import tool_service
+from app.services.tool_service import tool_service, parse_competition_text
 
 router = APIRouter(tags=["tools"])
 
@@ -58,3 +60,16 @@ async def competition_advisor(body: ToolRequest) -> dict:
         project_status=project_status, time_remaining=time_remaining
     )
     return {"result": result}
+
+
+class ParseCompetitionRequest(BaseModel):
+    content: str
+
+@router.post("/parse-competition")
+async def parse_competition(body: ParseCompetitionRequest) -> dict:
+    """Parse raw text into structured competition fields using LLM."""
+    try:
+        data = parse_competition_text(body.content)
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
