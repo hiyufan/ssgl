@@ -46,3 +46,4 @@ venv/
 .venv/
 ssgl-server
 backend/ssgl-server
+test_reports/
