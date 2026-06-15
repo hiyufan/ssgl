@@ -19,7 +19,7 @@ func TestNewAwardHandler(t *testing.T) {
 }
 
 func TestNewPrePlanHandler(t *testing.T) {
-	handler := NewPrePlanHandler()
+	handler := NewPrePlanHandler(nil)
 	if handler == nil {
 		t.Error("NewPrePlanHandler returned nil")
 	}

@@ -166,6 +166,17 @@ export interface TeacherStat {
   eval_count: number;
 }
 
+export interface LeaderboardEntry {
+  rank: number;
+  team_id: number;
+  team_name: string;
+  leader_name: string;
+  competition_count: number;
+  award_count: number;
+  pre_plan_count: number;
+  score: number;
+}
+
 // Audit Log types
 export interface AuditLog {
   id: number;

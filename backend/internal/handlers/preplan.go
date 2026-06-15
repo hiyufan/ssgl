@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -8,15 +9,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ssgl/competition-platform/internal/database"
 	"github.com/ssgl/competition-platform/internal/models"
+	"github.com/ssgl/competition-platform/internal/services"
 	"gorm.io/gorm"
 )
 
 // PrePlanHandler handles pre-plan HTTP requests.
-type PrePlanHandler struct{}
+type PrePlanHandler struct {
+	AIClient *services.AIServiceClient
+}
 
 // NewPrePlanHandler creates a new PrePlanHandler.
-func NewPrePlanHandler() *PrePlanHandler {
-	return &PrePlanHandler{}
+func NewPrePlanHandler(aiClient *services.AIServiceClient) *PrePlanHandler {
+	return &PrePlanHandler{AIClient: aiClient}
 }
 
 // CreatePrePlanRequest is the payload for creating a pre-plan.
@@ -206,4 +210,72 @@ func (h *PrePlanHandler) Update(c *gin.Context) {
 
 	db.Preload("Competition").Preload("Team").First(&preplan, preplan.ID)
 	c.JSON(http.StatusOK, gin.H{"pre_plan": preplan})
+}
+
+// AIReview handles POST /pre-plans/:id/review — triggers AI review and saves results.
+func (h *PrePlanHandler) AIReview(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pre-plan id"})
+		return
+	}
+
+	var preplan models.PrePlan
+	if err := db.Preload("Competition").Preload("Team").First(&preplan, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pre-plan not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch pre-plan"})
+		return
+	}
+
+	if h.AIClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "AI service not configured"})
+		return
+	}
+
+	// Build plan data for the AI review service
+	planData := map[string]interface{}{
+		"title":            preplan.Title,
+		"tech_stack":       preplan.TechStack,
+		"target_audience":  preplan.TargetAudience,
+		"market_analysis":  preplan.MarketAnalysis,
+		"innovation":       preplan.Innovation,
+		"expected_outcome": preplan.ExpectedOutcome,
+		"timeline":         preplan.Timeline,
+	}
+
+	result, err := h.AIClient.ReviewPrePlan(planData)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "AI review failed", "details": err.Error()})
+		return
+	}
+
+	// Extract score from result
+	var score *int
+	if s, ok := result["score"].(float64); ok {
+		intScore := int(s)
+		score = &intScore
+	}
+
+	// Marshal notes (full review JSON)
+	notesBytes, _ := json.Marshal(result)
+	notes := string(notesBytes)
+
+	// Update preplan with AI review results
+	updates := map[string]interface{}{
+		"ai_review_score": score,
+		"ai_review_notes": notes,
+		"status":          models.PrePlanStatusReviewed,
+	}
+	if err := db.Model(&preplan).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save AI review"})
+		return
+	}
+
+	db.Preload("Competition").Preload("Team").First(&preplan, preplan.ID)
+	c.JSON(http.StatusOK, gin.H{"pre_plan": preplan, "review": result})
 }

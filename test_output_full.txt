@@ -1,0 +1,56 @@
+============================================================
+🧪 SSGL 严格自动化测试 — 2026-06-15 14:34:56
+============================================================
+
+🔍 1. 服务健康检查
+  ✅ [PASS] backend-health: 后端服务运行中 (:8080) → 200
+  ❌ [FAIL] ai-health: AI 服务不可用
+     → resp=None
+  ❌ [FAIL] ai-db: AI 知识库不可用
+
+🔐 2. 认证与授权测试
+  ✅ [PASS] admin-login: 管理员 liuzy 登录成功
+  ✅ [PASS] register: 学生已存在（预期行为）
+  ✅ [PASS] users-me: 用户信息: liuzy / admin
+  ✅ [PASS] no-auth-401: 无 token 访问受保护路由 → 401 ✓
+  ✅ [PASS] bad-token-401: 无效 token → 401 ✓
+  ✅ [PASS] weak-password: 弱密码注册被拒绝 ✓
+
+📋 3. CRUD 接口测试
+  ✅ [PASS] comp-list: 赛事列表 → 0 条
+  ✅ [PASS] comp-create: 创建赛事成功, id=54
+  ✅ [PASS] comp-get: 获取赛事 54 成功
+  ✅ [PASS] comp-update: 更新赛事 54 成功
+  ✅ [PASS] comp-publish: 发布赛事 54 成功
+  ✅ [PASS] comp-delete: 删除赛事 54 成功
+  ✅ [PASS] team-list: 团队列表成功
+  ✅ [PASS] eval-list: 评价列表成功
+  ✅ [PASS] award-list: 奖项列表成功
+  ✅ [PASS] preplan-list: 预案列表成功
+  ✅ [PASS] workflow-list: 审批列表成功
+  ✅ [PASS] stat-overview: 统计 overview 成功
+  ✅ [PASS] stat-competitions: 统计 competitions 成功
+  ✅ [PASS] stat-teachers: 统计 teachers 成功
+  ✅ [PASS] audit-list: 审计日志成功
+  ✅ [PASS] audit-stats: 审计统计成功
+  ✅ [PASS] calendar: 赛事日历成功, 8 个事件, 月份=2026-06
+  ✅ [PASS] calendar-month: 赛事日历(指定月份)成功, 8 个事件
+  ✅ [PASS] team-comp-create: 团队测试赛事创建成功, id=55
+  ✅ [PASS] team-create: 创建团队成功, id=14
+  ✅ [PASS] team-join: 学生加入团队 14 成功
+  ✅ [PASS] team-leave: 学生离开团队 14 成功
+  ✅ [PASS] preplan-create: 创建预案成功, id=12
+  ✅ [PASS] preplan-update: 更新预案 12 成功
+  ✅ [PASS] award-create: 创建奖项成功, id=14
+  ✅ [PASS] award-settle: 结算奖项 14 成功
+  ✅ [PASS] eval-create: 创建评价成功
+  ✅ [PASS] team-cleanup: 清理团队测试赛事 55 成功
+
+🤖 4. AI 服务测试
+  ❌ [FAIL] rag-search: RAG 搜索失败 → None
+  ✅ [PASS] rag-docs: RAG 文档列表成功
+  ✅ [PASS] rag-stats: RAG 统计成功
+  ✅ [PASS] ai-query: AI query 成功 (10.3s)
+  ✅ [PASS] ai-advisor: AI advisor 成功 (61.2s)
+  ✅ [PASS] ai-parse-competition: AI parse-competition 成功 (44.6s)
+  ✅ [PASS] ai-start: AI start 成功 (46.4s)

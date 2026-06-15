@@ -6,6 +6,7 @@ import { statsAPI, workflowsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { SectionLabel } from '@/components/ui/page-helpers';
+import { BarChart, DonutChart, AreaChart } from '@/components/ui/charts';
 import type { StatsOverview, ApprovalWorkflow } from '@/types';
 
 export function AdminDashboard() {
@@ -170,6 +171,66 @@ export function AdminDashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Charts Section ─────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
+        {/* User Distribution Donut */}
+        <div className="card" style={{ padding: '20px 24px' }}>
+          <SectionLabel label="用户分布" />
+          <div style={{ marginTop: 16 }}>
+            <DonutChart
+              segments={[
+                { label: '学生', value: stats?.total_students || 0 },
+                { label: '教师', value: stats?.total_teachers || 0 },
+                { label: '管理员', value: Math.max(1, (stats?.total_users || 0) - (stats?.total_students || 0) - (stats?.total_teachers || 0)) },
+              ].filter(s => s.value > 0).map(s => ({
+                label: s.label,
+                value: Math.round(s.value / Math.max(stats?.total_users || 1, 1) * 100),
+              }))}
+              size={140}
+            />
+          </div>
+        </div>
+
+        {/* Activity Bar Chart */}
+        <div className="card" style={{ padding: '20px 24px' }}>
+          <SectionLabel label="平台数据" />
+          <div style={{ marginTop: 16 }}>
+            <BarChart
+              data={[
+                { label: '赛事', value: stats?.total_competitions || 0 },
+                { label: '团队', value: stats?.total_teams || 0 },
+                { label: '奖项', value: stats?.total_awards || 0 },
+                { label: '预案', value: stats?.total_pre_plans || 0 },
+                { label: '评价', value: stats?.total_evaluations || 0 },
+              ]}
+              color="var(--amber)"
+              h={140}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Quick Actions ──────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 24 }}>
+        {[
+          { label: '创建赛事', icon: 'trophy', path: '/competitions', color: 'var(--amber)' },
+          { label: '查看排行榜', icon: 'chart', path: '/leaderboard', color: 'var(--teal)' },
+          { label: '审批中心', icon: 'check', path: '/approvals', color: 'var(--red)' },
+          { label: '数据导出', icon: 'download', path: '/stats', color: 'var(--purple)' },
+        ].map((action) => (
+          <button key={action.label} className="card card-magnetic" onClick={() => navigate(action.path)}
+            style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = action.color; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = ''; }}
+          >
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: `${action.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: action.color }}>
+              <Icon name={action.icon} size={16} />
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{action.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

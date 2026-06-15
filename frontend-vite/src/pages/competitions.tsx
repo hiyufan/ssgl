@@ -192,10 +192,24 @@ export function CompetitionsPage() {
   const [filter, setFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [recommendations, setRecommendations] = useState<Array<Competition & { match_score: number; match_tags: string[]; reason: string }>>([]);
+  const [showRecommend, setShowRecommend] = useState(false);
+  const [loadingRecs, setLoadingRecs] = useState(false);
 
   useEffect(() => {
     competitionsAPI.list().then(res => setCompetitions(res.competitions || [])).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  const loadRecommendations = async () => {
+    if (recommendations.length > 0) { setShowRecommend(!showRecommend); return; }
+    setLoadingRecs(true);
+    try {
+      const res = await competitionsAPI.recommend();
+      setRecommendations(res.recommendations || []);
+      setShowRecommend(true);
+    } catch { toast.error('加载推荐失败'); }
+    finally { setLoadingRecs(false); }
+  };
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Competition | null>(null);

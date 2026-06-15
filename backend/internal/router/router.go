@@ -35,18 +35,20 @@ func Setup(cfg *config.Config) *gin.Engine {
 	// Create services.
 	authService := services.NewAuthService(&cfg.JWT)
 	workflowService := services.NewWorkflowService()
+	aiClient := services.NewAIServiceClient(&cfg.AI)
 
 	// Create handlers.
 	authHandler := handlers.NewAuthHandler(authService)
 	compHandler := handlers.NewCompetitionHandler()
 	teamHandler := handlers.NewTeamHandler()
 	workflowHandler := handlers.NewWorkflowHandler(workflowService)
-	preplanHandler := handlers.NewPrePlanHandler()
+	preplanHandler := handlers.NewPrePlanHandler(aiClient)
 	awardHandler := handlers.NewAwardHandler()
 	evalHandler := handlers.NewEvaluationHandler()
 	statsHandler := handlers.NewStatsHandler()
 	calendarHandler := handlers.NewCalendarHandler()
 	auditHandler := handlers.NewAuditHandler(database.GetDB())
+	recommendHandler := handlers.NewRecommendHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -69,6 +71,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Competitions (read — any authenticated user).
 		protected.GET("/competitions", compHandler.List)
+		protected.GET("/competitions/recommend", recommendHandler.Recommend)
 		protected.GET("/competitions/:id", compHandler.Get)
 
 		// Teams.
@@ -91,6 +94,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.POST("/pre-plans", preplanHandler.Create)
 		protected.GET("/pre-plans/:id", preplanHandler.Get)
 		protected.PUT("/pre-plans/:id", preplanHandler.Update)
+		protected.POST("/pre-plans/:id/review", preplanHandler.AIReview)
 
 		// Awards.
 		protected.GET("/awards", awardHandler.List)
@@ -108,6 +112,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Calendar.
 		protected.GET("/calendar", calendarHandler.List)
+
+		// Leaderboard.
+		protected.GET("/leaderboard", statsHandler.Leaderboard)
 
 		// Data export.
 		protected.GET("/stats/export/overview", statsHandler.ExportOverview)

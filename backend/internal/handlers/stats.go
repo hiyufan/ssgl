@@ -215,6 +215,75 @@ func (h *StatsHandler) ExportOverview(c *gin.Context) {
 	w.Flush()
 }
 
+// LeaderboardEntry holds a team's ranking data.
+type LeaderboardEntry struct {
+	Rank             int     `json:"rank"`
+	TeamID           uint    `json:"team_id"`
+	TeamName         string  `json:"team_name"`
+	LeaderName       string  `json:"leader_name"`
+	CompetitionCount int64   `json:"competition_count"`
+	AwardCount       int64   `json:"award_count"`
+	PrePlanCount     int64   `json:"pre_plan_count"`
+	Score            float64 `json:"score"`
+}
+
+// Leaderboard handles GET /leaderboard — returns teams ranked by activity and awards.
+func (h *StatsHandler) Leaderboard(c *gin.Context) {
+	db := database.GetDB()
+
+	var teams []models.Team
+	if err := db.Preload("Leader").Find(&teams).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch teams"})
+		return
+	}
+
+	entries := make([]LeaderboardEntry, len(teams))
+	for i, team := range teams {
+		var compCount int64
+		db.Model(&models.Team{}).Where("name = ? AND leader_id = ?", team.Name, team.LeaderID).Count(&compCount)
+
+		var awardCount int64
+		db.Model(&models.Award{}).Where("team_id = ?", team.ID).Count(&awardCount)
+
+		var prePlanCount int64
+		db.Model(&models.PrePlan{}).Where("team_id = ?", team.ID).Count(&prePlanCount)
+
+		// Score = awards * 10 + competitions * 3 + preplans * 1
+		score := float64(awardCount)*10 + float64(compCount)*3 + float64(prePlanCount)
+
+		leaderName := ""
+		if team.LeaderID > 0 {
+			leaderName = team.Leader.Name
+		}
+
+		entries[i] = LeaderboardEntry{
+			TeamID:           team.ID,
+			TeamName:         team.Name,
+			LeaderName:       leaderName,
+			CompetitionCount: compCount,
+			AwardCount:       awardCount,
+			PrePlanCount:     prePlanCount,
+			Score:            score,
+		}
+	}
+
+	// Sort by score descending
+	for i := 0; i < len(entries); i++ {
+		for j := i + 1; j < len(entries); j++ {
+			if entries[j].Score > entries[i].Score {
+				entries[i], entries[j] = entries[j], entries[i]
+			}
+		}
+	}
+
+	// Assign ranks
+	for i := range entries {
+		entries[i].Rank = i + 1
+	}
+
+	c.JSON(http.StatusOK, gin.H{"leaderboard": entries})
+}
+
 // ExportCompetitions handles GET /stats/export/competitions — returns per-competition stats as CSV.
 func (h *StatsHandler) ExportCompetitions(c *gin.Context) {
 	db := database.GetDB()

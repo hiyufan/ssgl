@@ -151,6 +151,11 @@ export const competitionsAPI = {
     const response = await api.post<{ competition: Competition }>(`/competitions/${id}/publish`);
     return response.data;
   },
+
+  recommend: async (): Promise<{ recommendations: Array<Competition & { match_score: number; match_tags: string[]; reason: string }> }> => {
+    const response = await api.get('/competitions/recommend');
+    return response.data;
+  },
 };
 
 // Teams API
@@ -230,6 +235,11 @@ export const prePlansAPI = {
     const response = await api.put<{ pre_plan: PrePlan }>(`/pre-plans/${id}`, data);
     return response.data;
   },
+
+  review: async (id: number): Promise<{ pre_plan: PrePlan; review: Record<string, unknown> }> => {
+    const response = await api.post<{ pre_plan: PrePlan; review: Record<string, unknown> }>(`/pre-plans/${id}/review`);
+    return response.data;
+  },
 };
 
 // Awards API
@@ -284,6 +294,11 @@ export const statsAPI = {
 
   teachers: async (): Promise<{ teachers: TeacherStat[] }> => {
     const response = await api.get<{ teachers: TeacherStat[] }>('/stats/teachers');
+    return response.data;
+  },
+
+  leaderboard: async (): Promise<{ leaderboard: LeaderboardEntry[] }> => {
+    const response = await api.get<{ leaderboard: LeaderboardEntry[] }>('/leaderboard');
     return response.data;
   },
 

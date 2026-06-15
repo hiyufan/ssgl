@@ -11,9 +11,10 @@ import { toast } from '@/components/ui/toast';
 import { getApiError } from '@/lib/form-utils';
 import type { PrePlan, Team } from '@/types';
 
-function AIReviewPanel({ plan }: { plan: PrePlan }) {
+function AIReviewPanel({ plan, onRefresh }: { plan: PrePlan; onRefresh?: () => void }) {
   const [text, setText] = useState('');
   const [typing, setTyping] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const fullText = plan.ai_review_notes || '';
 
   useEffect(() => {
@@ -29,13 +30,36 @@ function AIReviewPanel({ plan }: { plan: PrePlan }) {
     return () => clearInterval(interval);
   }, [plan.id]);
 
+  const triggerReview = async () => {
+    setReviewing(true);
+    try {
+      await prePlansAPI.review(plan.id);
+      toast.success('AI 评审完成');
+      onRefresh?.();
+    } catch (e: unknown) {
+      toast.error(getApiError(e));
+    } finally {
+      setReviewing(false);
+    }
+  };
+
   if (!plan.ai_review_score) {
     return (
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
         <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--teal-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--teal)' }}>
           <Icon name="sparkles" size={22}/>
         </div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-2)', textAlign: 'center' }}>AI 评审结果将在提交后生成</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-2)', textAlign: 'center' }}>
+          {reviewing ? 'AI 正在评审中，请稍候…' : '点击下方按钮，获取 AI 智能评审报告'}
+        </div>
+        <Button
+          onClick={triggerReview}
+          disabled={reviewing}
+          variant="primary"
+          style={{ marginTop: 8 }}
+        >
+          {reviewing ? '评审中…' : '✨ 请求 AI 评审'}
+        </Button>
       </div>
     );
   }
@@ -184,6 +208,16 @@ export function PrePlansPage() {
     setTab('detail');
   };
 
+  const refreshSelected = async () => {
+    if (!selected) return;
+    try {
+      const res = await prePlansAPI.get(selected.id);
+      const updated = res.pre_plan;
+      setPreplans(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setSelected(updated);
+    } catch { /* ignore */ }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
@@ -282,7 +316,7 @@ export function PrePlansPage() {
                   ))}
                 </div>
               ) : (
-                <AIReviewPanel plan={selected}/>
+                <AIReviewPanel plan={selected} onRefresh={refreshSelected}/>
               )}
             </div>
           </div>
