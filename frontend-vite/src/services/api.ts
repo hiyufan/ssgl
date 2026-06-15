@@ -203,13 +203,13 @@ export const teamsAPI = {
 
 // Workflows API
 export const workflowsAPI = {
-  list: async (params?: { tab?: string }): Promise<{ approvals: ApprovalWorkflow[] }> => {
-    const response = await api.get<{ approvals: ApprovalWorkflow[] }>('/workflows', { params });
+  list: async (params?: { tab?: string }): Promise<{ workflows: ApprovalWorkflow[]; total: number; page: number; page_size: number }> => {
+    const response = await api.get('/workflows', { params });
     return response.data;
   },
 
-  get: async (id: number): Promise<{ approval: ApprovalWorkflow }> => {
-    const response = await api.get<{ approval: ApprovalWorkflow }>(`/workflows/${id}`);
+  get: async (id: number): Promise<{ workflow: ApprovalWorkflow }> => {
+    const response = await api.get(`/workflows/${id}`);
     return response.data;
   },
 

@@ -25,7 +25,7 @@ export function AdminDashboard() {
           workflowsAPI.list({ tab: 'pending' }),
         ]);
         setStats(statsRes);
-        setPending(wfRes.approvals || []);
+        setPending(wfRes.workflows || []);
       } catch (e) {
         console.error('Dashboard fetch error:', e);
       } finally {

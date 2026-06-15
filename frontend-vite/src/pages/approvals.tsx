@@ -90,7 +90,7 @@ export function ApprovalsPage() {
   const [comment, setComment] = useState('');
 
   useEffect(() => {
-    workflowsAPI.list().then(res => setApprovals(res.approvals || [])).catch(console.error).finally(() => setLoading(false));
+    workflowsAPI.list().then(res => setApprovals(res.workflows || [])).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   const filtered = approvals.filter(a => filter === 'all' || a.status === filter);

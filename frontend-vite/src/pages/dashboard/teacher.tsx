@@ -26,7 +26,7 @@ export function TeacherDashboard() {
           statsAPI.teachers().catch(() => ({ teachers: [] })),
         ]);
         setTeams(teamRes.teams || []);
-        setPending(wfRes.approvals || []);
+        setPending(wfRes.workflows || []);
         // Find current teacher's avg evaluation score
         const teacher = (statsRes.teachers || []).find((t: any) => t.teacher_id === user?.id || t.id === user?.id);
         if (teacher) {
