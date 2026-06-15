@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
 import { useNavigate } from 'react-router-dom';
-import { teamsAPI, workflowsAPI } from '@/services/api';
+import { teamsAPI, workflowsAPI, statsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { Avatar, SectionLabel, ProgressBar } from '@/components/ui/page-helpers';
@@ -13,18 +13,25 @@ export function TeacherDashboard() {
   const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
   const [pending, setPending] = useState<ApprovalWorkflow[]>([]);
+  const [avgScore, setAvgScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [teamRes, wfRes] = await Promise.all([
+        const [teamRes, wfRes, statsRes] = await Promise.all([
           teamsAPI.list(),
           workflowsAPI.list({ tab: 'pending' }),
+          statsAPI.teachers().catch(() => ({ teachers: [] })),
         ]);
         setTeams(teamRes.teams || []);
         setPending(wfRes.approvals || []);
+        // Find current teacher's avg evaluation score
+        const teacher = (statsRes.teachers || []).find((t: any) => t.teacher_id === user?.id || t.id === user?.id);
+        if (teacher) {
+          setAvgScore(teacher.avg_overall || teacher.avg_score || null);
+        }
       } catch (e) {
         console.error('Teacher dashboard fetch error:', e);
       } finally {
@@ -84,8 +91,8 @@ export function TeacherDashboard() {
   const statItems = [
     { label: '指导团队', value: teams.length, icon: 'users', color: 'var(--teal)', sub: '跨赛事' },
     { label: '待审批', value: pending.length, icon: 'check', color: 'var(--amber)', sub: '需要处理' },
-    { label: '获奖率', value: '75%', icon: 'trophy', color: 'var(--green)', sub: '历史数据' },
-    { label: '学生评分', value: '4.5', icon: 'star', color: 'var(--purple)', sub: '评价汇总' },
+    { label: '获奖率', value: '—', icon: 'trophy', color: 'var(--green)', sub: '待数据积累' },
+    { label: '学生评分', value: avgScore ? avgScore.toFixed(1) : '—', icon: 'star', color: 'var(--purple)', sub: avgScore ? '评价汇总' : '暂无评价' },
   ];
 
   return (
@@ -174,19 +181,23 @@ export function TeacherDashboard() {
         <div data-bento className="bento-item card card-magnetic" style={{ padding: 20 }}>
           <SectionLabel label="学生评价汇总"/>
           <div style={{ marginTop: 12 }}>
-            {[
-              { dim: '教学质量', val: 4.5 },
-              { dim: '沟通效率', val: 4.3 },
-              { dim: '响应及时', val: 4.2 },
-            ].map(({ dim, val }) => (
-              <div key={dim} style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{dim}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--amber)' }}>{val}</span>
+            {avgScore ? (
+              [
+                { dim: '综合评分', val: avgScore },
+              ].map(({ dim, val }) => (
+                <div key={dim} style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{dim}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--amber)' }}>{val.toFixed(1)}</span>
+                  </div>
+                  <ProgressBar value={val} max={5} color="var(--amber)"/>
                 </div>
-                <ProgressBar value={val} max={5} color="var(--amber)"/>
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, padding: '12px 0' }}>
+                暂无学生评价数据
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

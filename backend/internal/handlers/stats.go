@@ -38,13 +38,33 @@ func (h *StatsHandler) Overview(c *gin.Context) {
 	var ongoingCompetitions int64
 	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusOngoing).Count(&ongoingCompetitions)
 
+	var totalAwards int64
+	db.Model(&models.Award{}).Count(&totalAwards)
+
+	var totalPrePlans int64
+	db.Model(&models.PrePlan{}).Count(&totalPrePlans)
+
+	var totalEvaluations int64
+	db.Model(&models.StudentEvaluation{}).Count(&totalEvaluations)
+
+	var publishedCompetitions int64
+	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusPublished).Count(&publishedCompetitions)
+
+	var settledAwards int64
+	db.Model(&models.Award{}).Where("status = ?", models.AwardStatusSettled).Count(&settledAwards)
+
 	c.JSON(http.StatusOK, gin.H{
-		"total_users":           totalUsers,
-		"total_students":        totalStudents,
-		"total_teachers":        totalTeachers,
-		"total_competitions":    totalCompetitions,
-		"total_teams":           totalTeams,
-		"ongoing_competitions":  ongoingCompetitions,
+		"total_users":              totalUsers,
+		"total_students":           totalStudents,
+		"total_teachers":           totalTeachers,
+		"total_competitions":       totalCompetitions,
+		"total_teams":              totalTeams,
+		"ongoing_competitions":     ongoingCompetitions,
+		"total_awards":             totalAwards,
+		"total_pre_plans":          totalPrePlans,
+		"total_evaluations":        totalEvaluations,
+		"published_competitions":   publishedCompetitions,
+		"settled_awards":           settledAwards,
 	})
 }
 

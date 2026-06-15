@@ -76,6 +76,8 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/teams/:id", teamHandler.Get)
 		protected.POST("/teams/:id/join", teamHandler.Join)
 		protected.DELETE("/teams/:id/leave", teamHandler.Leave)
+		protected.PUT("/teams/:id", teamHandler.Update)
+		protected.DELETE("/teams/:id", teamHandler.Delete)
 
 		// Workflows.
 		protected.GET("/workflows", workflowHandler.List)
@@ -87,12 +89,15 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/pre-plans", preplanHandler.List)
 		protected.POST("/pre-plans", preplanHandler.Create)
 		protected.GET("/pre-plans/:id", preplanHandler.Get)
+		protected.PUT("/pre-plans/:id", preplanHandler.Update)
 
 		// Awards.
 		protected.GET("/awards", awardHandler.List)
+		protected.GET("/awards/:id", awardHandler.Get)
 
 		// Evaluations.
 		protected.GET("/evaluations", evalHandler.List)
+		protected.GET("/evaluations/:id", evalHandler.Get)
 		protected.POST("/evaluations", evalHandler.Create)
 
 		// Stats.
@@ -109,6 +114,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		staff.PUT("/competitions/:id", compHandler.Update)
 		staff.DELETE("/competitions/:id", compHandler.Delete)
 		staff.POST("/competitions/:id/publish", compHandler.Publish)
+
+		// Award nomination — teacher/admin only.
+		staff.POST("/awards", awardHandler.Create)
 	}
 
 	// Admin-only routes.

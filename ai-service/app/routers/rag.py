@@ -26,7 +26,7 @@ async def query(body: RAGQuery) -> dict:
 @router.post("/search")
 async def search(body: RAGQuery) -> dict:
     """Search for similar documents without LLM generation."""
-    results = rag_service.search(query=body.question, top_k=body.top_k)
+    results = rag_service.search(query=body.question, top_k=body.top_k, threshold=0.3)
     return {"results": results}
 
 

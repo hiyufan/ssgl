@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { Sidebar } from './sidebar';
 import { TopBar } from './topbar';
 import { CustomCursor } from '../effects/custom-cursor';
+import { AIAssistant } from '../ai/assistant';
 import { useAppStore } from '@/stores/app';
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -40,6 +41,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+
+      <AIAssistant floating={true} />
     </>
   );
 }

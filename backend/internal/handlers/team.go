@@ -284,3 +284,80 @@ func (h *TeamHandler) Leave(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"team": team})
 }
+
+// UpdateTeamRequest is the payload for updating a team.
+type UpdateTeamRequest struct {
+	Name *string `json:"name"`
+}
+
+// Update handles PUT /teams/:id — updates team name (leader or admin only).
+func (h *TeamHandler) Update(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid team id"})
+		return
+	}
+
+	var team models.Team
+	if err := db.First(&team, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "team not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch team"})
+		return
+	}
+
+	var req UpdateTeamRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+
+	if len(updates) > 0 {
+		if err := db.Model(&team).Updates(updates).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update team"})
+			return
+		}
+	}
+
+	db.Preload("Competition").Preload("Leader").Preload("Members.User").First(&team, team.ID)
+	c.JSON(http.StatusOK, gin.H{"team": team})
+}
+
+// Delete handles DELETE /teams/:id — soft-deletes a team (leader or admin only).
+func (h *TeamHandler) Delete(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid team id"})
+		return
+	}
+
+	var team models.Team
+	if err := db.First(&team, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "team not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch team"})
+		return
+	}
+
+	// Delete team members first, then the team.
+	db.Where("team_id = ?", team.ID).Delete(&models.TeamMember{})
+	if err := db.Delete(&team).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete team"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "team deleted"})
+}

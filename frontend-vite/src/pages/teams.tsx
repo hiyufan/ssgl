@@ -172,9 +172,11 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
   onLeft: (teamId: number) => void;
 }) {
   const [leaving, setLeaving] = useState(false);
+  const [joining, setJoining] = useState(false);
   if (!team) return null;
   const myMembership = team.members?.find((m) => m.user_id === currentUserId);
   const canLeave = !!myMembership && myMembership.role !== 'leader';
+  const canJoin = !myMembership && currentUserId;
 
   const leave = async () => {
     if (!confirm(`确认退出团队「${team.name}」？`)) return;
@@ -187,6 +189,20 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
       toast.error(getApiError(err, '退出失败'));
     } finally {
       setLeaving(false);
+    }
+  };
+
+  const join = async () => {
+    setJoining(true);
+    try {
+      await teamsAPI.join(team.id);
+      toast.success('已加入团队');
+      // Reload page to reflect changes
+      window.location.reload();
+    } catch (err) {
+      toast.error(getApiError(err, '加入失败'));
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -214,6 +230,11 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
         {canLeave && (
           <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
             <Button variant="danger" size="sm" loading={leaving} onClick={leave}>退出团队</Button>
+          </div>
+        )}
+        {canJoin && (
+          <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <Button variant="primary" size="sm" loading={joining} onClick={join}>加入团队</Button>
           </div>
         )}
       </div>

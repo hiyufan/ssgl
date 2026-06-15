@@ -169,6 +169,15 @@ export const teamsAPI = {
     return response.data;
   },
 
+  update: async (id: number, data: { name?: string }): Promise<{ team: Team }> => {
+    const response = await api.put<{ team: Team }>(`/teams/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/teams/${id}`);
+  },
+
   join: async (id: number): Promise<void> => {
     await api.post(`/teams/${id}/join`);
   },
@@ -215,12 +224,27 @@ export const prePlansAPI = {
     const response = await api.post<{ pre_plan: PrePlan }>('/pre-plans', data);
     return response.data;
   },
+
+  update: async (id: number, data: Partial<PrePlan>): Promise<{ pre_plan: PrePlan }> => {
+    const response = await api.put<{ pre_plan: PrePlan }>(`/pre-plans/${id}`, data);
+    return response.data;
+  },
 };
 
 // Awards API
 export const awardsAPI = {
   list: async (params?: Record<string, string>): Promise<{ awards: Award[] }> => {
     const response = await api.get<{ awards: Award[] }>('/awards', { params });
+    return response.data;
+  },
+
+  get: async (id: number): Promise<{ award: Award }> => {
+    const response = await api.get<{ award: Award }>(`/awards/${id}`);
+    return response.data;
+  },
+
+  create: async (data: Partial<Award>): Promise<{ award: Award }> => {
+    const response = await api.post<{ award: Award }>('/awards', data);
     return response.data;
   },
 

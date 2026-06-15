@@ -78,6 +78,29 @@ func (h *EvaluationHandler) List(c *gin.Context) {
 	})
 }
 
+// Get handles GET /evaluations/:id.
+func (h *EvaluationHandler) Get(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid evaluation id"})
+		return
+	}
+
+	var evaluation models.StudentEvaluation
+	if err := db.Preload("Student").Preload("Teacher").Preload("Competition").First(&evaluation, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "evaluation not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch evaluation"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"evaluation": evaluation})
+}
+
 // Create handles POST /evaluations.
 func (h *EvaluationHandler) Create(c *gin.Context) {
 	db := database.GetDB()

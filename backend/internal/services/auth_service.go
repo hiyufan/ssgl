@@ -47,6 +47,9 @@ func NewAuthService(cfg *config.JWTConfig) *AuthService {
 // Register creates a new user after checking username and email uniqueness.
 func (s *AuthService) Register(username, email, password, role, name string) (*models.User, error) {
 	db := database.GetDB()
+	if db == nil {
+		return nil, errors.New("database not connected")
+	}
 
 	// Check username uniqueness.
 	var count int64
@@ -86,6 +89,9 @@ func (s *AuthService) Register(username, email, password, role, name string) (*m
 // Login verifies credentials and returns a token pair.
 func (s *AuthService) Login(username, password string) (*TokenPair, *models.User, error) {
 	db := database.GetDB()
+	if db == nil {
+		return nil, nil, errors.New("database not connected")
+	}
 
 	var user models.User
 	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
@@ -130,6 +136,9 @@ func (s *AuthService) RefreshToken(refreshToken string) (*TokenPair, error) {
 // GetUserByID returns the user with the given ID.
 func (s *AuthService) GetUserByID(id uint) (*models.User, error) {
 	db := database.GetDB()
+	if db == nil {
+		return nil, errors.New("database not connected")
+	}
 	var user models.User
 	if err := db.First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
