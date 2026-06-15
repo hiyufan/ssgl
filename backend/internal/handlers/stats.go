@@ -1,7 +1,11 @@
 package handlers
 
 import (
+	"encoding/csv"
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ssgl/competition-platform/internal/database"
@@ -170,4 +174,90 @@ func (h *StatsHandler) Teachers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"teachers": stats})
+}
+
+// ExportOverview handles GET /stats/export/overview — returns platform stats as CSV.
+func (h *StatsHandler) ExportOverview(c *gin.Context) {
+	db := database.GetDB()
+
+	var totalUsers, totalStudents, totalTeachers int64
+	db.Model(&models.User{}).Count(&totalUsers)
+	db.Model(&models.User{}).Where("role = ?", models.RoleStudent).Count(&totalStudents)
+	db.Model(&models.User{}).Where("role = ?", models.RoleTeacher).Count(&totalTeachers)
+
+	var totalCompetitions, ongoingComp, publishedComp int64
+	db.Model(&models.Competition{}).Count(&totalCompetitions)
+	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusOngoing).Count(&ongoingComp)
+	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusPublished).Count(&publishedComp)
+
+	var totalTeams, totalAwards, totalPrePlans, totalEvals int64
+	db.Model(&models.Team{}).Count(&totalTeams)
+	db.Model(&models.Award{}).Count(&totalAwards)
+	db.Model(&models.PrePlan{}).Count(&totalPrePlans)
+	db.Model(&models.StudentEvaluation{}).Count(&totalEvals)
+
+	filename := fmt.Sprintf("ssgl_stats_%s.csv", time.Now().Format("20060102_150405"))
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	w := csv.NewWriter(c.Writer)
+	w.Write([]string{"指标", "数值"})
+	w.Write([]string{"总用户数", strconv.FormatInt(totalUsers, 10)})
+	w.Write([]string{"学生数", strconv.FormatInt(totalStudents, 10)})
+	w.Write([]string{"教师数", strconv.FormatInt(totalTeachers, 10)})
+	w.Write([]string{"赛事总数", strconv.FormatInt(totalCompetitions, 10)})
+	w.Write([]string{"进行中赛事", strconv.FormatInt(ongoingComp, 10)})
+	w.Write([]string{"已发布赛事", strconv.FormatInt(publishedComp, 10)})
+	w.Write([]string{"团队总数", strconv.FormatInt(totalTeams, 10)})
+	w.Write([]string{"奖项总数", strconv.FormatInt(totalAwards, 10)})
+	w.Write([]string{"预案总数", strconv.FormatInt(totalPrePlans, 10)})
+	w.Write([]string{"评价总数", strconv.FormatInt(totalEvals, 10)})
+	w.Flush()
+}
+
+// ExportCompetitions handles GET /stats/export/competitions — returns per-competition stats as CSV.
+func (h *StatsHandler) ExportCompetitions(c *gin.Context) {
+	db := database.GetDB()
+
+	var competitions []models.Competition
+	if err := db.Order("id ASC").Find(&competitions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
+		return
+	}
+
+	filename := fmt.Sprintf("ssgl_competitions_%s.csv", time.Now().Format("20060102_150405"))
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	w := csv.NewWriter(c.Writer)
+	w.Write([]string{"ID", "赛事名称", "类型", "状态", "团队数", "预案数", "奖项数", "开始日期", "结束日期"})
+
+	for _, comp := range competitions {
+		var teamCount, prePlanCount, awardCount int64
+		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
+		db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&prePlanCount)
+		db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
+
+		startStr := ""
+		if !comp.StartDate.IsZero() {
+			startStr = comp.StartDate.Format("2006-01-02")
+		}
+		endStr := ""
+		if !comp.EndDate.IsZero() {
+			endStr = comp.EndDate.Format("2006-01-02")
+		}
+
+		w.Write([]string{
+			strconv.FormatUint(uint64(comp.ID), 10),
+			comp.Title,
+			comp.Type,
+			comp.Status,
+			strconv.FormatInt(teamCount, 10),
+			strconv.FormatInt(prePlanCount, 10),
+			strconv.FormatInt(awardCount, 10),
+			startStr,
+			endStr,
+		})
+	}
+	w.Flush()
 }

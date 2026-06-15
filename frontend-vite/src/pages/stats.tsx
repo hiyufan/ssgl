@@ -3,19 +3,71 @@ import { statsAPI } from '@/services/api';
 import { StatCard } from '@/components/ui/stat-card';
 import { DonutChart } from '@/components/ui/charts';
 import { Avatar, Stars, ProgressBar, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
+import { Icon } from '@/components/ui/icon';
 import type { StatsOverview, TeacherStat } from '@/types';
+
+interface CompetitionStat {
+  id: number;
+  title: string;
+  status: string;
+  team_count: number;
+  award_count: number;
+  pre_plan_count: number;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  draft: { label: '草稿', color: 'var(--text-3)', bg: 'var(--surface-2)' },
+  published: { label: '已发布', color: 'var(--teal)', bg: 'var(--teal-bg)' },
+  ongoing: { label: '进行中', color: 'var(--green)', bg: 'var(--green-bg)' },
+  ended: { label: '已结束', color: 'var(--amber)', bg: 'var(--amber-bg)' },
+  cancelled: { label: '已取消', color: 'var(--red)', bg: 'var(--red-bg)' },
+};
 
 export function StatsPage() {
   const [overview, setOverview] = useState<StatsOverview | null>(null);
   const [teachers, setTeachers] = useState<TeacherStat[]>([]);
+  const [competitions, setCompetitions] = useState<CompetitionStat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([statsAPI.overview(), statsAPI.teachers()])
-      .then(([o, t]) => { setOverview(o); setTeachers(t.teachers || []); })
+    Promise.all([statsAPI.overview(), statsAPI.teachers(), statsAPI.competitions()])
+      .then(([o, t, c]) => {
+        setOverview(o);
+        setTeachers(t.teachers || []);
+        setCompetitions((c as Record<string, unknown>).competitions as CompetitionStat[] || []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const handleExport = async (type: 'overview' | 'competitions') => {
+    setExporting(type);
+    try {
+      const blob = type === 'overview'
+        ? await statsAPI.exportOverview()
+        : await statsAPI.exportCompetitions();
+      const filename = type === 'overview'
+        ? `平台统计_${new Date().toISOString().slice(0, 10)}.csv`
+        : `赛事明细_${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadBlob(blob, filename);
+    } catch (e) {
+      console.error('Export failed:', e);
+    } finally {
+      setExporting(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -30,7 +82,17 @@ export function StatsPage() {
 
   return (
     <div className="forge-page">
-      <PageHeader title="统计分析" subtitle="平台数据全景 · 实时更新"/>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <PageHeader title="统计分析" subtitle="平台数据全景 · 实时更新"/>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => handleExport('overview')} disabled={exporting === 'overview'}>
+            <Icon name="download" size={14}/> {exporting === 'overview' ? '导出中…' : '导出总览'}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => handleExport('competitions')} disabled={exporting === 'competitions'}>
+            <Icon name="download" size={14}/> {exporting === 'competitions' ? '导出中…' : '导出赛事明细'}
+          </button>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 20 }}>
         <div className="anim-in d1"><StatCard label="赛事总数" value={overview?.total_competitions || 0} icon="trophy" color="var(--amber)"/></div>
@@ -74,6 +136,53 @@ export function StatsPage() {
           ))}
         </div>
       </div>
+
+      {/* Competition detail timeline */}
+      {competitions.length > 0 && (
+        <div className="card anim-in d4" style={{ overflow: 'hidden', marginBottom: 16 }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <SectionLabel label="赛事生命周期"/>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{competitions.length} 个赛事</span>
+          </div>
+          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {competitions.map((comp, i) => {
+              const st = STATUS_LABELS[comp.status] || STATUS_LABELS.draft;
+              const totalActivity = comp.team_count + comp.pre_plan_count + comp.award_count;
+              return (
+                <div key={comp.id} className={`anim-in d${Math.min(i + 1, 5)}`} style={{
+                  display: 'grid', gridTemplateColumns: '1fr 100px 80px 80px 80px', alignItems: 'center',
+                  padding: '10px 14px', borderRadius: 10, background: 'var(--surface)',
+                  border: '1px solid var(--border)', gap: 12,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                      color: st.color, background: st.bg,
+                    }}>{st.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{comp.title}</span>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--teal)' }}>{comp.team_count}</span>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>团队</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--purple)' }}>{comp.pre_plan_count}</span>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>预案</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--amber)' }}>{comp.award_count}</span>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>奖项</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                    <ProgressBar value={totalActivity} max={Math.max(...competitions.map(c => c.team_count + c.pre_plan_count + c.award_count), 1)} color="var(--green)" height={4}/>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', minWidth: 30, textAlign: 'right' }}>{totalActivity}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Teacher leaderboard */}
       {teachers.length > 0 && (

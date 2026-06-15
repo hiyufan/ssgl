@@ -104,6 +104,10 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/overview", statsHandler.Overview)
 		protected.GET("/stats/competitions", statsHandler.Competitions)
 		protected.GET("/stats/teachers", statsHandler.Teachers)
+
+		// Data export.
+		protected.GET("/stats/export/overview", statsHandler.ExportOverview)
+		protected.GET("/stats/export/competitions", statsHandler.ExportCompetitions)
 	}
 
 	// Competition management — teacher/admin only (inherits auth + audit from protected).

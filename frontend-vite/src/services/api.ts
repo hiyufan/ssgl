@@ -285,6 +285,16 @@ export const statsAPI = {
     const response = await api.get<{ teachers: TeacherStat[] }>('/stats/teachers');
     return response.data;
   },
+
+  exportOverview: async (): Promise<Blob> => {
+    const response = await api.get('/stats/export/overview', { responseType: 'blob' });
+    return response.data;
+  },
+
+  exportCompetitions: async (): Promise<Blob> => {
+    const response = await api.get('/stats/export/competitions', { responseType: 'blob' });
+    return response.data;
+  },
 };
 
 // Audit Logs API
