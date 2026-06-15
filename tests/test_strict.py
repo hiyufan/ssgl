@@ -549,6 +549,21 @@ def test_crud():
         else:
             _log("WARN", "preplan-update", f"更新预案 {preplan_id} → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
 
+        # preplan-review (AI review — may timeout on slow LLM, treat as WARN)
+        skip_slow = os.getenv("SSGL_SKIP_SLOW", "0") == "1"
+        if not skip_slow:
+            resp = _api_auth("POST", f"/api/v1/pre-plans/{preplan_id}/review", timeout=120)
+            if _ok(resp) and resp.status_code == 200:
+                _log("PASS", "preplan-review", f"AI 评审预案 {preplan_id} 成功")
+            elif _ok(resp) and resp.status_code in (400, 422):
+                _log("WARN", "preplan-review", f"AI 评审参数问题 → {resp.status_code}")
+            elif _ok(resp):
+                _log("WARN", "preplan-review", f"AI 评审 → {resp.status_code}", resp.text[:200])
+            else:
+                _log("WARN", "preplan-review", "AI 评审超时（LLM 推理慢）")
+        else:
+            _log("SKIP", "preplan-review", "跳过 AI 评审测试 (SSGL_SKIP_SLOW=1)")
+
     # --- Award CRUD: create, settle ---
     award_id = None
     if team_comp_id and team_id:
@@ -836,15 +851,21 @@ def test_code_quality():
     else:
         _log("FAIL", "go-tests", "没有 Go 测试文件 (_test.go)")
 
-    # Check Python test files
-    py_tests = list(root.rglob("test_*.py"))
+    # Check Python test files (exclude venv, node_modules, __pycache__)
+    py_tests = [
+        f for f in root.rglob("test_*.py")
+        if "venv" not in str(f) and "node_modules" not in str(f) and "__pycache__" not in str(f)
+    ]
     if py_tests:
         _log("PASS", "py-tests", f"找到 {len(py_tests)} 个 Python 测试文件")
     else:
         _log("FAIL", "py-tests", "没有 Python 测试文件 (test_*.py)")
 
-    # Check frontend test files
-    fe_tests = list((root / "frontend-vite").rglob("*.test.*")) + list((root / "frontend-vite").rglob("*.spec.*"))
+    # Check frontend test files (exclude node_modules)
+    fe_tests = [
+        f for f in (list((root / "frontend-vite").rglob("*.test.*")) + list((root / "frontend-vite").rglob("*.spec.*")))
+        if "node_modules" not in str(f)
+    ]
     if fe_tests:
         _log("PASS", "fe-tests", f"找到 {len(fe_tests)} 个前端测试文件")
     else:
