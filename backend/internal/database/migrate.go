@@ -26,6 +26,7 @@ func Migrate() {
 		&models.Award{},
 		&models.StudentEvaluation{},
 		&models.Notification{},
+		&models.TeamInvite{},
 		&models.AIAnalysisLog{},
 		&security.AuditLog{},
 	); err != nil {

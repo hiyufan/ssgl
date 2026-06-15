@@ -340,7 +340,7 @@ def test_crud():
         _log("FAIL", "audit-stats", f"审计统计失败 → {resp.status_code if _ok(resp) else 'None'}")
 
     # --- Data Export (CSV) ---
-    for ep in ["/api/v1/stats/export/overview", "/api/v1/stats/export/competitions"]:
+    for ep in ["/api/v1/stats/export/overview", "/api/v1/stats/export/competitions", "/api/v1/stats/export/teams"]:
         name = ep.split("/")[-1]
         resp = _api_auth("GET", ep)
         if _ok(resp) and resp.status_code == 200:
@@ -514,6 +514,61 @@ def test_crud():
         else:
             _log("SKIP", "team-join", "无学生token，跳过团队加入测试")
             _log("SKIP", "team-leave", "无学生token，跳过团队离开测试")
+
+    # --- Team Invite: invite, accept/decline, my-invites ---
+    if team_id and _student_token:
+        # Get student username for invite
+        resp_me = _api_auth("GET", "/api/v1/users/me", token=_student_token)
+        student_username = None
+        if _ok(resp_me) and resp_me.status_code == 200:
+            me = resp_me.json()
+            user = me.get("user", me)
+            student_username = user.get("username")
+
+        if student_username:
+            # Invite student to team (admin is leader)
+            resp = _api_auth("POST", f"/api/v1/teams/{team_id}/invite", json={
+                "username": student_username,
+                "message": "欢迎加入团队！"
+            })
+            if _ok(resp) and resp.status_code in (200, 201):
+                data = resp.json()
+                invite = data.get("invitation", data)
+                invite_code = invite.get("code")
+                _log("PASS", "team-invite", f"邀请 {student_username} 成功, code={invite_code}")
+            elif _ok(resp) and resp.status_code == 400:
+                # User may already be a member or have pending invite
+                _log("WARN", "team-invite", f"邀请 → 400: {resp.json().get('error', '')}")
+                invite_code = None
+            else:
+                _log("WARN", "team-invite", f"邀请 → {resp.status_code if _ok(resp) else 'None'}")
+                invite_code = None
+
+            # List team invites
+            resp = _api_auth("GET", f"/api/v1/teams/{team_id}/invites")
+            if _ok(resp) and resp.status_code == 200:
+                _log("PASS", "team-list-invites", "团队邀请列表成功")
+            else:
+                _log("WARN", "team-list-invites", f"团队邀请列表 → {resp.status_code if _ok(resp) else 'None'}")
+
+            # My invites (as student)
+            resp = _api_auth("GET", "/api/v1/teams/invites/me", token=_student_token)
+            if _ok(resp) and resp.status_code == 200:
+                _log("PASS", "team-my-invites", "我的邀请列表成功")
+            else:
+                _log("WARN", "team-my-invites", f"我的邀请 → {resp.status_code if _ok(resp) else 'None'}")
+
+            if invite_code:
+                # Decline the invite (test decline path)
+                resp = _api_auth("POST", f"/api/v1/teams/invite/{invite_code}/decline", token=_student_token)
+                if _ok(resp) and resp.status_code == 200:
+                    _log("PASS", "team-decline-invite", f"拒绝邀请 {invite_code} 成功")
+                else:
+                    _log("WARN", "team-decline-invite", f"拒绝邀请 → {resp.status_code if _ok(resp) else 'None'}")
+        else:
+            _log("SKIP", "team-invite", "无法获取学生用户名，跳过邀请测试")
+    elif team_id:
+        _log("SKIP", "team-invite", "无学生token，跳过邀请测试")
 
     # --- PrePlan CRUD: create, update ---
     preplan_id = None
@@ -766,9 +821,9 @@ def test_security():
         if cid:
             _api_auth("DELETE", f"/api/v1/competitions/{cid}")
 
-    # Check security headers
+    # Check security headers (resp may be 4xx — use _ok() since __bool__ is False for 4xx)
     resp = _api("GET", "/api/v1/competitions")
-    if resp:
+    if _ok(resp):
         headers = resp.headers
         checks = {
             "X-Content-Type-Options": "nosniff",

@@ -503,3 +503,51 @@ func (h *StatsHandler) ExportCompetitions(c *gin.Context) {
 	}
 	w.Flush()
 }
+
+// ExportTeams handles GET /stats/export/teams — returns team data as CSV.
+func (h *StatsHandler) ExportTeams(c *gin.Context) {
+	db := database.GetDB()
+
+	var teams []models.Team
+	if err := db.Preload("Competition").Preload("Leader").Order("id ASC").Find(&teams).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch teams"})
+		return
+	}
+
+	filename := fmt.Sprintf("ssgl_teams_%s.csv", time.Now().Format("20060102_150405"))
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	w := csv.NewWriter(c.Writer)
+	w.Write([]string{"ID", "团队名称", "所属赛事", "队长", "成员数", "状态", "创建日期"})
+
+	for _, team := range teams {
+		var memberCount int64
+		db.Model(&models.TeamMember{}).Where("team_id = ?", team.ID).Count(&memberCount)
+
+		createdAt := ""
+		if !team.CreatedAt.IsZero() {
+			createdAt = team.CreatedAt.Format("2006-01-02")
+		}
+
+		compTitle := ""
+		if team.Competition.ID > 0 {
+			compTitle = team.Competition.Title
+		}
+		leaderName := ""
+		if team.Leader.ID > 0 {
+			leaderName = team.Leader.Username
+		}
+
+		w.Write([]string{
+			strconv.FormatUint(uint64(team.ID), 10),
+			team.Name,
+			compTitle,
+			leaderName,
+			strconv.FormatInt(memberCount, 10),
+			team.Status,
+			createdAt,
+		})
+	}
+	w.Flush()
+}

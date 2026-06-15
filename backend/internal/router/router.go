@@ -84,6 +84,11 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.DELETE("/teams/:id/leave", teamHandler.Leave)
 		protected.PUT("/teams/:id", teamHandler.Update)
 		protected.DELETE("/teams/:id", teamHandler.Delete)
+		protected.POST("/teams/:id/invite", teamHandler.Invite)
+		protected.GET("/teams/:id/invites", teamHandler.ListInvites)
+		protected.POST("/teams/invite/:code/accept", teamHandler.AcceptInvite)
+		protected.POST("/teams/invite/:code/decline", teamHandler.DeclineInvite)
+		protected.GET("/teams/invites/me", teamHandler.MyInvites)
 
 		// Workflows.
 		protected.GET("/workflows", workflowHandler.List)
@@ -132,6 +137,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Data export.
 		protected.GET("/stats/export/overview", statsHandler.ExportOverview)
 		protected.GET("/stats/export/competitions", statsHandler.ExportCompetitions)
+		protected.GET("/stats/export/teams", statsHandler.ExportTeams)
 	}
 
 	// Competition management — teacher/admin only (inherits auth + audit from protected).
