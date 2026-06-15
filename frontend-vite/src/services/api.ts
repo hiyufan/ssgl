@@ -4,6 +4,7 @@ import type {
   StudentEvaluation, StatsOverview, TeacherStat,
   LoginRequest, LoginResponse, TokenPair,
   AuditLog, AuditStats, RAGDocument, RAGStats,
+  CalendarEvent,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -306,6 +307,14 @@ export const auditAPI = {
 
   stats: async (): Promise<AuditStats> => {
     const response = await api.get<AuditStats>('/audit-logs/stats');
+    return response.data;
+  },
+};
+
+// Calendar API
+export const calendarAPI = {
+  list: async (month?: string): Promise<{ events: CalendarEvent[]; month: string; total: number }> => {
+    const response = await api.get<{ events: CalendarEvent[]; month: string; total: number }>('/calendar', { params: month ? { month } : {} });
     return response.data;
   },
 };

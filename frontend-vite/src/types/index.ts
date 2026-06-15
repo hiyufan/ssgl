@@ -204,6 +204,18 @@ export interface RAGStats {
   recent_documents: RAGDocument[];
 }
 
+// Calendar types
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  type: 'hackathon' | 'innovation' | 'research';
+  status: string;
+  start_date: string;
+  end_date: string;
+  location?: string;
+  tags?: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   data?: T;

@@ -19,6 +19,7 @@ import { AIToolsPage } from '@/pages/aitools';
 import { CoachPage } from '@/pages/coach';
 import { KnowledgeBasePage } from '@/pages/knowledge-base';
 import { AuditLogsPage } from '@/pages/audit-logs';
+import { CalendarPage } from '@/pages/calendar';
 
 /** Restricts a route to one or more roles; otherwise redirects to the dashboard. */
 function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
@@ -36,6 +37,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/competitions" element={<CompetitionsPage />} />
         <Route path="/teams" element={<TeamsPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />
         <Route path="/aitools" element={<AIToolsPage />} />
         <Route path="/coach" element={<CoachPage />} />

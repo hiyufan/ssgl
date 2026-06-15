@@ -70,6 +70,15 @@ def _ok(resp):
     requests.Response.__bool__ returns False for 4xx/5xx, hiding valid error responses."""
     return resp is not None
 
+def _get_admin_user_id():
+    """Fetch admin user ID via /users/me."""
+    resp = _api_auth("GET", "/api/v1/users/me")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        user = data.get("user", data)
+        return user.get("id") or data.get("id")
+    return None
+
 def _login(username, password):
     resp = _api("POST", "/api/v1/auth/login", json={"username": username, "password": password})
     if _ok(resp) and resp.status_code == 200:
@@ -311,6 +320,178 @@ def test_crud():
     else:
         _log("FAIL", "audit-stats", f"审计统计失败 → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Calendar ---
+    resp = _api_auth("GET", "/api/v1/calendar")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        events = data.get("events", [])
+        _log("PASS", "calendar", f"赛事日历成功, {len(events)} 个事件, 月份={data.get('month', '?')}")
+    else:
+        _log("FAIL", "calendar", f"赛事日历失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Calendar with specific month
+    resp = _api_auth("GET", "/api/v1/calendar?month=2026-07")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "calendar-month", f"赛事日历(指定月份)成功, {data.get('total', '?')} 个事件")
+    else:
+        _log("WARN", "calendar-month", f"赛事日历(指定月份) → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Team CRUD: create, join, leave ---
+    # First create a temp competition for team tests
+    team_comp_data = {
+        "title": f"团队测试赛事-{int(time.time())}",
+        "description": "用于团队CRUD测试",
+        "type": "hackathon",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-07-01T00:00:00+08:00",
+        "end_date": "2026-08-01T00:00:00+08:00",
+        "location": "线上",
+        "tags": "测试"
+    }
+    resp = _api_auth("POST", "/api/v1/competitions", json=team_comp_data)
+    team_comp_id = None
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        comp = data.get("competition", data)
+        team_comp_id = comp.get("id") or data.get("id") or data.get("data", {}).get("id")
+        _log("PASS", "team-comp-create", f"团队测试赛事创建成功, id={team_comp_id}")
+    else:
+        _log("FAIL", "team-comp-create", f"团队测试赛事创建失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    team_id = None
+    if team_comp_id:
+        # team-create
+        team_data = {"name": f"自动化测试团队-{int(time.time())}", "competition_id": team_comp_id}
+        resp = _api_auth("POST", "/api/v1/teams", json=team_data)
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            team = data.get("team", data)
+            team_id = team.get("id") or data.get("id") or data.get("data", {}).get("id")
+            _log("PASS", "team-create", f"创建团队成功, id={team_id}")
+        else:
+            _log("FAIL", "team-create", f"创建团队失败 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+    if team_id:
+        # team-join (student joins)
+        if _student_token:
+            resp = _api_auth("POST", f"/api/v1/teams/{team_id}/join", token=_student_token)
+            if _ok(resp) and resp.status_code in (200, 201):
+                _log("PASS", "team-join", f"学生加入团队 {team_id} 成功")
+            else:
+                _log("WARN", "team-join", f"学生加入团队 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+            # team-leave
+            resp = _api_auth("DELETE", f"/api/v1/teams/{team_id}/leave", token=_student_token)
+            if _ok(resp) and resp.status_code == 200:
+                _log("PASS", "team-leave", f"学生离开团队 {team_id} 成功")
+            else:
+                _log("WARN", "team-leave", f"学生离开团队 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+        else:
+            _log("SKIP", "team-join", "无学生token，跳过团队加入测试")
+            _log("SKIP", "team-leave", "无学生token，跳过团队离开测试")
+
+    # --- PrePlan CRUD: create, update ---
+    preplan_id = None
+    if team_id:
+        preplan_data = {
+            "team_id": team_id,
+            "competition_id": team_comp_id,
+            "title": f"自动化测试预案-{int(time.time())}",
+            "tech_stack": "Go, Vue3, PostgreSQL",
+            "target_audience": "大学生",
+            "market_analysis": "竞赛管理系统市场分析",
+            "innovation": "AI辅助方案生成",
+            "expected_outcome": "完成MVP并获奖",
+            "timeline": "2026年7月-8月"
+        }
+        resp = _api_auth("POST", "/api/v1/pre-plans", json=preplan_data)
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            pp = data.get("pre_plan", data)
+            preplan_id = pp.get("id") or data.get("id") or data.get("data", {}).get("id")
+            _log("PASS", "preplan-create", f"创建预案成功, id={preplan_id}")
+        else:
+            _log("FAIL", "preplan-create", f"创建预案失败 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+    if preplan_id:
+        # preplan-update (partial update, pointer types)
+        resp = _api_auth("PUT", f"/api/v1/pre-plans/{preplan_id}", json={
+            "title": "更新后的预案标题",
+            "tech_stack": "Go, Vue3, PostgreSQL, Redis"
+        })
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "preplan-update", f"更新预案 {preplan_id} 成功")
+        else:
+            _log("WARN", "preplan-update", f"更新预案 {preplan_id} → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+    # --- Award CRUD: create, settle ---
+    award_id = None
+    if team_comp_id and team_id:
+        award_data = {
+            "competition_id": team_comp_id,
+            "team_id": team_id,
+            "rank": 1,
+            "rank_name": "一等奖",
+            "prize_name": "最佳创新奖",
+            "prize_amount": 5000.00
+        }
+        resp = _api_auth("POST", "/api/v1/awards", json=award_data)
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            aw = data.get("award", data)
+            award_id = aw.get("id") or data.get("id") or data.get("data", {}).get("id")
+            _log("PASS", "award-create", f"创建奖项成功, id={award_id}")
+        else:
+            _log("WARN", "award-create", f"创建奖项 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+    if award_id:
+        # award-settle (admin settles award, needs prize_amount body)
+        resp = _api_auth("POST", f"/api/v1/awards/{award_id}/settle", json={"prize_amount": 5000.00})
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "award-settle", f"结算奖项 {award_id} 成功")
+        else:
+            _log("WARN", "award-settle", f"结算奖项 {award_id} → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+    # --- Eval CRUD: create ---
+    if team_comp_id and _student_token:
+        # Get student user id
+        resp_me = _api_auth("GET", "/api/v1/users/me", token=_student_token)
+        student_id = None
+        if _ok(resp_me) and resp_me.status_code == 200:
+            me = resp_me.json()
+            user = me.get("user", me)
+            student_id = user.get("id") or me.get("id")
+        if student_id:
+            # Use a teacher user (not admin) for evaluation
+            eval_data = {
+                "teacher_id": 2,  # wangjg (teacher)
+                "competition_id": team_comp_id,
+                "teaching": 4,
+                "communication": 4,
+                "availability": 5,
+                "overall": 4,
+                "feedback": "自动化测试评价：表现良好，积极参与"
+            }
+            resp = _api_auth("POST", "/api/v1/evaluations", json=eval_data)
+            if _ok(resp) and resp.status_code in (200, 201):
+                _log("PASS", "eval-create", f"创建评价成功")
+            else:
+                _log("WARN", "eval-create", f"创建评价 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+        else:
+            _log("WARN", "eval-create", "无法获取学生ID，跳过评价创建")
+    else:
+        _log("WARN", "eval-create", "缺少赛事ID或学生token，跳过评价创建")
+
+    # Cleanup: delete competition (cascades)
+    if team_comp_id:
+        resp = _api_auth("DELETE", f"/api/v1/competitions/{team_comp_id}")
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "team-cleanup", f"清理团队测试赛事 {team_comp_id} 成功")
+        else:
+            _log("WARN", "team-cleanup", f"清理团队测试赛事 → {resp.status_code if _ok(resp) else 'None'}")
+
 
 # ============================================================
 # 4. AI Service Tests
@@ -347,12 +528,17 @@ def test_ai_service():
         ("POST", "/ai/api/v1/tools/advisor", {"input": "如何准备蓝桥杯", "extra": ""}),
         ("POST", "/ai/api/v1/tools/parse-competition", {"content": "蓝桥杯，工信部主办，4月省赛"}),
         ("POST", "/ai/api/v1/coach/start", {"source": "text", "pitch_text": "蓝桥杯竞赛项目：基于AI的智能学习助手", "role": "student"}),
+        ("POST", "/ai/api/v1/tools/business-plan", {"input": "为一个竞赛管理系统编写商业计划书，面向大学生市场"}),
+        ("POST", "/ai/api/v1/tools/market-analysis", {"input": "竞赛管理系统市场分析", "extra": "高校大学生"}),
+        ("POST", "/ai/api/v1/tools/improvement", {"input": "当前竞赛管理系统存在用户体验不佳、缺少实时通知等问题，请给出改进建议"}),
+        ("POST", "/ai/api/v1/tools/tech-route", {"input": "构建一个支持百万用户的竞赛管理平台，请推荐技术路线", "extra": "Go, Vue3, PostgreSQL, Docker"}),
+        ("POST", "/ai/api/v1/tools/resource-match", {"input": "我们需要AI模型训练、云服务器和数据分析资源", "extra": "GPU算力, 云服务器, 数据分析工具"}),
     ]
 
     for method, path, body in llm_endpoints:
         name = path.split("/")[-1]
         try:
-            resp = _api(method, path, base=AI_SERVICE, json=body, timeout=60)
+            resp = _api(method, path, base=AI_SERVICE, json=body, timeout=90)
             if _ok(resp) and resp.status_code == 200:
                 _log("PASS", f"ai-{name}", f"AI {name} 成功 ({resp.elapsed.total_seconds():.1f}s)")
             elif _ok(resp) and resp.status_code in (400, 422):

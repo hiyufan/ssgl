@@ -45,6 +45,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	awardHandler := handlers.NewAwardHandler()
 	evalHandler := handlers.NewEvaluationHandler()
 	statsHandler := handlers.NewStatsHandler()
+	calendarHandler := handlers.NewCalendarHandler()
 	auditHandler := handlers.NewAuditHandler(database.GetDB())
 
 	v1 := r.Group("/api/v1")
@@ -104,6 +105,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/overview", statsHandler.Overview)
 		protected.GET("/stats/competitions", statsHandler.Competitions)
 		protected.GET("/stats/teachers", statsHandler.Teachers)
+
+		// Calendar.
+		protected.GET("/calendar", calendarHandler.List)
 
 		// Data export.
 		protected.GET("/stats/export/overview", statsHandler.ExportOverview)
