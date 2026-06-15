@@ -52,6 +52,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	notifHandler := handlers.NewNotificationHandler()
 	showcaseHandler := handlers.NewShowcaseHandler()
 	matchHandler := handlers.NewMatchHandler()
+	profileHandler := handlers.NewProfileHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -71,6 +72,10 @@ func Setup(cfg *config.Config) *gin.Engine {
 	{
 		// Users.
 		protected.GET("/users/me", authHandler.GetMe)
+		protected.GET("/users/profile/me", profileHandler.GetMyProfile)
+		protected.PUT("/users/profile", profileHandler.UpdateProfile)
+		protected.GET("/users/profile/:id", profileHandler.GetProfile)
+		protected.GET("/users", profileHandler.ListUsers)
 
 		// Competitions (read — any authenticated user).
 		protected.GET("/competitions", compHandler.List)

@@ -27,6 +27,8 @@ const NAV: Record<string, { id?: string; icon?: string; label?: string; section?
     { id: 'knowledge-base', icon: 'db', label: '知识库管理' },
     { section: '系统管理' },
     { id: 'audit-logs', icon: 'shield', label: '审计日志' },
+    { section: '账户' },
+    { id: 'profile', icon: 'users', label: '个人中心' },
   ],
   teacher: [
     { id: 'dashboard', icon: 'home', label: '概览' },
@@ -45,6 +47,8 @@ const NAV: Record<string, { id?: string; icon?: string; label?: string; section?
     { section: '智能助手' },
     { id: 'aitools', icon: 'sparkles', label: 'AI 工具箱' },
     { id: 'coach', icon: 'target', label: '赛事陪练' },
+    { section: '账户' },
+    { id: 'profile', icon: 'users', label: '个人中心' },
   ],
   student: [
     { id: 'dashboard', icon: 'home', label: '概览' },
@@ -61,6 +65,8 @@ const NAV: Record<string, { id?: string; icon?: string; label?: string; section?
     { id: 'coach', icon: 'target', label: '赛事陪练' },
     { section: '反馈' },
     { id: 'evaluations', icon: 'star', label: '评价导师' },
+    { section: '账户' },
+    { id: 'profile', icon: 'users', label: '个人中心' },
   ],
 };
 

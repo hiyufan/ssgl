@@ -533,3 +533,55 @@ export const ragAPI = {
 };
 
 export { api, aiApi };
+
+// Profile API
+export interface UserProfile {
+  id: number;
+  username: string;
+  name: string;
+  email: string;
+  role: string;
+  dept: string;
+  student_id: string;
+  phone: string;
+  avatar: string;
+  created_at: string;
+  team_count: number;
+  award_count: number;
+  pre_plan_count: number;
+  competition_count: number;
+}
+
+export interface UserSummary {
+  id: number;
+  username: string;
+  name: string;
+  role: string;
+  dept: string;
+  avatar: string;
+}
+
+export const profileAPI = {
+  getMyProfile: async (): Promise<{ profile: UserProfile }> => {
+    const response = await api.get<{ profile: UserProfile }>('/users/profile/me');
+    return response.data;
+  },
+
+  getProfile: async (id: number): Promise<{ profile: UserProfile }> => {
+    const response = await api.get<{ profile: UserProfile }>(`/users/profile/${id}`);
+    return response.data;
+  },
+
+  updateProfile: async (data: Partial<UserProfile>): Promise<{ message: string; user: Partial<UserProfile> }> => {
+    const response = await api.put('/users/profile', data);
+    return response.data;
+  },
+
+  searchUsers: async (query?: string, role?: string): Promise<{ users: UserSummary[]; total: number }> => {
+    const params: Record<string, string> = {};
+    if (query) params.q = query;
+    if (role) params.role = role;
+    const response = await api.get('/users', { params });
+    return response.data;
+  },
+};

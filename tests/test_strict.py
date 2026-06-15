@@ -201,6 +201,34 @@ def test_auth():
     else:
         _log("WARN", "weak-password", f"弱密码注册返回 {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Profile endpoints ---
+    resp = _api_auth("GET", "/api/v1/users/profile/me")
+    if _ok(resp) and resp.status_code == 200:
+        p = resp.json().get("profile", {})
+        _log("PASS", "profile-me", f"个人资料: {p.get('name')} (teams={p.get('team_count')}, awards={p.get('award_count')})")
+    else:
+        _log("FAIL", "profile-me", f"/users/profile/me → {resp.status_code if _ok(resp) else 'None'}")
+
+    resp = _api_auth("GET", "/api/v1/users/profile/1")
+    if _ok(resp) and resp.status_code == 200:
+        p = resp.json().get("profile", {})
+        _log("PASS", "profile-by-id", f"查看用户资料: {p.get('name')} ({p.get('role')})")
+    else:
+        _log("FAIL", "profile-by-id", f"/users/profile/1 → {resp.status_code if _ok(resp) else 'None'}")
+
+    resp = _api_auth("PUT", "/api/v1/users/profile", json={"name": "刘志远"})
+    if _ok(resp) and resp.status_code == 200:
+        _log("PASS", "profile-update", f"更新资料成功")
+    else:
+        _log("FAIL", "profile-update", f"更新资料 → {resp.status_code if _ok(resp) else 'None'}")
+
+    resp = _api_auth("GET", "/api/v1/users?q=test&role=student")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        _log("PASS", "users-search", f"用户搜索成功, {d.get('total', 0)} 条结果")
+    else:
+        _log("FAIL", "users-search", f"用户搜索 → {resp.status_code if _ok(resp) else 'None'}")
+
 
 # ============================================================
 # 3. CRUD Tests (Backend API)
