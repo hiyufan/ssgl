@@ -551,3 +551,23 @@ func (h *StatsHandler) ExportTeams(c *gin.Context) {
 	}
 	w.Flush()
 }
+
+// TypeDistribution holds competition count by type.
+type TypeDistribution struct {
+	Type  string `json:"type"`
+	Count int64  `json:"count"`
+}
+
+// TypeDistribution handles GET /stats/type-distribution — returns competition counts grouped by type.
+func (h *StatsHandler) TypeDistribution(c *gin.Context) {
+	db := database.GetDB()
+
+	var results []TypeDistribution
+	db.Model(&models.Competition{}).
+		Select("type, COUNT(*) as count").
+		Group("type").
+		Order("count DESC").
+		Scan(&results)
+
+	c.JSON(http.StatusOK, gin.H{"types": results})
+}

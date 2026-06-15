@@ -368,6 +368,15 @@ def test_crud():
     else:
         _log("FAIL", "stat-progress", f"赛事进度失败 → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Type distribution endpoint ---
+    resp = _api_auth("GET", "/api/v1/stats/type-distribution")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        types = data.get("types", [])
+        _log("PASS", "stat-type-dist", f"赛事类型分布成功, {len(types)} 种类型")
+    else:
+        _log("FAIL", "stat-type-dist", f"赛事类型分布失败 → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- Notifications endpoint ---
     resp = _api_auth("GET", "/api/v1/notifications")
     if _ok(resp) and resp.status_code == 200:
@@ -763,6 +772,151 @@ def test_ai_service():
 
 
 # ============================================================
+# 4b. Coach Full-Flow Tests
+# ============================================================
+def test_coach_flow():
+    """Test the full coach flow: start → answer stream → final report."""
+    print("\n🎯 4b. AI 答辩教练完整流程")
+
+    skip_slow = os.getenv("SSGL_SKIP_SLOW", "0") == "1"
+    if skip_slow:
+        _log("SKIP", "coach-flow", "跳过教练流程测试 (SSGL_SKIP_SLOW=1)")
+        return
+
+    # Step 1: Start a coaching session
+    resp = _api("POST", "/ai/api/v1/coach/start", base=AI_SERVICE, json={
+        "source": "text",
+        "pitch_text": "蓝桥杯竞赛项目：基于AI的智能学习助手，通过自然语言处理技术为学生提供个性化学习方案，目前已完成原型开发",
+        "role": "student",
+        "num_questions": 3,
+    }, timeout=90)
+
+    if not _ok(resp) or resp.status_code != 200:
+        _log("FAIL", "coach-start", f"教练启动失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    data = resp.json()
+    session_id = data.get("session_id", "")
+    questions = data.get("questions", [])
+    scores = data.get("scores", {})
+
+    if not session_id or not questions:
+        _log("FAIL", "coach-start", "教练启动返回数据不完整")
+        return
+
+    _log("PASS", "coach-start", f"教练启动成功, session={session_id[:8]}..., {len(questions)} 问, 综合分={data.get('overall', '?')}")
+
+    # Step 2: Answer first question (streaming)
+    q = questions[0]
+    resp = _api("POST", "/ai/api/v1/coach/answer", base=AI_SERVICE, json={
+        "session_id": session_id,
+        "question_id": q["id"],
+        "answer": "我们的项目采用了最新的NLP技术，结合GPT模型和知识图谱，能够为每个学生生成个性化的学习路径。目前已完成原型开发，在50名学生中测试，学习效率提升了30%。",
+    }, timeout=120)
+
+    if not _ok(resp) or resp.status_code != 200:
+        _log("FAIL", "coach-answer", f"教练回答失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    # Parse SSE stream
+    full_text = ""
+    try:
+        for line in resp.iter_lines(decode_unicode=True):
+            if line and line.startswith("data: "):
+                chunk = line[6:]
+                if chunk in ("[DONE]", "[EXPIRED]", "[ERROR]"):
+                    break
+                try:
+                    parsed = json.loads(chunk)
+                    full_text += parsed.get("chunk", parsed.get("text", ""))
+                except json.JSONDecodeError:
+                    full_text += chunk
+    except Exception as e:
+        _log("WARN", "coach-answer", f"流式解析异常: {e}")
+
+    if len(full_text) > 10:
+        _log("PASS", "coach-answer", f"教练回答流式成功, {len(full_text)} 字符")
+    else:
+        _log("WARN", "coach-answer", f"教练回答内容过短: {len(full_text)} 字符")
+
+    # Step 3: Get final report
+    resp = _api("POST", "/ai/api/v1/coach/final", base=AI_SERVICE, json={
+        "session_id": session_id,
+    }, timeout=120)
+
+    if not _ok(resp) or resp.status_code != 200:
+        _log("FAIL", "coach-final", f"教练终评失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    final = resp.json()
+    overall = final.get("overall", 0)
+    final_scores = final.get("scores", {})
+    highlights = final.get("highlights", [])
+    improvements = final.get("improvements", [])
+
+    if overall and final_scores:
+        _log("PASS", "coach-final", f"教练终评成功, 综合分={overall}, "
+             f"维度={len(final_scores)}, 亮点={len(highlights)}, 改进={len(improvements)}")
+    else:
+        _log("WARN", "coach-final", "教练终评数据不完整")
+
+
+# ============================================================
+# 4c. Knowledge Base Management Tests
+# ============================================================
+def test_knowledge_base():
+    """Test knowledge base: upload, ingest, search, chunks, delete."""
+    print("\n📚 4c. 知识库管理测试")
+
+    # Text ingest
+    resp = _api("POST", "/ai/api/v1/rag/ingest", base=AI_SERVICE, json={
+        "content": "蓝桥杯全国软件和信息技术专业人才大赛是由工业和信息化部人才交流中心主办的全国性IT学科赛事。大赛分为省赛和全国总决赛两个阶段。",
+        "metadata": {"source": "test", "category": "competition_intro"},
+        "chunk_strategy": "semantic",
+    }, timeout=30)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "rag-ingest", f"文本摄入成功, {data.get('chunk_count', 0)} 个分块")
+    else:
+        _log("FAIL", "rag-ingest", f"文本摄入失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # File upload
+    test_content = "# 测试文档\n\n这是SSGL知识库上传测试文档。\n\n## 竞赛管理\n\n系统支持赛事创建、团队管理、预案提交等完整功能。"
+    import io
+    files = {"file": ("test_upload.md", test_content.encode("utf-8"), "text/markdown")}
+    resp = _api("POST", "/ai/api/v1/rag/upload", base=AI_SERVICE, files=files,
+                data={"chunk_strategy": "semantic"}, timeout=30)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "rag-upload", f"文件上传成功, {data.get('chunk_count', 0)} 个分块")
+    else:
+        _log("FAIL", "rag-upload", f"文件上传失败 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:150] if _ok(resp) else "")
+
+    # Document chunks
+    resp = _api("GET", "/ai/api/v1/rag/documents", base=AI_SERVICE)
+    if _ok(resp) and resp.status_code == 200:
+        docs = resp.json().get("documents", [])
+        test_doc = next((d for d in docs if d.get("filename") == "test_upload.md"), None)
+        if test_doc:
+            resp2 = _api("GET", f"/ai/api/v1/rag/documents/test_upload.md/chunks", base=AI_SERVICE)
+            if _ok(resp2) and resp2.status_code == 200:
+                chunks = resp2.json().get("chunks", [])
+                _log("PASS", "rag-chunks", f"文档分块查询成功, {len(chunks)} 个分块")
+            else:
+                _log("WARN", "rag-chunks", f"分块查询失败 → {resp2.status_code if _ok(resp2) else 'None'}")
+        else:
+            _log("WARN", "rag-chunks", "未找到上传的测试文档")
+
+    # Delete test document
+    resp = _api("DELETE", "/ai/api/v1/rag/documents/test_upload.md", base=AI_SERVICE)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "rag-delete", f"文档删除成功, 删除 {data.get('chunks_deleted', 0)} 个分块")
+    else:
+        _log("FAIL", "rag-delete", f"文档删除失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
 # 5. RBAC Tests
 # ============================================================
 def test_rbac():
@@ -1043,6 +1197,8 @@ def run_all():
     test_auth()
     test_crud()
     test_ai_service()
+    test_coach_flow()
+    test_knowledge_base()
     test_rbac()
     test_security()
     test_performance()

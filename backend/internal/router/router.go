@@ -119,6 +119,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/teachers", statsHandler.Teachers)
 		protected.GET("/stats/students", statsHandler.Students)
 		protected.GET("/stats/progress", statsHandler.Progress)
+		protected.GET("/stats/type-distribution", statsHandler.TypeDistribution)
 
 		// Notifications (read for all users).
 		protected.GET("/notifications", notifHandler.List)

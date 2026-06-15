@@ -32,7 +32,7 @@ class ChunkingService:
         self,
         chunk_size: int = 512,
         chunk_overlap: int = 50,
-        min_chunk_size: int = 50,
+        min_chunk_size: int = 20,
     ):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
@@ -60,15 +60,27 @@ class ChunkingService:
         metadata = metadata or {}
 
         if strategy == "paragraph":
-            return self._chunk_by_paragraph(text, metadata)
+            chunks = self._chunk_by_paragraph(text, metadata)
         elif strategy == "sentence":
-            return self._chunk_by_sentence(text, metadata)
+            chunks = self._chunk_by_sentence(text, metadata)
         elif strategy == "fixed":
-            return self._chunk_fixed_length(text, metadata)
+            chunks = self._chunk_fixed_length(text, metadata)
         elif strategy == "semantic":
-            return self._chunk_semantic(text, metadata)
+            chunks = self._chunk_semantic(text, metadata)
         else:
             raise ValueError(f"Unknown chunking strategy: {strategy}")
+
+        # Fallback: if no chunks were produced but text exists, create one chunk
+        if not chunks and text.strip():
+            chunks = [Chunk(
+                content=text.strip(),
+                index=0,
+                start_char=0,
+                end_char=len(text),
+                metadata=metadata,
+            )]
+
+        return chunks
 
     def _chunk_by_paragraph(self, text: str, metadata: dict) -> list[Chunk]:
         """Split by double newlines (paragraphs)."""
