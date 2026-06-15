@@ -176,6 +176,70 @@ func (h *StatsHandler) Teachers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"teachers": stats})
 }
 
+// StudentStats holds student-related statistics.
+type StudentStats struct {
+	TotalStudents      int64   `json:"total_students"`
+	StudentsWithTeams  int64   `json:"students_with_teams"`
+	StudentsWithAwards int64   `json:"students_with_awards"`
+	AvgTeamSize        float64 `json:"avg_team_size"`
+	TopStudents        []TopStudent `json:"top_students,omitempty"`
+}
+
+// TopStudent holds a student's activity summary.
+type TopStudent struct {
+	ID           uint   `json:"id"`
+	Name         string `json:"name"`
+	TeamCount    int64  `json:"team_count"`
+	AwardCount   int64  `json:"award_count"`
+	PrePlanCount int64  `json:"pre_plan_count"`
+}
+
+// Students handles GET /stats/students — returns student-related statistics.
+func (h *StatsHandler) Students(c *gin.Context) {
+	db := database.GetDB()
+
+	var totalStudents int64
+	db.Model(&models.User{}).Where("role = ?", models.RoleStudent).Count(&totalStudents)
+
+	// Students who are in at least one team
+	var studentsWithTeams int64
+	db.Model(&models.TeamMember{}).Distinct("user_id").Count(&studentsWithTeams)
+
+	// Students who have awards (through teams)
+	var studentsWithAwards int64
+	db.Raw(`SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm
+		INNER JOIN awards a ON a.team_id = tm.team_id`).Scan(&studentsWithAwards)
+
+	// Average team size
+	var avgTeamSize float64
+	db.Raw(`SELECT COALESCE(AVG(member_count), 0) FROM (
+		SELECT COUNT(*) as member_count FROM team_members GROUP BY team_id
+	) sub`).Scan(&avgTeamSize)
+
+	// Top students by activity
+	var topStudents []TopStudent
+	db.Raw(`SELECT u.id, u.name,
+		COUNT(DISTINCT tm.team_id) as team_count,
+		COUNT(DISTINCT a.id) as award_count,
+		COUNT(DISTINCT pp.id) as pre_plan_count
+		FROM users u
+		LEFT JOIN team_members tm ON tm.user_id = u.id
+		LEFT JOIN awards a ON a.team_id = tm.team_id
+		LEFT JOIN pre_plans pp ON pp.team_id = tm.team_id
+		WHERE u.role = 'student'
+		GROUP BY u.id, u.name
+		ORDER BY (COUNT(DISTINCT a.id) * 10 + COUNT(DISTINCT tm.team_id) * 3 + COUNT(DISTINCT pp.id)) DESC
+		LIMIT 10`).Scan(&topStudents)
+
+	c.JSON(http.StatusOK, gin.H{
+		"total_students":       totalStudents,
+		"students_with_teams":  studentsWithTeams,
+		"students_with_awards": studentsWithAwards,
+		"avg_team_size":        avgTeamSize,
+		"top_students":         topStudents,
+	})
+}
+
 // ExportOverview handles GET /stats/export/overview — returns platform stats as CSV.
 func (h *StatsHandler) ExportOverview(c *gin.Context) {
 	db := database.GetDB()

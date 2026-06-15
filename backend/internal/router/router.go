@@ -49,6 +49,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	calendarHandler := handlers.NewCalendarHandler()
 	auditHandler := handlers.NewAuditHandler(database.GetDB())
 	recommendHandler := handlers.NewRecommendHandler()
+	notifHandler := handlers.NewNotificationHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -109,6 +110,13 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/overview", statsHandler.Overview)
 		protected.GET("/stats/competitions", statsHandler.Competitions)
 		protected.GET("/stats/teachers", statsHandler.Teachers)
+		protected.GET("/stats/students", statsHandler.Students)
+
+		// Notifications (read for all users).
+		protected.GET("/notifications", notifHandler.List)
+		protected.GET("/notifications/unread-count", notifHandler.UnreadCount)
+		protected.POST("/notifications/:id/read", notifHandler.MarkRead)
+		protected.POST("/notifications/read-all", notifHandler.MarkAllRead)
 
 		// Calendar.
 		protected.GET("/calendar", calendarHandler.List)
@@ -141,6 +149,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 	admin.Use(middleware.RequireRole("admin"))
 	{
 		admin.POST("/awards/:id/settle", awardHandler.Settle)
+
+		// Notification management — admin only.
+		admin.POST("/notifications", notifHandler.Create)
 
 		// Audit logs
 		admin.GET("/audit-logs", auditHandler.List)

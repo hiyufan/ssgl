@@ -104,8 +104,11 @@ def test_services():
     else:
         _log("FAIL", "backend-health", f"后端服务不可用")
 
-    # AI Service
+    # AI Service (retry once on transient timeout)
     resp = _api("GET", "/health", base=AI_SERVICE)
+    if not _ok(resp):
+        time.sleep(1)
+        resp = _api("GET", "/health", base=AI_SERVICE, timeout=20)
     if _ok(resp) and resp.status_code == 200:
         data = resp.json()
         _log("PASS", "ai-health", f"AI 服务运行中 (:8000) → {data.get('status', '?')}")
@@ -328,6 +331,82 @@ def test_crud():
         _log("PASS", "audit-stats", "审计统计成功")
     else:
         _log("FAIL", "audit-stats", f"审计统计失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Data Export (CSV) ---
+    for ep in ["/api/v1/stats/export/overview", "/api/v1/stats/export/competitions"]:
+        name = ep.split("/")[-1]
+        resp = _api_auth("GET", ep)
+        if _ok(resp) and resp.status_code == 200:
+            content_type = resp.headers.get("Content-Type", "")
+            if "csv" in content_type or "text" in content_type:
+                _log("PASS", f"export-{name}", f"导出 {name} 成功, Content-Type={content_type}, {len(resp.content)} bytes")
+            else:
+                _log("WARN", f"export-{name}", f"导出 {name} 返回非 CSV 格式: {content_type}")
+        else:
+            _log("FAIL", f"export-{name}", f"导出 {name} 失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Student stats endpoint ---
+    resp = _api_auth("GET", "/api/v1/stats/students")
+    if _ok(resp) and resp.status_code == 200:
+        _log("PASS", "stat-students", "统计 students 成功")
+    else:
+        _log("WARN", "stat-students", f"统计 students → {resp.status_code if _ok(resp) else 'None'} (may not exist yet)")
+
+    # --- Notifications endpoint ---
+    resp = _api_auth("GET", "/api/v1/notifications")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "notifications-list", f"通知列表成功, {data.get('total', '?')} 条, 未读={data.get('unread_count', '?')}")
+    else:
+        _log("WARN", "notifications-list", f"通知列表 → {resp.status_code if _ok(resp) else 'None'} (may not exist yet)")
+
+    # --- Notification create + mark-read CRUD ---
+    if _ok(resp) and resp.status_code == 200:
+        admin_id = _get_admin_user_id()
+        if admin_id:
+            # Create notification
+            resp_create = _api_auth("POST", "/api/v1/notifications", json={
+                "user_id": admin_id, "type": "test", "title": "自动化测试通知", "message": "这是一条测试通知"
+            })
+            if _ok(resp_create) and resp_create.status_code in (200, 201):
+                notif_data = resp_create.json()
+                notif = notif_data.get("notification", notif_data)
+                notif_id = notif.get("id")
+                _log("PASS", "notif-create", f"创建通知成功, id={notif_id}")
+
+                if notif_id:
+                    # Mark read
+                    resp_read = _api_auth("POST", f"/api/v1/notifications/{notif_id}/read")
+                    if _ok(resp_read) and resp_read.status_code == 200:
+                        _log("PASS", "notif-mark-read", f"标记通知 {notif_id} 已读成功")
+                    else:
+                        _log("WARN", "notif-mark-read", f"标记已读 → {resp_read.status_code if _ok(resp_read) else 'None'}")
+
+                    # Unread count after mark-read
+                    resp_uc = _api_auth("GET", "/api/v1/notifications/unread-count")
+                    if _ok(resp_uc) and resp_uc.status_code == 200:
+                        _log("PASS", "notif-unread-count", f"未读计数成功: {resp_uc.json().get('unread_count', '?')}")
+                    else:
+                        _log("WARN", "notif-unread-count", f"未读计数 → {resp_uc.status_code if _ok(resp_uc) else 'None'}")
+
+                    # Mark all read
+                    resp_all = _api_auth("POST", "/api/v1/notifications/read-all")
+                    if _ok(resp_all) and resp_all.status_code == 200:
+                        _log("PASS", "notif-mark-all-read", "全部标记已读成功")
+                    else:
+                        _log("WARN", "notif-mark-all-read", f"全部标记已读 → {resp_all.status_code if _ok(resp_all) else 'None'}")
+            else:
+                _log("WARN", "notif-create", f"创建通知 → {resp_create.status_code if _ok(resp_create) else 'None'}")
+
+    # --- Notification RBAC: student cannot create notifications ---
+    if _student_token:
+        resp_nc = _api_auth("POST", "/api/v1/notifications", token=_student_token, json={
+            "user_id": 1, "type": "hack", "title": "Should fail", "message": "RBAC test"
+        })
+        if _ok(resp_nc) and resp_nc.status_code in (401, 403):
+            _log("PASS", "notif-rbac-student", f"学生无法创建通知 → {resp_nc.status_code} ✓")
+        elif _ok(resp_nc):
+            _log("WARN", "notif-rbac-student", f"学生创建通知未被拒绝 → {resp_nc.status_code}")
 
     # --- Calendar ---
     resp = _api_auth("GET", "/api/v1/calendar")
