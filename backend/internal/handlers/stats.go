@@ -240,6 +240,115 @@ func (h *StatsHandler) Students(c *gin.Context) {
 	})
 }
 
+// CompetitionProgress holds lifecycle progress data for a single competition.
+type CompetitionProgress struct {
+	ID            uint    `json:"id"`
+	Title         string  `json:"title"`
+	Status        string  `json:"status"`
+	Type          string  `json:"type"`
+	StartDate     string  `json:"start_date"`
+	EndDate       string  `json:"end_date"`
+	TeamCount     int64   `json:"team_count"`
+	StudentCount  int64   `json:"student_count"`
+	PrePlanCount  int64   `json:"pre_plan_count"`
+	ReviewedCount int64   `json:"reviewed_count"`
+	ApprovedCount int64   `json:"approved_count"`
+	AwardCount    int64   `json:"award_count"`
+	SettledCount  int64   `json:"settled_count"`
+	TotalPrize    float64 `json:"total_prize"`
+	Progress      float64 `json:"progress"` // 0-100 lifecycle completion %
+}
+
+// Progress handles GET /stats/progress — returns lifecycle progress for all competitions.
+func (h *StatsHandler) Progress(c *gin.Context) {
+	db := database.GetDB()
+
+	var competitions []models.Competition
+	if err := db.Order("id ASC").Find(&competitions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
+		return
+	}
+
+	progress := make([]CompetitionProgress, len(competitions))
+	for i, comp := range competitions {
+		var teamCount int64
+		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
+
+		var studentCount int64
+		db.Raw(`SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm
+			INNER JOIN teams t ON t.id = tm.team_id
+			WHERE t.competition_id = ?`, comp.ID).Scan(&studentCount)
+
+		var prePlanCount int64
+		db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&prePlanCount)
+
+		var reviewedCount int64
+		db.Model(&models.PrePlan{}).Where("competition_id = ? AND status IN ?", comp.ID, []string{"reviewed", "approved"}).Count(&reviewedCount)
+
+		var approvedCount int64
+		db.Model(&models.PrePlan{}).Where("competition_id = ? AND status = ?", comp.ID, "approved").Count(&approvedCount)
+
+		var awardCount int64
+		db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
+
+		var settledCount int64
+		db.Model(&models.Award{}).Where("competition_id = ? AND status = ?", comp.ID, models.AwardStatusSettled).Count(&settledCount)
+
+		var totalPrize float64
+		db.Model(&models.Award{}).Where("competition_id = ? AND status = ?", comp.ID, models.AwardStatusSettled).
+			Select("COALESCE(SUM(prize_amount), 0)").Row().Scan(&totalPrize)
+
+		// Calculate lifecycle progress: creation(10%) + teams(20%) + preplans(30%) + review(20%) + awards(20%)
+		var progressPct float64
+		if teamCount > 0 {
+			progressPct += 20
+		}
+		if prePlanCount > 0 {
+			progressPct += 30
+		}
+		if reviewedCount > 0 {
+			progressPct += 20
+		}
+		if awardCount > 0 {
+			progressPct += 20
+		}
+		// Base progress for existing competition
+		progressPct += 10
+		if progressPct > 100 {
+			progressPct = 100
+		}
+
+		startStr := ""
+		if !comp.StartDate.IsZero() {
+			startStr = comp.StartDate.Format("2006-01-02")
+		}
+		endStr := ""
+		if !comp.EndDate.IsZero() {
+			endStr = comp.EndDate.Format("2006-01-02")
+		}
+
+		progress[i] = CompetitionProgress{
+			ID:            comp.ID,
+			Title:         comp.Title,
+			Status:        comp.Status,
+			Type:          comp.Type,
+			StartDate:     startStr,
+			EndDate:       endStr,
+			TeamCount:     teamCount,
+			StudentCount:  studentCount,
+			PrePlanCount:  prePlanCount,
+			ReviewedCount: reviewedCount,
+			ApprovedCount: approvedCount,
+			AwardCount:    awardCount,
+			SettledCount:  settledCount,
+			TotalPrize:    totalPrize,
+			Progress:      progressPct,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"competitions": progress})
+}
+
 // ExportOverview handles GET /stats/export/overview — returns platform stats as CSV.
 func (h *StatsHandler) ExportOverview(c *gin.Context) {
 	db := database.GetDB()

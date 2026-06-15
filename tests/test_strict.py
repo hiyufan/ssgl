@@ -359,6 +359,15 @@ def test_crud():
     else:
         _log("WARN", "stat-students", f"统计 students → {resp.status_code if _ok(resp) else 'None'} (may not exist yet)")
 
+    # --- Competition progress endpoint ---
+    resp = _api_auth("GET", "/api/v1/stats/progress")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        comps = data.get("competitions", [])
+        _log("PASS", "stat-progress", f"赛事进度成功, {len(comps)} 个赛事")
+    else:
+        _log("FAIL", "stat-progress", f"赛事进度失败 → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- Notifications endpoint ---
     resp = _api_auth("GET", "/api/v1/notifications")
     if _ok(resp) and resp.status_code == 200:
@@ -614,7 +623,7 @@ def test_ai_service():
     print("\n🤖 4. AI 服务测试")
 
     # RAG search (no LLM needed)
-    resp = _api("POST", "/ai/api/v1/rag/search", base=AI_SERVICE, json={"question": "蓝桥杯", "top_k": 3})
+    resp = _api("POST", "/ai/api/v1/rag/search", base=AI_SERVICE, json={"question": "蓝桥杯竞赛的参赛经验和获奖技巧", "top_k": 5})
     if _ok(resp) and resp.status_code == 200:
         data = resp.json()
         results = data.get("results", [])
@@ -643,16 +652,17 @@ def test_ai_service():
         _log("SKIP", "ai-llm", "跳过 LLM 端点测试 (SSGL_SKIP_SLOW=1)")
         return
 
+    # Timeouts per endpoint (matching actual LLM response times)
     llm_endpoints = [
-        ("POST", "/ai/api/v1/rag/query", {"question": "什么是蓝桥杯？"}, 60),
-        ("POST", "/ai/api/v1/tools/advisor", {"input": "如何准备蓝桥杯", "extra": ""}, 60),
-        ("POST", "/ai/api/v1/tools/parse-competition", {"content": "蓝桥杯，工信部主办，4月省赛"}, 60),
-        ("POST", "/ai/api/v1/coach/start", {"source": "text", "pitch_text": "蓝桥杯竞赛项目：基于AI的智能学习助手", "role": "student"}, 60),
-        ("POST", "/ai/api/v1/tools/business-plan", {"input": "为一个竞赛管理系统编写商业计划书"}, 60),
-        ("POST", "/ai/api/v1/tools/market-analysis", {"input": "竞赛管理系统", "extra": "高校"}, 60),
-        ("POST", "/ai/api/v1/tools/improvement", {"input": "竞赛管理系统缺少实时通知，给出改进建议"}, 60),
-        ("POST", "/ai/api/v1/tools/tech-route", {"input": "竞赛管理平台技术路线", "extra": "Go, Vue3, PostgreSQL"}, 60),
-        ("POST", "/ai/api/v1/tools/resource-match", {"input": "需要AI模型训练和云服务器资源", "extra": "GPU算力, 云服务器"}, 60),
+        ("POST", "/ai/api/v1/rag/query", {"question": "什么是蓝桥杯？"}, 30),
+        ("POST", "/ai/api/v1/tools/advisor", {"input": "如何准备蓝桥杯", "extra": ""}, 90),
+        ("POST", "/ai/api/v1/tools/parse-competition", {"content": "蓝桥杯，工信部主办，4月省赛"}, 90),
+        ("POST", "/ai/api/v1/coach/start", {"source": "text", "pitch_text": "蓝桥杯竞赛项目：基于AI的智能学习助手", "role": "student"}, 90),
+        ("POST", "/ai/api/v1/tools/business-plan", {"input": "为一个竞赛管理系统编写商业计划书"}, 180),
+        ("POST", "/ai/api/v1/tools/market-analysis", {"input": "竞赛管理系统", "extra": "高校"}, 120),
+        ("POST", "/ai/api/v1/tools/improvement", {"input": "竞赛管理系统缺少实时通知，给出改进建议"}, 120),
+        ("POST", "/ai/api/v1/tools/tech-route", {"input": "竞赛管理平台技术路线", "extra": "Go, Vue3, PostgreSQL"}, 120),
+        ("POST", "/ai/api/v1/tools/resource-match", {"input": "需要AI模型训练和云服务器资源", "extra": "GPU算力, 云服务器"}, 120),
     ]
 
     for method, path, body, timeout in llm_endpoints:
