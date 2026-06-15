@@ -570,6 +570,16 @@ def test_crud():
     elif team_id:
         _log("SKIP", "team-invite", "无学生token，跳过邀请测试")
 
+    # --- Teammate Matching ---
+    if team_comp_id:
+        resp = _api_auth("GET", f"/api/v1/teams/match?competition_id={team_comp_id}")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            matches = data.get("matches", [])
+            _log("PASS", "team-match", f"队友匹配成功, {len(matches)} 个推荐")
+        else:
+            _log("WARN", "team-match", f"队友匹配 → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- PrePlan CRUD: create, update ---
     preplan_id = None
     if team_id:

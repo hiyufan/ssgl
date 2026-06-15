@@ -11,7 +11,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormModal, Field, TextInput, Select } from '@/components/ui/form';
 import { toast } from '@/components/ui/toast';
 import { getApiError } from '@/lib/form-utils';
-import type { Team, Competition } from '@/types';
+import type { Team, Competition, MatchResult } from '@/types';
 
 /** 建队表单。competitions 页「报名参加」会以 fixedCompetition 复用本组件。 */
 export function TeamForm({ onClose, competitions, fixedCompetition, onCreated }: {
@@ -71,11 +71,29 @@ export function TeamsPage() {
   const currentUser = useAuthStore((s) => s.user);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailTeam, setDetailTeam] = useState<Team | null>(null);
+  const [matchOpen, setMatchOpen] = useState(false);
+  const [matchCompId, setMatchCompId] = useState<string>('');
+  const [matches, setMatches] = useState<MatchResult[]>([]);
+  const [matching, setMatching] = useState(false);
 
   const onCreated = (team: Team) => setTeams((prev) => [team, ...prev]);
   const onLeft = (teamId: number) => {
     setTeams((prev) => prev.filter((t) => t.id !== teamId));
     setDetailTeam(null);
+  };
+
+  const doMatch = async (compId: string) => {
+    if (!compId) return;
+    setMatching(true);
+    setMatches([]);
+    try {
+      const res = await teamsAPI.match(Number(compId));
+      setMatches(res.matches || []);
+    } catch (err) {
+      toast.error(getApiError(err, '匹配失败'));
+    } finally {
+      setMatching(false);
+    }
   };
 
   const comps = [{ id: 'all', title: '全部赛事' }, ...competitions.filter(c => c.status !== 'cancelled')];
@@ -97,7 +115,12 @@ export function TeamsPage() {
       <PageHeader
         title={role === 'teacher' ? '指导团队' : role === 'student' ? '我的团队' : '团队管理'}
         subtitle={`${filtered.length} 支团队`}
-        actions={role === 'student' ? <Button variant="primary" icon={<Icon name="plus" size={13}/>} onClick={() => setCreateOpen(true)}>创建团队</Button> : undefined}
+        actions={role === 'student' ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="outline" icon={<Icon name="search" size={13}/>} onClick={() => { setMatchOpen(true); setMatchCompId(''); setMatches([]); }}>找队友</Button>
+            <Button variant="primary" icon={<Icon name="plus" size={13}/>} onClick={() => setCreateOpen(true)}>创建团队</Button>
+          </div>
+        ) : undefined}
       />
 
       <div className="anim-in" style={{ display: 'flex', gap: 6, marginBottom: 20, overflowX: 'auto', paddingBottom: 4 }}>
@@ -161,6 +184,60 @@ export function TeamsPage() {
 
       {createOpen && <TeamForm onClose={() => setCreateOpen(false)} competitions={competitions} onCreated={onCreated} />}
       <TeamDetail team={detailTeam} currentUserId={currentUser?.id} onClose={() => setDetailTeam(null)} onLeft={onLeft} />
+
+      {/* Teammate Matching Modal */}
+      <Modal open={matchOpen} onClose={() => setMatchOpen(false)} title="🤝 智能找队友" width={580}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Select
+              value={matchCompId}
+              onChange={(v) => { setMatchCompId(v); if (v) doMatch(v); }}
+              options={competitions.filter(c => c.status !== 'cancelled').map(c => ({ value: String(c.id), label: c.title }))}
+              placeholder="选择赛事查看推荐队友"
+            />
+          </div>
+          {matching && (
+            <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-3)' }}>
+              <svg width={24} height={24} viewBox="0 0 24 24" style={{ animation: 'forge-spin 0.7s linear infinite', marginBottom: 8 }}>
+                <circle cx="12" cy="12" r="10" fill="none" stroke="var(--border-2)" strokeWidth="2.5"/>
+                <path d="M12 2a10 10 0 0110 10" fill="none" stroke="var(--teal)" strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
+              <div>正在匹配...</div>
+            </div>
+          )}
+          {!matching && matches.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>找到 {matches.length} 位推荐队友</div>
+              {matches.map((m, i) => (
+                <div key={m.user_id} className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Avatar name={m.name || m.username} size={36} index={i} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{m.name || m.username}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      {m.dept && `${m.dept} · `}{m.reason}
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>
+                      {m.team_count > 0 && <span>🏅 {m.team_count} 次参赛</span>}
+                      {m.award_count > 0 && <span>🏆 {m.award_count} 个奖项</span>}
+                      {m.pre_plan_count > 0 && <span>📋 {m.pre_plan_count} 份预案</span>}
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700,
+                    background: m.match_score >= 50 ? 'var(--green-dim)' : m.match_score > 0 ? 'var(--amber-dim)' : 'var(--surface)',
+                    color: m.match_score >= 50 ? 'var(--green)' : m.match_score > 0 ? 'var(--amber)' : 'var(--text-3)',
+                  }}>
+                    {Math.round(m.match_score)}分
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!matching && matchCompId && matches.length === 0 && (
+            <EmptyState icon="users" title="暂无匹配" subtitle="该赛事下没有可匹配的空闲学生" />
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

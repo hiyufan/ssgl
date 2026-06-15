@@ -5,7 +5,7 @@ import type {
   LoginRequest, LoginResponse, TokenPair,
   AuditLog, AuditStats, RAGDocument, RAGStats,
   CalendarEvent, ShowcaseData,
-  LeaderboardEntry,
+  LeaderboardEntry, MatchResult,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -191,6 +191,13 @@ export const teamsAPI = {
 
   leave: async (id: number): Promise<void> => {
     await api.delete(`/teams/${id}/leave`);
+  },
+
+  match: async (competitionId: number, limit?: number): Promise<{ matches: MatchResult[]; total: number }> => {
+    const params: Record<string, string> = { competition_id: String(competitionId) };
+    if (limit) params.limit = String(limit);
+    const response = await api.get('/teams/match', { params });
+    return response.data;
   },
 };
 

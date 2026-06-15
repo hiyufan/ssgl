@@ -51,6 +51,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	recommendHandler := handlers.NewRecommendHandler()
 	notifHandler := handlers.NewNotificationHandler()
 	showcaseHandler := handlers.NewShowcaseHandler()
+	matchHandler := handlers.NewMatchHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -124,6 +125,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/notifications/unread-count", notifHandler.UnreadCount)
 		protected.POST("/notifications/:id/read", notifHandler.MarkRead)
 		protected.POST("/notifications/read-all", notifHandler.MarkAllRead)
+
+		// Teammate matching.
+		protected.GET("/teams/match", matchHandler.Match)
 
 		// Calendar.
 		protected.GET("/calendar", calendarHandler.List)

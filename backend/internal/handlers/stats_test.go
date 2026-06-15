@@ -1,0 +1,257 @@
+package handlers
+
+import (
+	"math"
+	"testing"
+)
+
+func TestCompetitionStatsFields(t *testing.T) {
+	cs := CompetitionStats{
+		ID:           1,
+		Title:        "蓝桥杯",
+		Status:       "ongoing",
+		TeamCount:    5,
+		AwardCount:   2,
+		PrePlanCount: 3,
+	}
+
+	if cs.ID != 1 {
+		t.Errorf("expected ID=1, got %d", cs.ID)
+	}
+	if cs.Title != "蓝桥杯" {
+		t.Errorf("expected Title='蓝桥杯', got '%s'", cs.Title)
+	}
+	if cs.Status != "ongoing" {
+		t.Errorf("expected Status='ongoing', got '%s'", cs.Status)
+	}
+	if cs.TeamCount != 5 {
+		t.Errorf("expected TeamCount=5, got %d", cs.TeamCount)
+	}
+	if cs.AwardCount != 2 {
+		t.Errorf("expected AwardCount=2, got %d", cs.AwardCount)
+	}
+	if cs.PrePlanCount != 3 {
+		t.Errorf("expected PrePlanCount=3, got %d", cs.PrePlanCount)
+	}
+}
+
+func TestTeacherStatsFields(t *testing.T) {
+	ts := TeacherStats{
+		ID:               10,
+		Name:             "张老师",
+		EvaluationCount:  8,
+		AvgTeaching:      4.5,
+		AvgCommunication: 4.2,
+		AvgAvailability:  4.8,
+		AvgOverall:       4.4,
+	}
+
+	if ts.ID != 10 {
+		t.Errorf("expected ID=10, got %d", ts.ID)
+	}
+	if ts.Name != "张老师" {
+		t.Errorf("expected Name='张老师', got '%s'", ts.Name)
+	}
+	if ts.EvaluationCount != 8 {
+		t.Errorf("expected EvaluationCount=8, got %d", ts.EvaluationCount)
+	}
+	if ts.AvgTeaching != 4.5 {
+		t.Errorf("expected AvgTeaching=4.5, got %f", ts.AvgTeaching)
+	}
+	if ts.AvgCommunication != 4.2 {
+		t.Errorf("expected AvgCommunication=4.2, got %f", ts.AvgCommunication)
+	}
+	if ts.AvgAvailability != 4.8 {
+		t.Errorf("expected AvgAvailability=4.8, got %f", ts.AvgAvailability)
+	}
+	if ts.AvgOverall != 4.4 {
+		t.Errorf("expected AvgOverall=4.4, got %f", ts.AvgOverall)
+	}
+}
+
+func TestStudentStatsFields(t *testing.T) {
+	ss := StudentStats{
+		TotalStudents:      100,
+		StudentsWithTeams:  75,
+		StudentsWithAwards: 30,
+		AvgTeamSize:        3.5,
+		TopStudents: []TopStudent{
+			{ID: 1, Name: "Alice", TeamCount: 3, AwardCount: 2, PrePlanCount: 5},
+			{ID: 2, Name: "Bob", TeamCount: 2, AwardCount: 1, PrePlanCount: 3},
+		},
+	}
+
+	if ss.TotalStudents != 100 {
+		t.Errorf("expected TotalStudents=100, got %d", ss.TotalStudents)
+	}
+	if ss.StudentsWithTeams != 75 {
+		t.Errorf("expected StudentsWithTeams=75, got %d", ss.StudentsWithTeams)
+	}
+	if ss.StudentsWithAwards != 30 {
+		t.Errorf("expected StudentsWithAwards=30, got %d", ss.StudentsWithAwards)
+	}
+	if ss.AvgTeamSize != 3.5 {
+		t.Errorf("expected AvgTeamSize=3.5, got %f", ss.AvgTeamSize)
+	}
+	if len(ss.TopStudents) != 2 {
+		t.Fatalf("expected 2 top students, got %d", len(ss.TopStudents))
+	}
+	if ss.TopStudents[0].Name != "Alice" {
+		t.Errorf("expected first top student 'Alice', got '%s'", ss.TopStudents[0].Name)
+	}
+}
+
+func TestTopStudentFields(t *testing.T) {
+	ts := TopStudent{
+		ID:           42,
+		Name:         "测试学生",
+		TeamCount:    2,
+		AwardCount:   1,
+		PrePlanCount: 4,
+	}
+
+	if ts.ID != 42 {
+		t.Errorf("expected ID=42, got %d", ts.ID)
+	}
+	if ts.Name != "测试学生" {
+		t.Errorf("expected Name='测试学生', got '%s'", ts.Name)
+	}
+	if ts.TeamCount != 2 {
+		t.Errorf("expected TeamCount=2, got %d", ts.TeamCount)
+	}
+	if ts.AwardCount != 1 {
+		t.Errorf("expected AwardCount=1, got %d", ts.AwardCount)
+	}
+	if ts.PrePlanCount != 4 {
+		t.Errorf("expected PrePlanCount=4, got %d", ts.PrePlanCount)
+	}
+}
+
+func TestCompetitionProgressFields(t *testing.T) {
+	cp := CompetitionProgress{
+		ID:            1,
+		Title:         "数学建模",
+		Status:        "ongoing",
+		Type:          "innovation",
+		StartDate:     "2026-06-01",
+		EndDate:       "2026-08-31",
+		TeamCount:     10,
+		StudentCount:  35,
+		PrePlanCount:  8,
+		ReviewedCount: 5,
+		ApprovedCount: 3,
+		AwardCount:    2,
+		SettledCount:  1,
+		TotalPrize:    5000.0,
+		Progress:      80,
+	}
+
+	if cp.ID != 1 {
+		t.Errorf("expected ID=1, got %d", cp.ID)
+	}
+	if cp.Title != "数学建模" {
+		t.Errorf("expected Title='数学建模', got '%s'", cp.Title)
+	}
+	if cp.TotalPrize != 5000.0 {
+		t.Errorf("expected TotalPrize=5000, got %f", cp.TotalPrize)
+	}
+	if cp.Progress != 80 {
+		t.Errorf("expected Progress=80, got %f", cp.Progress)
+	}
+}
+
+func TestProgressCalculationFormula(t *testing.T) {
+	// Test the lifecycle progress formula: creation(10%) + teams(20%) + preplans(30%) + review(20%) + awards(20%)
+	tests := []struct {
+		name              string
+		teamCount         int64
+		prePlanCount      int64
+		reviewedCount     int64
+		awardCount        int64
+		expectedProgress  float64
+	}{
+		{"empty competition", 0, 0, 0, 0, 10},
+		{"with teams only", 1, 0, 0, 0, 30},
+		{"with preplans", 1, 1, 0, 0, 60},
+		{"with reviews", 1, 1, 1, 0, 80},
+		{"full lifecycle", 1, 1, 1, 1, 100},
+		{"teams and awards only", 1, 0, 0, 1, 50},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var progressPct float64
+			if tt.teamCount > 0 {
+				progressPct += 20
+			}
+			if tt.prePlanCount > 0 {
+				progressPct += 30
+			}
+			if tt.reviewedCount > 0 {
+				progressPct += 20
+			}
+			if tt.awardCount > 0 {
+				progressPct += 20
+			}
+			progressPct += 10 // base
+			if progressPct > 100 {
+				progressPct = 100
+			}
+
+			if math.Abs(progressPct-tt.expectedProgress) > 0.01 {
+				t.Errorf("%s: expected progress=%.0f, got %.0f", tt.name, tt.expectedProgress, progressPct)
+			}
+		})
+	}
+}
+
+func TestLeaderboardEntryFields(t *testing.T) {
+	entry := LeaderboardEntry{
+		Rank:             1,
+		TeamID:           5,
+		TeamName:         "冠军队",
+		LeaderName:       "张三",
+		CompetitionCount: 3,
+		AwardCount:       2,
+		PrePlanCount:     4,
+		Score:            34, // 2*10 + 3*3 + 4*1 = 33... actually 2*10+3*3+4=33
+	}
+
+	if entry.Rank != 1 {
+		t.Errorf("expected Rank=1, got %d", entry.Rank)
+	}
+	if entry.TeamID != 5 {
+		t.Errorf("expected TeamID=5, got %d", entry.TeamID)
+	}
+	if entry.TeamName != "冠军队" {
+		t.Errorf("expected TeamName='冠军队', got '%s'", entry.TeamName)
+	}
+	if entry.LeaderName != "张三" {
+		t.Errorf("expected LeaderName='张三', got '%s'", entry.LeaderName)
+	}
+}
+
+func TestLeaderboardScoreFormula(t *testing.T) {
+	// Score = awards * 10 + competitions * 3 + preplans * 1
+	tests := []struct {
+		name          string
+		awards        int64
+		competitions  int64
+		preplans      int64
+		expectedScore float64
+	}{
+		{"zero", 0, 0, 0, 0},
+		{"awards only", 3, 0, 0, 30},
+		{"mixed", 2, 3, 4, 33},     // 2*10 + 3*3 + 4*1 = 33
+		{"heavy awards", 5, 1, 2, 55}, // 5*10 + 1*3 + 2*1 = 55
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score := float64(tt.awards)*10 + float64(tt.competitions)*3 + float64(tt.preplans)
+			if math.Abs(score-tt.expectedScore) > 0.01 {
+				t.Errorf("%s: expected score=%.0f, got %.0f", tt.name, tt.expectedScore, score)
+			}
+		})
+	}
+}

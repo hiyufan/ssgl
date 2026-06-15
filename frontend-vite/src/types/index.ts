@@ -227,6 +227,20 @@ export interface CalendarEvent {
   tags?: string;
 }
 
+// Teammate Matching types
+export interface MatchResult {
+  user_id: number;
+  username: string;
+  name: string;
+  dept: string;
+  avatar: string;
+  team_count: number;
+  award_count: number;
+  pre_plan_count: number;
+  match_score: number;
+  reason: string;
+}
+
 export interface ShowcaseEntry {
   id: number;
   competition_id: number;
