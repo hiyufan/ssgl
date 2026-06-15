@@ -46,16 +46,23 @@ def _log(level, name, msg, details=""):
         print(f"     → {details[:200]}")
 
 def _api(method, path, base=BACKEND, **kwargs):
-    """Make API request with error handling."""
+    """Make API request with error handling and rate limit retry."""
     url = f"{base}{path}"
     timeout = kwargs.pop("timeout", 15)
-    try:
-        resp = requests.request(method, url, timeout=timeout, **kwargs)
-        return resp
-    except requests.exceptions.ConnectionError:
-        return None
-    except requests.exceptions.Timeout:
-        return None
+    max_retries = kwargs.pop("max_retries", 2)
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.request(method, url, timeout=timeout, **kwargs)
+            if resp.status_code == 429 and attempt < max_retries:
+                wait = 3 * (attempt + 1)
+                time.sleep(wait)
+                continue
+            return resp
+        except requests.exceptions.ConnectionError:
+            return None
+        except requests.exceptions.Timeout:
+            return None
+    return None
 
 def _api_auth(method, path, token=None, **kwargs):
     """Make authenticated API request."""
@@ -433,6 +440,16 @@ def test_crud():
         _log("PASS", "leaderboard", f"排行榜成功, {len(entries)} 支团队")
     else:
         _log("FAIL", "leaderboard", f"排行榜失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Showcase ---
+    resp = _api_auth("GET", "/api/v1/showcase")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        total = data.get("total_awards", 0)
+        prize = data.get("total_prize", 0)
+        _log("PASS", "showcase", f"成果展示成功, {total} 个奖项, 奖金总额 ¥{prize}")
+    else:
+        _log("FAIL", "showcase", f"成果展示失败 → {resp.status_code if _ok(resp) else 'None'}")
 
     # --- Team CRUD: create, join, leave ---
     # First create a temp competition for team tests

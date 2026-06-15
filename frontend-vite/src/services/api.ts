@@ -4,7 +4,8 @@ import type {
   StudentEvaluation, StatsOverview, TeacherStat,
   LoginRequest, LoginResponse, TokenPair,
   AuditLog, AuditStats, RAGDocument, RAGStats,
-  CalendarEvent,
+  CalendarEvent, ShowcaseData,
+  LeaderboardEntry,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -299,6 +300,11 @@ export const statsAPI = {
 
   leaderboard: async (): Promise<{ leaderboard: LeaderboardEntry[] }> => {
     const response = await api.get<{ leaderboard: LeaderboardEntry[] }>('/leaderboard');
+    return response.data;
+  },
+
+  showcase: async (): Promise<ShowcaseData> => {
+    const response = await api.get<ShowcaseData>('/showcase');
     return response.data;
   },
 

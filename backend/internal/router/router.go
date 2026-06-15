@@ -50,6 +50,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	auditHandler := handlers.NewAuditHandler(database.GetDB())
 	recommendHandler := handlers.NewRecommendHandler()
 	notifHandler := handlers.NewNotificationHandler()
+	showcaseHandler := handlers.NewShowcaseHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -123,6 +124,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Leaderboard.
 		protected.GET("/leaderboard", statsHandler.Leaderboard)
+
+		// Showcase — settled awards for public display.
+		protected.GET("/showcase", showcaseHandler.List)
 
 		// Data export.
 		protected.GET("/stats/export/overview", statsHandler.ExportOverview)

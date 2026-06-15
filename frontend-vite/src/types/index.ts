@@ -227,6 +227,30 @@ export interface CalendarEvent {
   tags?: string;
 }
 
+export interface ShowcaseEntry {
+  id: number;
+  competition_id: number;
+  competition_name: string;
+  comp_type: string;
+  team_id: number;
+  team_name: string;
+  leader_name: string;
+  rank: number;
+  rank_name: string;
+  prize_name: string;
+  prize_amount: number;
+  settled_at: string;
+}
+
+export interface ShowcaseData {
+  entries: ShowcaseEntry[];
+  total_awards: number;
+  total_prize: number;
+  total_teams: number;
+  comp_count: number;
+  top_teams: ShowcaseEntry[];
+}
+
 // API Response types
 export interface ApiResponse<T> {
   data?: T;
