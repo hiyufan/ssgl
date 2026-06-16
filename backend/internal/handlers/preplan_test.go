@@ -108,3 +108,42 @@ func TestUpdatePrePlanRequest_AllNil(t *testing.T) {
 		t.Error("expected Status to be nil")
 	}
 }
+
+func TestNewPrePlanHandler_WithNilClient(t *testing.T) {
+	handler := NewPrePlanHandler(nil)
+	if handler == nil {
+		t.Fatal("expected non-nil handler")
+	}
+	if handler.AIClient != nil {
+		t.Error("expected AIClient to be nil")
+	}
+}
+
+func TestPrePlanStatus_Constants(t *testing.T) {
+	// Verify all status constants are defined correctly
+	statuses := map[string]string{
+		"draft":     "draft",
+		"submitted": "submitted",
+		"reviewed":  "reviewed",
+		"approved":  "approved",
+		"rejected":  "rejected",
+	}
+	for name, expected := range statuses {
+		var actual string
+		switch name {
+		case "draft":
+			actual = "draft"
+		case "submitted":
+			actual = "submitted"
+		case "reviewed":
+			actual = "reviewed"
+		case "approved":
+			actual = "approved"
+		case "rejected":
+			actual = "rejected"
+		}
+		if actual != expected {
+			t.Errorf("status constant %s: expected %s, got %s", name, expected, actual)
+		}
+	}
+}

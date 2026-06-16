@@ -99,6 +99,10 @@ func TestSetup_HasAPIRoutes(t *testing.T) {
 		"GET /api/v1/stats/engagement",
 		"GET /api/v1/users/me/activity",
 		"GET /api/v1/notifications",
+		// New endpoints added in this iteration
+		"POST /api/v1/pre-plans/:id/teacher-review",
+		"DELETE /api/v1/pre-plans/:id",
+		"GET /api/v1/competitions/:id/stats",
 	}
 
 	for _, route := range requiredRoutes {

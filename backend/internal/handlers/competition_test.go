@@ -29,3 +29,55 @@ func TestParseTimeField_EmptyString(t *testing.T) {
 		t.Error("expected error for empty string, got nil")
 	}
 }
+
+func TestNewCompetitionHandler(t *testing.T) {
+	handler := NewCompetitionHandler()
+	if handler == nil {
+		t.Fatal("expected non-nil handler")
+	}
+}
+
+func TestCreateCompetitionRequest_Types(t *testing.T) {
+	validTypes := []string{"hackathon", "innovation", "research", "business_plan", "ai_innovation", "data_science"}
+	for _, tt := range validTypes {
+		req := CreateCompetitionRequest{
+			Title:       "Test",
+			Type:        tt,
+			MaxTeamSize: 5,
+			MinTeamSize: 1,
+			StartDate:   "2026-07-01T00:00:00+08:00",
+			EndDate:     "2026-08-01T00:00:00+08:00",
+		}
+		if req.Type != tt {
+			t.Errorf("expected type %s, got %s", tt, req.Type)
+		}
+	}
+}
+
+func TestCreateCompetitionRequest_Fields(t *testing.T) {
+	req := CreateCompetitionRequest{
+		Title:                "蓝桥杯2026",
+		Description:          "全国软件大赛",
+		Type:                 "hackathon",
+		MaxTeamSize:          5,
+		MinTeamSize:          1,
+		StartDate:            "2026-07-01T00:00:00+08:00",
+		EndDate:              "2026-08-01T00:00:00+08:00",
+		Location:             "北京",
+		Level:                "national",
+		Tags:                 "编程,AI",
+		Website:              "https://lanqiao.com",
+		ContactName:          "张老师",
+		ContactEmail:         "zhang@test.com",
+		RegistrationDeadline: "2026-06-15T00:00:00+08:00",
+	}
+	if req.Title != "蓝桥杯2026" {
+		t.Errorf("expected Title='蓝桥杯2026', got '%s'", req.Title)
+	}
+	if req.Level != "national" {
+		t.Errorf("expected Level='national', got '%s'", req.Level)
+	}
+	if req.MaxTeamSize != 5 {
+		t.Errorf("expected MaxTeamSize=5, got %d", req.MaxTeamSize)
+	}
+}

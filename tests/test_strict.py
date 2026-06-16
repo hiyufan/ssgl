@@ -846,6 +846,70 @@ def test_crud():
         else:
             _log("SKIP", "preplan-review", "跳过 AI 评审测试 (SSGL_SKIP_SLOW=1)")
 
+    # --- Teacher review (approve) ---
+    if preplan_id:
+        resp = _api_auth("POST", f"/api/v1/pre-plans/{preplan_id}/teacher-review", json={"action": "approve", "notes": "同意通过"})
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            _log("PASS", "preplan-teacher-approve", f"教师审核通过, action={data.get('action')}")
+        else:
+            _log("WARN", "preplan-teacher-approve", f"教师审核 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+    # --- Teacher review (reject) - create a new preplan to reject ---
+    if team_comp_id and team_id:
+        resp = _api_auth("POST", "/api/v1/pre-plans", json={
+            "competition_id": team_comp_id, "team_id": team_id,
+            "title": "待拒绝预案", "tech_stack": "Python"
+        })
+        if _ok(resp) and resp.status_code in (200, 201):
+            reject_pp = resp.json().get("pre_plan", {})
+            reject_pp_id = reject_pp.get("id")
+            if reject_pp_id:
+                resp = _api_auth("POST", f"/api/v1/pre-plans/{reject_pp_id}/teacher-review", json={"action": "reject", "notes": "需要改进"})
+                if _ok(resp) and resp.status_code == 200:
+                    _log("PASS", "preplan-teacher-reject", f"教师驳回预案成功")
+                else:
+                    _log("WARN", "preplan-teacher-reject", f"教师驳回 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Teacher review validation (bad action) ---
+    if preplan_id:
+        resp = _api_auth("POST", f"/api/v1/pre-plans/{preplan_id}/teacher-review", json={"action": "invalid"})
+        if _ok(resp) and resp.status_code == 400:
+            _log("PASS", "preplan-teacher-bad-action", "无效 action → 400 ✓")
+        else:
+            _log("WARN", "preplan-teacher-bad-action", f"预期 400, 实际 {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Preplan delete ---
+    if team_comp_id and team_id:
+        resp = _api_auth("POST", "/api/v1/pre-plans", json={
+            "competition_id": team_comp_id, "team_id": team_id,
+            "title": "待删除预案", "tech_stack": "Go"
+        })
+        if _ok(resp) and resp.status_code in (200, 201):
+            del_pp = resp.json().get("pre_plan", {})
+            del_pp_id = del_pp.get("id")
+            if del_pp_id:
+                resp = _api_auth("DELETE", f"/api/v1/pre-plans/{del_pp_id}")
+                if _ok(resp) and resp.status_code == 200:
+                    _log("PASS", "preplan-delete", f"删除预案 {del_pp_id} 成功")
+                    # Verify gone
+                    resp = _api_auth("GET", f"/api/v1/pre-plans/{del_pp_id}")
+                    if _ok(resp) and resp.status_code == 404:
+                        _log("PASS", "preplan-delete-verify", "删除后 404 ✓")
+                    else:
+                        _log("WARN", "preplan-delete-verify", f"删除后 → {resp.status_code if _ok(resp) else 'None'}")
+                else:
+                    _log("WARN", "preplan-delete", f"删除预案 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Competition detail stats ---
+    if team_comp_id:
+        resp = _api_auth("GET", f"/api/v1/competitions/{team_comp_id}/stats")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            _log("PASS", "comp-stats", f"赛事统计成功, teams={data.get('team_count')}, students={data.get('student_count')}, preplans={data.get('preplan_count')}")
+        else:
+            _log("WARN", "comp-stats", f"赛事统计 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
     # --- Award CRUD: create, settle ---
     award_id = None
     if team_comp_id and team_id:

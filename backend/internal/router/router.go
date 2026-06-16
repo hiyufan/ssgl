@@ -115,6 +115,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/competitions", compHandler.List)
 		protected.GET("/competitions/recommend", recommendHandler.Recommend)
 		protected.GET("/competitions/:id", compHandler.Get)
+		protected.GET("/competitions/:id/stats", compHandler.CompetitionStats)
 
 		// Teams.
 		protected.GET("/teams", teamHandler.List)
@@ -142,6 +143,8 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/pre-plans/:id", preplanHandler.Get)
 		protected.PUT("/pre-plans/:id", preplanHandler.Update)
 		protected.POST("/pre-plans/:id/review", preplanHandler.AIReview)
+		protected.POST("/pre-plans/:id/teacher-review", preplanHandler.TeacherReview)
+		protected.DELETE("/pre-plans/:id", preplanHandler.Delete)
 
 		// Awards.
 		protected.GET("/awards", awardHandler.List)

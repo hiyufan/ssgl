@@ -279,3 +279,90 @@ func (h *PrePlanHandler) AIReview(c *gin.Context) {
 	db.Preload("Competition").Preload("Team").First(&preplan, preplan.ID)
 	c.JSON(http.StatusOK, gin.H{"pre_plan": preplan, "review": result})
 }
+
+// TeacherReview handles POST /pre-plans/:id/teacher-review — teacher approves or rejects a preplan.
+func (h *PrePlanHandler) TeacherReview(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pre-plan id"})
+		return
+	}
+
+	var preplan models.PrePlan
+	if err := db.First(&preplan, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pre-plan not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch pre-plan"})
+		return
+	}
+
+	var req struct {
+		Action string `json:"action" binding:"required,oneof=approve reject"`
+		Notes  string `json:"notes"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	newStatus := models.PrePlanStatusApproved
+	if req.Action == "reject" {
+		newStatus = models.PrePlanStatusRejected
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"status":      newStatus,
+		"updated_at":  now,
+	}
+	if req.Notes != "" {
+		// Preserve existing AI review notes and append teacher notes
+		teacherNotes := map[string]interface{}{
+			"teacher_action": req.Action,
+			"teacher_notes":  req.Notes,
+			"reviewed_at":    now.Format(time.RFC3339),
+		}
+		notesBytes, _ := json.Marshal(teacherNotes)
+		updates["ai_review_notes"] = preplan.AIReviewNotes + "\n---\n" + string(notesBytes)
+	}
+
+	if err := db.Model(&preplan).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update pre-plan"})
+		return
+	}
+
+	db.Preload("Competition").Preload("Team").First(&preplan, preplan.ID)
+	c.JSON(http.StatusOK, gin.H{"pre_plan": preplan, "action": req.Action})
+}
+
+// Delete handles DELETE /pre-plans/:id — soft deletes a pre-plan.
+func (h *PrePlanHandler) Delete(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pre-plan id"})
+		return
+	}
+
+	var preplan models.PrePlan
+	if err := db.First(&preplan, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pre-plan not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch pre-plan"})
+		return
+	}
+
+	if err := db.Delete(&preplan).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete pre-plan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "pre-plan deleted"})
+}

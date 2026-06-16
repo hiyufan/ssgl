@@ -413,3 +413,69 @@ func canManageCompetition(c *gin.Context, organizerID uint) bool {
 	id, ok := uid.(uint)
 	return ok && id == organizerID
 }
+
+// CompetitionStats handles GET /competitions/:id/stats — returns detailed stats for a competition.
+func (h *CompetitionHandler) CompetitionStats(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid competition id"})
+		return
+	}
+
+	var competition models.Competition
+	if err := db.First(&competition, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "competition not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competition"})
+		return
+	}
+
+	// Count teams registered for this competition
+	var teamCount int64
+	db.Model(&models.Team{}).Where("competition_id = ?", id).Count(&teamCount)
+
+	// Count unique students in teams for this competition
+	var studentCount int64
+	db.Raw("SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm JOIN teams t ON tm.team_id = t.id WHERE t.competition_id = ?", id).Scan(&studentCount)
+
+	// Count preplans
+	var preplanCount int64
+	db.Model(&models.PrePlan{}).Where("competition_id = ?", id).Count(&preplanCount)
+
+	// Count preplans by status
+	var reviewedCount, approvedCount int64
+	db.Model(&models.PrePlan{}).Where("competition_id = ? AND status = ?", id, models.PrePlanStatusReviewed).Count(&reviewedCount)
+	db.Model(&models.PrePlan{}).Where("competition_id = ? AND status = ?", id, models.PrePlanStatusApproved).Count(&approvedCount)
+
+	// Count awards
+	var awardCount int64
+	db.Model(&models.Award{}).Where("competition_id = ?", id).Count(&awardCount)
+
+	// Count milestones
+	var milestoneCount, milestoneCompleted int64
+	db.Model(&models.Milestone{}).Where("competition_id = ?", id).Count(&milestoneCount)
+	db.Model(&models.Milestone{}).Where("competition_id = ? AND status = ?", id, "completed").Count(&milestoneCompleted)
+
+	// Average team size
+	var avgTeamSize float64
+	db.Raw("SELECT COALESCE(AVG(member_count), 0) FROM (SELECT COUNT(*) as member_count FROM team_members tm JOIN teams t ON tm.team_id = t.id WHERE t.competition_id = ? GROUP BY t.id) sub", id).Scan(&avgTeamSize)
+
+	c.JSON(http.StatusOK, gin.H{
+		"competition_id":        id,
+		"title":                 competition.Title,
+		"status":                competition.Status,
+		"team_count":            teamCount,
+		"student_count":         studentCount,
+		"preplan_count":         preplanCount,
+		"reviewed_count":        reviewedCount,
+		"approved_count":        approvedCount,
+		"award_count":           awardCount,
+		"milestone_count":       milestoneCount,
+		"milestone_completed":   milestoneCompleted,
+		"avg_team_size":         avgTeamSize,
+	})
+}
