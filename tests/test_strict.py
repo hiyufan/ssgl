@@ -549,6 +549,102 @@ def test_crud():
     else:
         _log("FAIL", "showcase", f"成果展示失败 → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Milestones: CRUD + batch + progress ---
+    milestone_comp_data = {
+        "title": f"里程碑测试赛事-{int(time.time())}",
+        "description": "用于里程碑CRUD测试",
+        "type": "hackathon",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-07-01T00:00:00+08:00",
+        "end_date": "2026-08-01T00:00:00+08:00",
+    }
+    resp = _api_auth("POST", "/api/v1/competitions", json=milestone_comp_data)
+    milestone_comp_id = None
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        comp = data.get("competition", data)
+        milestone_comp_id = comp.get("id") or data.get("id")
+        _log("PASS", "milestone-comp-create", f"里程碑测试赛事创建成功, id={milestone_comp_id}")
+    else:
+        _log("FAIL", "milestone-comp-create", f"里程碑测试赛事创建失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    milestone_id = None
+    if milestone_comp_id:
+        # Create single milestone
+        resp = _api_auth("POST", "/api/v1/milestones", json={
+            "competition_id": milestone_comp_id,
+            "title": "报名截止",
+            "type": "registration",
+            "due_date": "2026-07-01T00:00:00+08:00",
+            "sort_order": 1,
+        })
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            m = data.get("milestone", data)
+            milestone_id = m.get("id") or data.get("id")
+            _log("PASS", "milestone-create", f"创建里程碑成功, id={milestone_id}")
+        else:
+            _log("FAIL", "milestone-create", f"创建里程碑失败 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+        # Batch create
+        resp = _api_auth("POST", f"/api/v1/competitions/{milestone_comp_id}/milestones/batch", json=[
+            {"title": "作品提交", "type": "submission", "due_date": "2026-07-10T00:00:00+08:00", "sort_order": 2},
+            {"title": "评审阶段", "type": "review", "due_date": "2026-07-15T00:00:00+08:00", "sort_order": 3},
+            {"title": "颁奖典礼", "type": "award", "due_date": "2026-07-20T00:00:00+08:00", "sort_order": 4},
+        ])
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            _log("PASS", "milestone-batch", f"批量创建成功, {data.get('total', 0)} 个里程碑")
+        else:
+            _log("FAIL", "milestone-batch", f"批量创建失败 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+    # List milestones
+    if milestone_comp_id:
+        resp = _api_auth("GET", f"/api/v1/competitions/{milestone_comp_id}/milestones")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            _log("PASS", "milestone-list", f"里程碑列表成功, {data.get('total', 0)} 个, 进度={data.get('progress', 0)}%")
+        else:
+            _log("FAIL", "milestone-list", f"里程碑列表失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Update milestone status
+    if milestone_id:
+        resp = _api_auth("PUT", f"/api/v1/milestones/{milestone_id}", json={"status": "completed"})
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "milestone-update", f"更新里程碑状态成功")
+        else:
+            _log("FAIL", "milestone-update", f"更新里程碑 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Get single milestone
+        resp = _api_auth("GET", f"/api/v1/milestones/{milestone_id}")
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "milestone-get", f"获取里程碑成功")
+        else:
+            _log("FAIL", "milestone-get", f"获取里程碑 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Verify progress after update
+    if milestone_comp_id:
+        resp = _api_auth("GET", f"/api/v1/competitions/{milestone_comp_id}/milestones")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            if data.get("completed", 0) > 0 and data.get("progress", 0) > 0:
+                _log("PASS", "milestone-progress", f"里程碑进度正确, completed={data['completed']}, progress={data['progress']}%")
+            else:
+                _log("WARN", "milestone-progress", f"里程碑进度异常: completed={data.get('completed')}, progress={data.get('progress')}%")
+
+    # Delete milestone
+    if milestone_id:
+        resp = _api_auth("DELETE", f"/api/v1/milestones/{milestone_id}")
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "milestone-delete", f"删除里程碑成功")
+        else:
+            _log("FAIL", "milestone-delete", f"删除里程碑 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Cleanup milestone competition
+    if milestone_comp_id:
+        _api_auth("DELETE", f"/api/v1/competitions/{milestone_comp_id}")
+
     # --- Team CRUD: create, join, leave ---
     # First create a temp competition for team tests
     team_comp_data = {

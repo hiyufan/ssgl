@@ -50,10 +50,12 @@ func Setup(cfg *config.Config) *gin.Engine {
 		"http://localhost:5173",
 	}
 
-	// TODO: Connect to Redis for distributed rate limiting
-	// redisClient := redis.NewClient(&redis.Options{Addr: cfg.Redis.Host + ":" + cfg.Redis.Port})
-	// securityConfig.UseRedis = true
-	// securityConfig.RedisClient = redisClient
+	// NOTE: Distributed rate limiting via Redis is available as a future enhancement.
+	// To enable, configure Redis connection in config.yaml and uncomment below:
+	//   redisClient := redis.NewClient(&redis.Options{Addr: cfg.Redis.Host + ":" + cfg.Redis.Port})
+	//   securityConfig.UseRedis = true
+	//   securityConfig.RedisClient = redisClient
+	// Currently using in-memory rate limiting which is sufficient for single-instance deployments.
 
 	security.ApplySecurity(r, securityConfig)
 
@@ -78,6 +80,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	showcaseHandler := handlers.NewShowcaseHandler()
 	matchHandler := handlers.NewMatchHandler()
 	profileHandler := handlers.NewProfileHandler()
+	milestoneHandler := handlers.NewMilestoneHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -177,6 +180,10 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/export/overview", statsHandler.ExportOverview)
 		protected.GET("/stats/export/competitions", statsHandler.ExportCompetitions)
 		protected.GET("/stats/export/teams", statsHandler.ExportTeams)
+
+		// Milestones (read — any authenticated user).
+		protected.GET("/competitions/:id/milestones", milestoneHandler.List)
+		protected.GET("/milestones/:id", milestoneHandler.Get)
 	}
 
 	// Competition management — teacher/admin only (inherits auth + audit from protected).
@@ -190,6 +197,12 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Award nomination — teacher/admin only.
 		staff.POST("/awards", awardHandler.Create)
+
+		// Milestones — teacher/admin only.
+		staff.POST("/milestones", milestoneHandler.Create)
+		staff.PUT("/milestones/:id", milestoneHandler.Update)
+		staff.DELETE("/milestones/:id", milestoneHandler.Delete)
+		staff.POST("/competitions/:id/milestones/batch", milestoneHandler.BatchCreate)
 	}
 
 	// Admin-only routes.
