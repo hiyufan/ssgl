@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { teamsAPI, prePlansAPI, competitionsAPI } from '@/services/api';
 import { SectionLabel } from '@/components/ui/page-helpers';
 import { Avatar } from '@/components/ui/page-helpers';
+import { Icon } from '@/components/ui/icon';
 import type { Team, PrePlan, Competition } from '@/types';
 
 export function StudentDashboard() {
@@ -229,7 +230,7 @@ export function StudentDashboard() {
       </div>
 
       {/* Row 3: Team detail + Open competitions */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
         <div data-bento className="card" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <SectionLabel label="我的团队" />
@@ -278,6 +279,44 @@ export function StudentDashboard() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Row 4: Quick Actions */}
+      <div data-bento className="card" style={{ padding: '20px 24px' }}>
+        <SectionLabel label="快捷操作" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
+          {[
+            { icon: 'trophy', label: '浏览赛事', desc: '查看可参加的赛事', color: 'var(--amber)', path: '/competitions' },
+            { icon: 'users', label: '创建团队', desc: '组建你的竞赛团队', color: 'var(--teal)', path: '/teams' },
+            { icon: 'sparkles', label: 'AI 工具箱', desc: '智能辅助工具', color: 'var(--purple)', path: '/aitools' },
+            { icon: 'target', label: '模拟答辩', desc: 'AI 答辩教练陪练', color: 'var(--green)', path: '/coach' },
+          ].map((action) => (
+            <button
+              key={action.label}
+              onClick={() => navigate(action.path)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                padding: '20px 16px', borderRadius: 10,
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                cursor: 'pointer', transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = action.color;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = `0 4px 12px ${action.color}22`;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <Icon name={action.icon} size={24} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{action.label}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{action.desc}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

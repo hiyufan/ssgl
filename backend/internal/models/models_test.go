@@ -77,6 +77,9 @@ func TestCompetition_TypeConstants(t *testing.T) {
 		{CompTypeHackathon, "hackathon"},
 		{CompTypeInnovation, "innovation"},
 		{CompTypeResearch, "research"},
+		{CompTypeBusinessPlan, "business_plan"},
+		{CompTypeAIInnovation, "ai_innovation"},
+		{CompTypeDataScience, "data_science"},
 	}
 	for _, tt := range types {
 		if tt.val != tt.expected {
@@ -88,17 +91,21 @@ func TestCompetition_TypeConstants(t *testing.T) {
 func TestCompetition_Fields(t *testing.T) {
 	now := time.Now()
 	comp := Competition{
-		ID:          1,
-		Title:       "Test Competition",
-		Description: "A test competition",
-		Type:        CompTypeHackathon,
-		Status:      CompStatusDraft,
-		MaxTeamSize: 5,
-		MinTeamSize: 1,
-		StartDate:   now,
-		EndDate:     now.Add(48 * time.Hour),
-		Location:    "Online",
-		Tags:        "test,go",
+		ID:            1,
+		Title:         "Test Competition",
+		Description:   "A test competition",
+		Type:          CompTypeHackathon,
+		Status:        CompStatusDraft,
+		MaxTeamSize:   5,
+		MinTeamSize:   1,
+		StartDate:     now,
+		EndDate:       now.Add(48 * time.Hour),
+		Location:      "Online",
+		Tags:          "test,go",
+		Level:         "national",
+		Website:       "https://example.com",
+		ContactName:   "张老师",
+		ContactEmail:  "zhang@example.edu.cn",
 	}
 
 	if comp.Title != "Test Competition" {
@@ -115,5 +122,34 @@ func TestCompetition_Fields(t *testing.T) {
 	}
 	if !comp.StartDate.Before(comp.EndDate) {
 		t.Error("expected StartDate before EndDate")
+	}
+	if comp.Level != "national" {
+		t.Errorf("expected level 'national', got '%s'", comp.Level)
+	}
+	if comp.Website != "https://example.com" {
+		t.Errorf("expected website 'https://example.com', got '%s'", comp.Website)
+	}
+	if comp.ContactName != "张老师" {
+		t.Errorf("expected contact_name '张老师', got '%s'", comp.ContactName)
+	}
+	if comp.ContactEmail != "zhang@example.edu.cn" {
+		t.Errorf("expected contact_email 'zhang@example.edu.cn', got '%s'", comp.ContactEmail)
+	}
+}
+
+func TestCompetition_NewTypes(t *testing.T) {
+	compTypes := []struct {
+		typ      string
+		expected string
+	}{
+		{CompTypeBusinessPlan, "business_plan"},
+		{CompTypeAIInnovation, "ai_innovation"},
+		{CompTypeDataScience, "data_science"},
+	}
+	for _, ct := range compTypes {
+		comp := Competition{Type: ct.typ}
+		if comp.Type != ct.expected {
+			t.Errorf("expected type=%s, got %s", ct.expected, comp.Type)
+		}
 	}
 }

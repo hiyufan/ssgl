@@ -1,12 +1,13 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
 import { useRole } from '@/hooks/use-role';
 import { Icon } from '@/components/ui/icon';
+import { notificationsAPI, workflowsAPI } from '@/services/api';
 
 /* ─── Nav Config ──────────────────────────────────────── */
-const NAV: Record<string, { id?: string; icon?: string; label?: string; section?: string; badge?: number }[]> = {
+const NAV_CONFIG: Record<string, { id?: string; icon?: string; label?: string; section?: string; badgeKey?: string }[]> = {
   admin: [
     { id: 'dashboard', icon: 'home', label: '概览' },
     { section: '赛事运营' },
@@ -14,7 +15,7 @@ const NAV: Record<string, { id?: string; icon?: string; label?: string; section?
     { id: 'calendar', icon: 'calendar', label: '赛事日历' },
     { id: 'teams', icon: 'users', label: '团队管理' },
     { section: '流程审批' },
-    { id: 'approvals', icon: 'check', label: '审批中心', badge: 3 },
+    { id: 'approvals', icon: 'check', label: '审批中心', badgeKey: 'pending' },
     { id: 'awards', icon: 'gift', label: '获奖管理' },
     { section: '数据洞察' },
     { id: 'evaluations', icon: 'star', label: '学生评价' },
@@ -37,7 +38,7 @@ const NAV: Record<string, { id?: string; icon?: string; label?: string; section?
     { id: 'calendar', icon: 'calendar', label: '赛事日历' },
     { id: 'teams', icon: 'users', label: '指导团队' },
     { section: '流程审批' },
-    { id: 'approvals', icon: 'check', label: '待办审批', badge: 2 },
+    { id: 'approvals', icon: 'check', label: '待办审批', badgeKey: 'pending' },
     { id: 'awards', icon: 'gift', label: '获奖确认' },
     { section: '数据洞察' },
     { id: 'evaluations', icon: 'star', label: '评价中心' },
@@ -86,8 +87,32 @@ export function Sidebar({ isOpen }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const activeId = location.pathname.replace(/^\//, '') || 'dashboard';
-  const nav = NAV[role] || [];
+  const nav = NAV_CONFIG[role] || [];
   const meta = ROLE_META[role];
+
+  // Dynamic badges
+  const [badges, setBadges] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const fetchBadges = async () => {
+      const newBadges: Record<string, number> = {};
+      try {
+        // Fetch pending workflows count
+        const wfRes = await workflowsAPI.list({ tab: 'pending' });
+        const pendingCount = (wfRes.workflows || []).length;
+        if (pendingCount > 0) newBadges['pending'] = pendingCount;
+      } catch { /* ignore */ }
+      try {
+        // Fetch unread notifications count
+        const notifRes = await notificationsAPI.getUnreadCount();
+        if (notifRes.unread_count > 0) newBadges['notifications'] = notifRes.unread_count;
+      } catch { /* ignore */ }
+      setBadges(newBadges);
+    };
+    fetchBadges();
+    const interval = setInterval(fetchBadges, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Sliding indicator
   const navRef = useRef<HTMLElement>(null);
@@ -183,6 +208,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             return <div key={i} className="nav-section">{item.section}</div>;
           }
           const active = activeId === item.id;
+          const badgeCount = item.badgeKey ? (badges[item.badgeKey] || 0) : 0;
           return (
             <button
               key={item.id}
@@ -194,14 +220,14 @@ export function Sidebar({ isOpen }: SidebarProps) {
             >
               <Icon name={item.icon!} size={15}/>
               <span style={{ flex: 1 }}>{item.label}</span>
-              {item.badge && (
+              {badgeCount > 0 && (
                 <span style={{
                   minWidth: 18, height: 18, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: active ? 'rgba(184,134,11,0.2)' : 'var(--red)',
                   color: active ? 'var(--amber)' : '#fff',
                   fontSize: 10, fontWeight: 700, padding: '0 5px',
                 }}>
-                  {item.badge}
+                  {badgeCount > 99 ? '99+' : badgeCount}
                 </span>
               )}
             </button>
@@ -250,4 +276,4 @@ export function Sidebar({ isOpen }: SidebarProps) {
   );
 }
 
-export { NAV, ROLE_META };
+export { NAV_CONFIG as NAV, ROLE_META };

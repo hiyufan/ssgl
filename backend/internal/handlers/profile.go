@@ -279,3 +279,119 @@ func (h *ProfileHandler) ListUsers(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"users": result, "total": len(result)})
 }
+
+// UserActivityItem represents an activity event for a specific user.
+type UserActivityItem struct {
+	ID        uint   `json:"id"`
+	Type      string `json:"type"`
+	Title     string `json:"title"`
+	Detail    string `json:"detail"`
+	CreatedAt string `json:"created_at"`
+}
+
+// MyActivity handles GET /users/me/activity — returns the current user's recent activity.
+func (h *ProfileHandler) MyActivity(c *gin.Context) {
+	db := database.GetDB()
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database not connected"})
+		return
+	}
+
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	userID := userIDVal.(uint)
+
+	limit := 15
+	if l, err := strconv.Atoi(c.Query("limit")); err == nil && l > 0 && l <= 50 {
+		limit = l
+	}
+
+	var activities []UserActivityItem
+
+	// Get user's team IDs
+	var teamMembers []models.TeamMember
+	db.Where("user_id = ?", userID).Find(&teamMembers)
+	teamIDs := make([]uint, 0, len(teamMembers))
+	for _, tm := range teamMembers {
+		teamIDs = append(teamIDs, tm.TeamID)
+	}
+
+	// Teams the user is in
+	if len(teamIDs) > 0 {
+		var teams []models.Team
+		db.Preload("Competition").Where("id IN ?", teamIDs).Order("created_at DESC").Limit(limit).Find(&teams)
+		for _, team := range teams {
+			compTitle := ""
+			if team.Competition.ID > 0 {
+				compTitle = team.Competition.Title
+			}
+			activities = append(activities, UserActivityItem{
+				ID:        team.ID,
+				Type:      "team",
+				Title:     "加入团队: " + team.Name,
+				Detail:    "赛事: " + compTitle,
+				CreatedAt: team.CreatedAt.Format("2006-01-02 15:04"),
+			})
+		}
+
+		// Pre-plans from user's teams
+		var preplans []models.PrePlan
+		db.Where("team_id IN ?", teamIDs).Order("created_at DESC").Limit(limit).Find(&preplans)
+		for _, pp := range preplans {
+			activities = append(activities, UserActivityItem{
+				ID:        pp.ID,
+				Type:      "preplan",
+				Title:     "提交预案: " + pp.Title,
+				Detail:    "状态: " + pp.Status,
+				CreatedAt: pp.CreatedAt.Format("2006-01-02 15:04"),
+			})
+		}
+
+		// Awards from user's teams
+		var awards []models.Award
+		db.Where("team_id IN ?", teamIDs).Order("created_at DESC").Limit(limit).Find(&awards)
+		for _, award := range awards {
+			activities = append(activities, UserActivityItem{
+				ID:    award.ID,
+				Type:  "award",
+				Title: "获得奖项: " + award.PrizeName,
+				Detail: award.RankName + ", 奖金: ¥" + strconv.FormatFloat(award.PrizeAmount, 'f', 0, 64),
+				CreatedAt: award.CreatedAt.Format("2006-01-02 15:04"),
+			})
+		}
+	}
+
+	// Evaluations received
+	var evals []models.StudentEvaluation
+	db.Where("student_id = ?", userID).Order("created_at DESC").Limit(limit).Find(&evals)
+	for _, ev := range evals {
+		activities = append(activities, UserActivityItem{
+			ID:        ev.ID,
+			Type:      "evaluation",
+			Title:     "收到评价",
+			Detail:    "综合评分: " + strconv.Itoa(ev.Overall) + "/5",
+			CreatedAt: ev.CreatedAt.Format("2006-01-02 15:04"),
+		})
+	}
+
+	// Sort by CreatedAt descending
+	for i := 0; i < len(activities); i++ {
+		for j := i + 1; j < len(activities); j++ {
+			if activities[j].CreatedAt > activities[i].CreatedAt {
+				activities[i], activities[j] = activities[j], activities[i]
+			}
+		}
+	}
+
+	if len(activities) > limit {
+		activities = activities[:limit]
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"activities": activities,
+		"total":      len(activities),
+	})
+}

@@ -156,6 +156,21 @@ export function CalendarPage() {
         actions={
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <button
+              onClick={() => {
+                const now = new Date();
+                setCurrentMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+                setSelectedDay(new Date().toISOString().slice(0, 10));
+              }}
+              style={{
+                height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid var(--amber)',
+                background: 'var(--amber-bg)', color: 'var(--amber)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 600, gap: 4,
+              }}
+            >
+              <Icon name="target" size={12} /> 今天
+            </button>
+            <button
               onClick={prevMonth}
               style={{
                 width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)',
@@ -235,7 +250,6 @@ export function CalendarPage() {
                   width: 22, height: 22, borderRadius: 6,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: isToday ? 'var(--amber)' : 'transparent',
-                  color2: isToday ? '#0F1523' : undefined,
                 }}>
                   <span style={{ color: isToday ? '#0F1523' : undefined }}>{day}</span>
                 </div>

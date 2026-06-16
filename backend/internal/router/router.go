@@ -2,6 +2,7 @@ package router
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ssgl/competition-platform/internal/config"
@@ -16,6 +17,30 @@ import (
 // Setup creates and configures the gin.Engine with all routes.
 func Setup(cfg *config.Config) *gin.Engine {
 	r := gin.Default()
+
+	// Public health endpoint (no auth).
+	r.GET("/health", func(c *gin.Context) {
+		db := database.GetDB()
+		dbOK := db != nil
+		if dbOK {
+			sqlDB, err := db.DB()
+			if err != nil || sqlDB.Ping() != nil {
+				dbOK = false
+			}
+		}
+		status := "healthy"
+		code := http.StatusOK
+		if !dbOK {
+			status = "degraded"
+			code = http.StatusServiceUnavailable
+		}
+		c.JSON(code, gin.H{
+			"status":   status,
+			"database": dbOK,
+			"service":  "ssgl-backend",
+			"version":  "1.0.0",
+		})
+	})
 
 	// Apply security middleware
 	securityConfig := security.DefaultSecurityConfig()
@@ -76,6 +101,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.PUT("/users/profile", profileHandler.UpdateProfile)
 		protected.GET("/users/profile/:id", profileHandler.GetProfile)
 		protected.GET("/users", profileHandler.ListUsers)
+		protected.GET("/users/me/activity", profileHandler.MyActivity)
 
 		// Competitions (read — any authenticated user).
 		protected.GET("/competitions", compHandler.List)
@@ -125,6 +151,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/students", statsHandler.Students)
 		protected.GET("/stats/progress", statsHandler.Progress)
 		protected.GET("/stats/type-distribution", statsHandler.TypeDistribution)
+		protected.GET("/stats/recent-activity", statsHandler.RecentActivity)
 
 		// Notifications (read for all users).
 		protected.GET("/notifications", notifHandler.List)

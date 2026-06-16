@@ -17,9 +17,12 @@ const (
 
 // Competition type constants.
 const (
-	CompTypeHackathon  = "hackathon"
-	CompTypeInnovation = "innovation"
-	CompTypeResearch   = "research"
+	CompTypeHackathon    = "hackathon"
+	CompTypeInnovation   = "innovation"
+	CompTypeResearch     = "research"
+	CompTypeBusinessPlan = "business_plan"
+	CompTypeAIInnovation = "ai_innovation"
+	CompTypeDataScience  = "data_science"
 )
 
 // Competition represents an academic competition or event.
@@ -39,6 +42,10 @@ type Competition struct {
 	RulesDocURL         string         `json:"rules_doc_url" gorm:"size:512"`
 	Prize               string         `json:"prize" gorm:"size:256"`
 	Tags                string         `json:"tags" gorm:"size:512"`
+	Level               string         `json:"level" gorm:"size:32"`
+	Website             string         `json:"website" gorm:"size:512"`
+	ContactName         string         `json:"contact_name" gorm:"size:128"`
+	ContactEmail        string         `json:"contact_email" gorm:"size:256"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `json:"-" gorm:"index"`

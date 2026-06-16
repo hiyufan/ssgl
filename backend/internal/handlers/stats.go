@@ -571,3 +571,121 @@ func (h *StatsHandler) TypeDistribution(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"types": results})
 }
+
+// ActivityItem represents a single activity event in the feed.
+type ActivityItem struct {
+	ID        uint   `json:"id"`
+	Type      string `json:"type"` // competition, team, award, preplan, evaluation
+	Title     string `json:"title"`
+	Detail    string `json:"detail"`
+	UserID    uint   `json:"user_id,omitempty"`
+	UserName  string `json:"user_name,omitempty"`
+	CreatedAt string `json:"created_at"`
+}
+
+// RecentActivity handles GET /stats/recent-activity — returns the latest activity events.
+func (h *StatsHandler) RecentActivity(c *gin.Context) {
+	db := database.GetDB()
+
+	limit := 20
+	if l, err := strconv.Atoi(c.Query("limit")); err == nil && l > 0 && l <= 50 {
+		limit = l
+	}
+
+	var activities []ActivityItem
+
+	// Recent competitions
+	var comps []models.Competition
+	db.Order("created_at DESC").Limit(limit).Find(&comps)
+	for _, comp := range comps {
+		activities = append(activities, ActivityItem{
+			ID:        comp.ID,
+			Type:      "competition",
+			Title:     comp.Title,
+			Detail:    "赛事类型: " + comp.Type + ", 状态: " + comp.Status,
+			UserID:    comp.OrganizerID,
+			CreatedAt: comp.CreatedAt.Format("2006-01-02 15:04"),
+		})
+	}
+
+	// Recent teams
+	var teams []models.Team
+	db.Preload("Leader").Preload("Competition").Order("created_at DESC").Limit(limit).Find(&teams)
+	for _, team := range teams {
+		leaderName := ""
+		if team.LeaderID > 0 {
+			leaderName = team.Leader.Name
+		}
+		compTitle := ""
+		if team.Competition.ID > 0 {
+			compTitle = team.Competition.Title
+		}
+		detail := "队长: " + leaderName
+		if compTitle != "" {
+			detail += ", 赛事: " + compTitle
+		}
+		activities = append(activities, ActivityItem{
+			ID:        team.ID,
+			Type:      "team",
+			Title:     team.Name,
+			Detail:    detail,
+			UserID:    team.LeaderID,
+			UserName:  leaderName,
+			CreatedAt: team.CreatedAt.Format("2006-01-02 15:04"),
+		})
+	}
+
+	// Recent awards
+	var awards []models.Award
+	db.Preload("Team").Order("created_at DESC").Limit(limit).Find(&awards)
+	for _, award := range awards {
+		teamName := ""
+		if award.Team.ID > 0 {
+			teamName = award.Team.Name
+		}
+		activities = append(activities, ActivityItem{
+			ID:    award.ID,
+			Type:  "award",
+			Title: award.PrizeName,
+			Detail: "团队: " + teamName + ", 奖项: " + award.RankName + ", 奖金: ¥" +
+				strconv.FormatFloat(award.PrizeAmount, 'f', 0, 64),
+			CreatedAt: award.CreatedAt.Format("2006-01-02 15:04"),
+		})
+	}
+
+	// Recent pre-plans
+	var preplans []models.PrePlan
+	db.Preload("Team").Order("created_at DESC").Limit(limit).Find(&preplans)
+	for _, pp := range preplans {
+		teamName := ""
+		if pp.Team.ID > 0 {
+			teamName = pp.Team.Name
+		}
+		activities = append(activities, ActivityItem{
+			ID:        pp.ID,
+			Type:      "preplan",
+			Title:     pp.Title,
+			Detail:    "团队: " + teamName + ", 状态: " + pp.Status,
+			CreatedAt: pp.CreatedAt.Format("2006-01-02 15:04"),
+		})
+	}
+
+	// Sort all activities by CreatedAt descending (simple bubble sort for small N)
+	for i := 0; i < len(activities); i++ {
+		for j := i + 1; j < len(activities); j++ {
+			if activities[j].CreatedAt > activities[i].CreatedAt {
+				activities[i], activities[j] = activities[j], activities[i]
+			}
+		}
+	}
+
+	// Trim to limit
+	if len(activities) > limit {
+		activities = activities[:limit]
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"activities": activities,
+		"total":      len(activities),
+	})
+}

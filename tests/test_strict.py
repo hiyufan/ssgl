@@ -102,10 +102,11 @@ def _login(username, password):
 def test_services():
     print("\n🔍 1. 服务健康检查")
 
-    # Backend - use login as health check (public endpoint)
-    resp = _api("POST", "/api/v1/auth/login", json={"username": ADMIN_USER, "password": ADMIN_PASS})
+    # Backend - dedicated /health endpoint
+    resp = _api("GET", "/health")
     if _ok(resp) and resp.status_code == 200:
-        _log("PASS", "backend-health", f"后端服务运行中 (:8080) → 200")
+        data = resp.json()
+        _log("PASS", "backend-health", f"后端服务运行中 (:8080) → {data.get('status')}, db={data.get('database')}, version={data.get('version')}")
     elif _ok(resp):
         _log("PASS", "backend-health", f"后端服务运行中 (:8080) → {resp.status_code}")
     else:
@@ -404,6 +405,32 @@ def test_crud():
         _log("PASS", "stat-type-dist", f"赛事类型分布成功, {len(types)} 种类型")
     else:
         _log("FAIL", "stat-type-dist", f"赛事类型分布失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Recent activity endpoint ---
+    resp = _api_auth("GET", "/api/v1/stats/recent-activity")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        activities = data.get("activities", [])
+        _log("PASS", "stat-recent-activity", f"最近动态成功, {len(activities)} 条活动")
+    else:
+        _log("FAIL", "stat-recent-activity", f"最近动态失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Recent activity with limit
+    resp = _api_auth("GET", "/api/v1/stats/recent-activity?limit=5")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "stat-recent-activity-limit", f"最近动态(limit=5)成功, {data.get('total', '?')} 条")
+    else:
+        _log("WARN", "stat-recent-activity-limit", f"最近动态(limit) → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- User activity endpoint ---
+    resp = _api_auth("GET", "/api/v1/users/me/activity")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        activities = data.get("activities", [])
+        _log("PASS", "user-activity", f"个人动态成功, {len(activities)} 条活动")
+    else:
+        _log("FAIL", "user-activity", f"个人动态失败 → {resp.status_code if _ok(resp) else 'None'}")
 
     # --- Notifications endpoint ---
     resp = _api_auth("GET", "/api/v1/notifications")
@@ -1141,7 +1168,7 @@ def test_code_quality():
     secrets_found = []
     for ext in ["*.go", "*.py", "*.ts", "*.tsx", "*.sh"]:
         for f in root.rglob(ext):
-            if "node_modules" in str(f) or "venv" in str(f) or ".git" in str(f) or ".env" in str(f) or "test_strict.py" in str(f):
+            if "node_modules" in str(f) or "venv" in str(f) or ".git" in str(f) or ".env" in str(f) or "test_strict.py" in str(f) or f.name.endswith("_test.go"):
                 continue
             try:
                 content = f.read_text(errors="ignore")

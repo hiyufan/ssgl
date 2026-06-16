@@ -532,6 +532,37 @@ export const ragAPI = {
   },
 };
 
+// Notifications API
+export interface Notification {
+  id: number;
+  user_id: number;
+  type: string;
+  title: string;
+  message: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+export const notificationsAPI = {
+  list: async (params?: { unread?: boolean; page?: number; page_size?: number }): Promise<{ items: Notification[]; total: number; unread_count: number }> => {
+    const response = await api.get('/notifications', { params });
+    return response.data;
+  },
+
+  getUnreadCount: async (): Promise<{ unread_count: number }> => {
+    const response = await api.get('/notifications/unread-count');
+    return response.data;
+  },
+
+  markRead: async (id: number): Promise<void> => {
+    await api.post(`/notifications/${id}/read`);
+  },
+
+  markAllRead: async (): Promise<void> => {
+    await api.post('/notifications/read-all');
+  },
+};
+
 export { api, aiApi };
 
 // Profile API

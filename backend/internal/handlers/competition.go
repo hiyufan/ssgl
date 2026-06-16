@@ -23,7 +23,7 @@ func NewCompetitionHandler() *CompetitionHandler {
 type CreateCompetitionRequest struct {
 	Title                string `json:"title" binding:"required,max=256"`
 	Description          string `json:"description"`
-	Type                 string `json:"type" binding:"required,oneof=hackathon innovation research"`
+	Type                 string `json:"type" binding:"required,oneof=hackathon innovation research business_plan ai_innovation data_science"`
 	MaxTeamSize          int    `json:"max_team_size" binding:"required,min=1"`
 	MinTeamSize          int    `json:"min_team_size" binding:"required,min=1"`
 	RegistrationDeadline string `json:"registration_deadline"`
@@ -33,13 +33,17 @@ type CreateCompetitionRequest struct {
 	RulesDocURL          string `json:"rules_doc_url" binding:"max=512"`
 	Prize                string `json:"prize" binding:"max=256"`
 	Tags                 string `json:"tags" binding:"max=512"`
+	Level                string `json:"level" binding:"omitempty,oneof=school provincial national international"`
+	Website              string `json:"website" binding:"max=512"`
+	ContactName          string `json:"contact_name" binding:"max=128"`
+	ContactEmail         string `json:"contact_email" binding:"max=256"`
 }
 
 // UpdateCompetitionRequest is the payload for updating a competition.
 type UpdateCompetitionRequest struct {
 	Title                string `json:"title" binding:"max=256"`
 	Description          string `json:"description"`
-	Type                 string `json:"type" binding:"omitempty,oneof=hackathon innovation research"`
+	Type                 string `json:"type" binding:"omitempty,oneof=hackathon innovation research business_plan ai_innovation data_science"`
 	MaxTeamSize          int    `json:"max_team_size" binding:"min=1"`
 	MinTeamSize          int    `json:"min_team_size" binding:"min=1"`
 	RegistrationDeadline string `json:"registration_deadline"`
@@ -49,6 +53,10 @@ type UpdateCompetitionRequest struct {
 	RulesDocURL          string `json:"rules_doc_url" binding:"max=512"`
 	Prize                string `json:"prize" binding:"max=256"`
 	Tags                 string `json:"tags" binding:"max=512"`
+	Level                string `json:"level" binding:"omitempty,oneof=school provincial national international"`
+	Website              string `json:"website" binding:"max=512"`
+	ContactName          string `json:"contact_name" binding:"max=128"`
+	ContactEmail         string `json:"contact_email" binding:"max=256"`
 }
 
 // List handles GET /competitions with filtering, search, and pagination.
@@ -166,19 +174,23 @@ func (h *CompetitionHandler) Create(c *gin.Context) {
 	}
 
 	competition := models.Competition{
-		Title:       req.Title,
-		Description: req.Description,
-		Type:        req.Type,
-		Status:      models.CompStatusDraft,
-		MaxTeamSize: req.MaxTeamSize,
-		MinTeamSize: req.MinTeamSize,
-		StartDate:   startDate,
-		EndDate:     endDate,
-		Location:    req.Location,
-		OrganizerID: organizerID.(uint),
-		RulesDocURL: req.RulesDocURL,
-		Prize:       req.Prize,
-		Tags:        req.Tags,
+		Title:        req.Title,
+		Description:  req.Description,
+		Type:         req.Type,
+		Status:       models.CompStatusDraft,
+		MaxTeamSize:  req.MaxTeamSize,
+		MinTeamSize:  req.MinTeamSize,
+		StartDate:    startDate,
+		EndDate:      endDate,
+		Location:     req.Location,
+		OrganizerID:  organizerID.(uint),
+		RulesDocURL:  req.RulesDocURL,
+		Prize:        req.Prize,
+		Tags:         req.Tags,
+		Level:        req.Level,
+		Website:      req.Website,
+		ContactName:  req.ContactName,
+		ContactEmail: req.ContactEmail,
 	}
 	if regDeadline != nil {
 		competition.RegistrationDeadline = *regDeadline
@@ -278,6 +290,18 @@ func (h *CompetitionHandler) Update(c *gin.Context) {
 	}
 	if req.Tags != "" {
 		updates["tags"] = req.Tags
+	}
+	if req.Level != "" {
+		updates["level"] = req.Level
+	}
+	if req.Website != "" {
+		updates["website"] = req.Website
+	}
+	if req.ContactName != "" {
+		updates["contact_name"] = req.ContactName
+	}
+	if req.ContactEmail != "" {
+		updates["contact_email"] = req.ContactEmail
 	}
 
 	if len(updates) == 0 {
