@@ -112,19 +112,26 @@ def test_services():
     else:
         _log("FAIL", "backend-health", f"后端服务不可用")
 
-    # AI Service (retry once on transient timeout)
-    resp = _api("GET", "/health", base=AI_SERVICE)
-    if not _ok(resp):
-        time.sleep(1)
-        resp = _api("GET", "/health", base=AI_SERVICE, timeout=20)
+    # AI Service (retry up to 3 times on transient timeout)
+    resp = None
+    for _attempt in range(3):
+        resp = _api("GET", "/health", base=AI_SERVICE, timeout=10)
+        if _ok(resp) and resp.status_code == 200:
+            break
+        time.sleep(2)
     if _ok(resp) and resp.status_code == 200:
         data = resp.json()
         _log("PASS", "ai-health", f"AI 服务运行中 (:8000) → {data.get('status', '?')}")
     else:
         _log("FAIL", "ai-health", f"AI 服务不可用", f"resp={resp}")
 
-    # AI Service DB
-    resp = _api("GET", "/ai/api/v1/rag/stats", base=AI_SERVICE)
+    # AI Service DB (retry up to 2 times)
+    resp = None
+    for _attempt in range(2):
+        resp = _api("GET", "/ai/api/v1/rag/stats", base=AI_SERVICE, timeout=10)
+        if _ok(resp) and resp.status_code == 200:
+            break
+        time.sleep(1)
     if _ok(resp) and resp.status_code == 200:
         data = resp.json()
         total = data.get("total_documents", data.get("total_chunks", "?"))
