@@ -457,6 +457,22 @@ def test_crud():
     else:
         _log("FAIL", "user-activity", f"个人动态失败 → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Global search ---
+    resp = _api_auth("GET", "/api/v1/search?q=test")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        results = data.get("results", [])
+        _log("PASS", "global-search", f"全局搜索成功, {len(results)} 条结果, query={data.get('query','')}")
+    else:
+        _log("FAIL", "global-search", f"全局搜索失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Global search missing query ---
+    resp = _api_auth("GET", "/api/v1/search")
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "global-search-no-q", f"搜索缺少 q 参数 → 400 ✓")
+    else:
+        _log("FAIL", "global-search-no-q", f"预期 400, 实际 {resp.status_code if _ok(resp) else 'None'}")
+
     # --- Notifications endpoint ---
     resp = _api_auth("GET", "/api/v1/notifications")
     if _ok(resp) and resp.status_code == 200:

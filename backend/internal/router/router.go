@@ -81,6 +81,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	matchHandler := handlers.NewMatchHandler()
 	profileHandler := handlers.NewProfileHandler()
 	milestoneHandler := handlers.NewMilestoneHandler()
+	globalSearchHandler := handlers.NewGlobalSearchHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -105,6 +106,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/users/profile/:id", profileHandler.GetProfile)
 		protected.GET("/users", profileHandler.ListUsers)
 		protected.GET("/users/me/activity", profileHandler.MyActivity)
+
+		// Global search.
+		protected.GET("/search", globalSearchHandler.Search)
 
 		// Competitions (read — any authenticated user).
 		protected.GET("/competitions", compHandler.List)
