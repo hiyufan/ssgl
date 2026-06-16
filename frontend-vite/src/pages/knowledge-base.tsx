@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { ragAPI } from '@/services/api';
 import { Icon } from '@/components/ui/icon';
-import { PageHeader } from '@/components/ui/page-helpers';
+import { PageHeader, SectionLabel } from '@/components/ui/page-helpers';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { RAGDocument, RAGStats } from '@/types';
 
@@ -11,6 +11,10 @@ export function KnowledgeBasePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [ragQuery, setRagQuery] = useState('');
+  const [ragResults, setRagResults] = useState<Array<{ content: string; metadata: Record<string, unknown>; score: number }> | null>(null);
+  const [ragLoading, setRagLoading] = useState(false);
+  const [ragAnswer, setRagAnswer] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = () => {
@@ -57,6 +61,38 @@ export function KnowledgeBasePage() {
     }
   };
 
+  const handleRagQuery = async () => {
+    if (!ragQuery.trim()) return;
+    setRagLoading(true);
+    setRagResults(null);
+    setRagAnswer(null);
+    try {
+      const res = await ragAPI.query(ragQuery);
+      setRagAnswer(res.answer || null);
+      setRagResults(res.sources || res.results || []);
+    } catch (err) {
+      console.error('RAG query error:', err);
+      setRagAnswer('查询失败，请稍后重试');
+    } finally {
+      setRagLoading(false);
+    }
+  };
+
+  const handleRagSearch = async () => {
+    if (!ragQuery.trim()) return;
+    setRagLoading(true);
+    setRagResults(null);
+    setRagAnswer(null);
+    try {
+      const res = await ragAPI.search(ragQuery);
+      setRagResults(res.results || []);
+    } catch (err) {
+      console.error('RAG search error:', err);
+    } finally {
+      setRagLoading(false);
+    }
+  };
+
   const filtered = docs.filter(doc => !search || doc.filename.toLowerCase().includes(search.toLowerCase()));
 
   if (loading) {
@@ -98,6 +134,63 @@ export function KnowledgeBasePage() {
         <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
           {stats ? `${stats.total_documents} 文档 · ${stats.total_chunks} 分块` : '加载中…'}
         </span>
+      </div>
+
+      {/* RAG Query Section */}
+      <div className="card anim-in d2" style={{ padding: 20, marginBottom: 20 }}>
+        <SectionLabel label="🔍 智能问答" />
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>基于知识库的 RAG 检索问答，输入问题获取 AI 回答</p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <input
+            value={ragQuery}
+            onChange={e => setRagQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleRagQuery(); }}
+            placeholder="输入问题，如：蓝桥杯竞赛的参赛经验有哪些？"
+            style={{ flex: 1, height: 40, padding: '0 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text)', outline: 'none' }}
+          />
+          <button className="btn btn-primary" onClick={handleRagQuery} disabled={ragLoading || !ragQuery.trim()} style={{ minWidth: 80 }}>
+            {ragLoading ? '查询中…' : 'AI 问答'}
+          </button>
+          <button className="btn btn-outline" onClick={handleRagSearch} disabled={ragLoading || !ragQuery.trim()} style={{ minWidth: 80 }}>
+            语义搜索
+          </button>
+        </div>
+
+        {/* RAG Answer */}
+        {ragAnswer && (
+          <div style={{ padding: 16, borderRadius: 10, background: 'var(--amber-bg)', border: '1px solid var(--amber-border)', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)', marginBottom: 8, letterSpacing: '0.05em' }}>AI 回答</div>
+            <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{ragAnswer}</div>
+          </div>
+        )}
+
+        {/* RAG Search Results */}
+        {ragResults && ragResults.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8 }}>匹配到 {ragResults.length} 条相关片段</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {ragResults.map((r, i) => (
+                <div key={i} style={{ padding: 12, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6, marginBottom: 6 }}>{r.content}</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {r.score != null && (
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--green)', fontWeight: 600 }}>
+                        相似度: {(r.score * 100).toFixed(1)}%
+                      </span>
+                    )}
+                    {r.metadata?.filename && (
+                      <span style={{ fontSize: 10, color: 'var(--text-3)' }}>来源: {String(r.metadata.filename)}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ragResults && ragResults.length === 0 && !ragLoading && !ragAnswer && (
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-3)', fontSize: 13 }}>未找到相关结果</div>
+        )}
       </div>
 
       {filtered.length === 0 ? (

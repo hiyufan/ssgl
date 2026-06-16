@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
 import { useNavigate } from 'react-router-dom';
-import { teamsAPI, prePlansAPI, competitionsAPI, notificationsAPI, type Notification } from '@/services/api';
+import { teamsAPI, prePlansAPI, competitionsAPI, notificationsAPI, profileAPI, type Notification } from '@/services/api';
 import { SectionLabel } from '@/components/ui/page-helpers';
 import { Avatar } from '@/components/ui/page-helpers';
 import { Icon } from '@/components/ui/icon';
@@ -17,22 +17,25 @@ export function StudentDashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<Array<{ id: number; type: string; title: string; detail: string; created_at: string }>>([]);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [teamRes, planRes, compRes, notifRes] = await Promise.all([
+        const [teamRes, planRes, compRes, notifRes, actRes] = await Promise.all([
           teamsAPI.list(),
           prePlansAPI.list(),
           competitionsAPI.list(),
           notificationsAPI.list({ page: 1, page_size: 5 }).catch(() => ({ items: [], total: 0, unread_count: 0 })),
+          profileAPI.myActivity(8).catch(() => ({ activities: [] })),
         ]);
         setTeams(teamRes.teams || []);
         setPreplans(planRes.pre_plans || []);
         setCompetitions(compRes.competitions || []);
         setNotifications(notifRes.items || []);
         setUnreadCount(notifRes.unread_count || 0);
+        setActivities(actRes.activities || []);
       } catch (e) {
         console.error('Student dashboard fetch error:', e);
       } finally {
@@ -365,6 +368,51 @@ export function StudentDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Row 5: Activity Feed */}
+      {activities.length > 0 && (
+        <div className="card anim-in" style={{ overflow: 'hidden', marginBottom: 24 }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <SectionLabel label="我的动态" />
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>最近 {activities.length} 条</span>
+          </div>
+          <div>
+            {activities.map((act, i) => {
+              const typeIcons: Record<string, { icon: string; color: string }> = {
+                team: { icon: 'users', color: 'var(--teal)' },
+                preplan: { icon: 'file', color: 'var(--purple)' },
+                award: { icon: 'gift', color: 'var(--amber)' },
+                evaluation: { icon: 'star', color: 'var(--green)' },
+              };
+              const t = typeIcons[act.type] || { icon: 'clock', color: 'var(--text-3)' };
+              return (
+                <div key={`${act.type}-${act.id}-${i}`} style={{
+                  padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12,
+                  borderBottom: i < activities.length - 1 ? '1px solid var(--border)' : 'none',
+                  transition: 'background 0.15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+                >
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 7, background: `${t.color}18`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <Icon name={t.icon} size={13} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{act.title}</div>
+                    {act.detail && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{act.detail}</div>}
+                  </div>
+                  <span style={{ fontSize: 10, color: 'var(--text-3)', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>
+                    {act.created_at || ''}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

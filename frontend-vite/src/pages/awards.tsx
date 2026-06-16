@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { awardsAPI } from '@/services/api';
+import { awardsAPI, competitionsAPI, teamsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
 import { PageHeader, SectionLabel } from '@/components/ui/page-helpers';
-import type { Award } from '@/types';
+import type { Award, Competition, Team } from '@/types';
 import { useRole } from '@/hooks/use-role';
 import { Button } from '@/components/ui/button';
-import { FormModal, Field, NumberInput } from '@/components/ui/form';
+import { FormModal, Field, NumberInput, TextInput, Select } from '@/components/ui/form';
 import { toast } from '@/components/ui/toast';
 import { getApiError } from '@/lib/form-utils';
 
@@ -40,6 +40,79 @@ function SettleAwardModal({ award, onClose, onSettled }: {
   );
 }
 
+function CreateAwardModal({ onClose, onCreated }: {
+  onClose: () => void;
+  onCreated: (a: Award) => void;
+}) {
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [compId, setCompId] = useState('');
+  const [teamId, setTeamId] = useState('');
+  const [rank, setRank] = useState('1');
+  const [rankName, setRankName] = useState('');
+  const [prizeName, setPrizeName] = useState('');
+  const [prizeAmount, setPrizeAmount] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      competitionsAPI.list().catch(() => ({ competitions: [] })),
+      teamsAPI.list().catch(() => ({ teams: [] })),
+    ]).then(([compRes, teamRes]) => {
+      setCompetitions(compRes.competitions || []);
+      setTeams(teamRes.teams || []);
+    });
+  }, []);
+
+  const submit = async () => {
+    if (!compId || !teamId) { setError('请选择赛事和团队'); return; }
+    setSubmitting(true); setError(null);
+    try {
+      const res = await awardsAPI.create({
+        competition_id: Number(compId),
+        team_id: Number(teamId),
+        rank: Number(rank) || 1,
+        rank_name: rankName || undefined,
+        prize_name: prizeName || undefined,
+        prize_amount: Number(prizeAmount) || 0,
+      });
+      toast.success('奖项创建成功');
+      onCreated(res.award);
+      onClose();
+    } catch (err) {
+      setError(getApiError(err, '创建失败'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <FormModal open={true} onClose={onClose} title="提名奖项" onSubmit={submit} submitting={submitting} error={error} submitLabel="创建奖项" width={500}>
+      <Field label="赛事">
+        <Select value={compId} onChange={setCompId} placeholder="请选择赛事"
+          options={competitions.map(c => ({ value: String(c.id), label: c.title }))} />
+      </Field>
+      <Field label="团队">
+        <Select value={teamId} onChange={setTeamId} placeholder="请选择团队"
+          options={teams.map(t => ({ value: String(t.id), label: t.name }))} />
+      </Field>
+      <Field label="排名">
+        <NumberInput min={1} value={rank} onChange={e => setRank(e.target.value)} />
+      </Field>
+      <Field label="奖项名称（可选）">
+        <TextInput value={rankName} onChange={e => setRankName(e.target.value)} placeholder="如：一等奖" />
+      </Field>
+      <Field label="奖品名称（可选）">
+        <TextInput value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="如：最佳创新奖" />
+      </Field>
+      <Field label="奖金（元）">
+        <NumberInput min={0} value={prizeAmount} onChange={e => setPrizeAmount(e.target.value)} />
+      </Field>
+    </FormModal>
+  );
+}
+
 export function AwardsPage() {
   const [awards, setAwards] = useState<Award[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +124,9 @@ export function AwardsPage() {
 
   const role = useRole();
   const [settling, setSettling] = useState<Award | null>(null);
+  const [creating, setCreating] = useState(false);
   const onSettled = (a: Award) => setAwards((prev) => prev.map((x) => (x.id === a.id ? a : x)));
+  const onCreated = (a: Award) => setAwards((prev) => [a, ...prev]);
 
   const filtered = tab === 'all' ? awards : awards.filter(a => a.status === tab);
   const top3 = awards.slice(0, 3);
@@ -76,6 +151,11 @@ export function AwardsPage() {
       <PageHeader
         title="获奖管理"
         subtitle={`${awards.length} 个获奖记录，其中 ${awards.filter(a => a.status === 'settled').length} 个已结算`}
+        actions={
+          (role === 'admin' || role === 'teacher') ? (
+            <Button variant="primary" onClick={() => setCreating(true)}>提名奖项</Button>
+          ) : undefined
+        }
       />
 
       {/* Podium */}
@@ -153,6 +233,7 @@ export function AwardsPage() {
         </table>
       </div>
       {settling && <SettleAwardModal award={settling} onClose={() => setSettling(null)} onSettled={onSettled} />}
+      {creating && <CreateAwardModal onClose={() => setCreating(false)} onCreated={onCreated} />}
     </div>
   );
 }

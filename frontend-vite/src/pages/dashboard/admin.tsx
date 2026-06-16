@@ -14,18 +14,21 @@ export function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<StatsOverview | null>(null);
   const [pending, setPending] = useState<ApprovalWorkflow[]>([]);
+  const [engagement, setEngagement] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, wfRes] = await Promise.all([
+        const [statsRes, wfRes, engRes] = await Promise.all([
           statsAPI.overview(),
           workflowsAPI.list({ tab: 'pending' }),
+          statsAPI.engagement().catch(() => null),
         ]);
         setStats(statsRes);
         setPending(wfRes.workflows || []);
+        setEngagement(engRes);
       } catch (e) {
         console.error('Dashboard fetch error:', e);
       } finally {
@@ -211,6 +214,29 @@ export function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Engagement Metrics ─────────────────────────── */}
+      {engagement && (
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel label="参与度指标" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginTop: 12 }}>
+            {[
+              { label: '组队率', value: `${(engagement.team_formation_rate || 0).toFixed(1)}%`, desc: `${engagement.students_with_teams || 0}/${engagement.total_students || 0} 学生`, color: 'var(--teal)' },
+              { label: 'AI 评审率', value: `${(engagement.ai_review_rate || 0).toFixed(1)}%`, desc: `${engagement.reviewed_pre_plans || 0}/${engagement.total_pre_plans || 0} 预案`, color: 'var(--purple)' },
+              { label: '赛事完成率', value: `${(engagement.completion_rate || 0).toFixed(1)}%`, desc: `${engagement.published_competitions || 0} 已发布`, color: 'var(--amber)' },
+              { label: '平均团队规模', value: (engagement.avg_team_size || 0).toFixed(1), desc: `${engagement.total_teams || 0} 个团队`, color: 'var(--green)' },
+              { label: '平均预案评分', value: (engagement.avg_pre_plan_score || 0).toFixed(1), desc: 'AI 评审均分', color: 'var(--red)' },
+              { label: '进行中赛事', value: String(engagement.active_competitions || 0), desc: `共 ${engagement.total_competitions || 0} 个`, color: 'var(--orange)' },
+            ].map((item) => (
+              <div key={item.label} className="card card-magnetic" style={{ padding: '16px 18px', borderLeft: `3px solid ${item.color}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>{item.label}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700, color: item.color, lineHeight: 1 }}>{item.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>{item.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Quick Actions ──────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 24 }}>

@@ -380,6 +380,25 @@ export const statsAPI = {
     const response = await api.get('/stats/export/teams', { responseType: 'blob' });
     return response.data;
   },
+
+  engagement: async (): Promise<{
+    total_students: number;
+    students_with_teams: number;
+    team_formation_rate: number;
+    total_pre_plans: number;
+    reviewed_pre_plans: number;
+    ai_review_rate: number;
+    avg_pre_plan_score: number;
+    total_competitions: number;
+    published_competitions: number;
+    completion_rate: number;
+    total_teams: number;
+    avg_team_size: number;
+    active_competitions: number;
+  }> => {
+    const response = await api.get('/stats/engagement');
+    return response.data;
+  },
 };
 
 // Audit Logs API
@@ -669,6 +688,13 @@ export const profileAPI = {
     if (query) params.q = query;
     if (role) params.role = role;
     const response = await api.get('/users', { params });
+    return response.data;
+  },
+
+  myActivity: async (limit?: number): Promise<{ activities: Array<{ id: number; type: string; title: string; detail: string; created_at: string }> }> => {
+    const params: Record<string, string> = {};
+    if (limit) params.limit = String(limit);
+    const response = await api.get('/users/me/activity', { params });
     return response.data;
   },
 };
