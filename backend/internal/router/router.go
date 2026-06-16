@@ -82,6 +82,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	profileHandler := handlers.NewProfileHandler()
 	milestoneHandler := handlers.NewMilestoneHandler()
 	globalSearchHandler := handlers.NewGlobalSearchHandler()
+	diagnosticsHandler := handlers.NewDiagnosticsHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -179,6 +180,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Showcase — settled awards for public display.
 		protected.GET("/showcase", showcaseHandler.List)
+
+		// System diagnostics.
+		protected.GET("/system/diagnostics", diagnosticsHandler.Diagnostics)
 
 		// Data export.
 		protected.GET("/stats/export/overview", statsHandler.ExportOverview)

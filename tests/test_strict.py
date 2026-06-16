@@ -448,6 +448,22 @@ def test_crud():
     else:
         _log("WARN", "stat-trends-6m", f"赛事趋势(6个月) → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Engagement endpoint ---
+    resp = _api_auth("GET", "/api/v1/stats/engagement")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "stat-engagement", f"参与度统计成功, 组队率={data.get('team_formation_rate', '?')}%, AI评审率={data.get('ai_review_rate', '?')}%")
+    else:
+        _log("FAIL", "stat-engagement", f"参与度统计失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- System diagnostics endpoint ---
+    resp = _api_auth("GET", "/api/v1/system/diagnostics")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "system-diagnostics", f"系统诊断成功, uptime={data.get('uptime_seconds', '?')}s, db_pool={data.get('db_pool_stats', {}).get('open_connections', '?')}")
+    else:
+        _log("WARN", "system-diagnostics", f"系统诊断 → {resp.status_code if _ok(resp) else 'None'} (may not exist yet)")
+
     # --- User activity endpoint ---
     resp = _api_auth("GET", "/api/v1/users/me/activity")
     if _ok(resp) and resp.status_code == 200:
