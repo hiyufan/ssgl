@@ -430,6 +430,24 @@ def test_crud():
     else:
         _log("WARN", "stat-recent-activity-limit", f"最近动态(limit) → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Competition trends endpoint ---
+    resp = _api_auth("GET", "/api/v1/stats/trends")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        trends = data.get("trends", [])
+        _log("PASS", "stat-trends", f"赛事趋势成功, {len(trends)} 个月数据")
+    else:
+        _log("FAIL", "stat-trends", f"赛事趋势失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Trends with custom months param
+    resp = _api_auth("GET", "/api/v1/stats/trends?months=6")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        trends = data.get("trends", [])
+        _log("PASS", "stat-trends-6m", f"赛事趋势(6个月)成功, {len(trends)} 个月")
+    else:
+        _log("WARN", "stat-trends-6m", f"赛事趋势(6个月) → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- User activity endpoint ---
     resp = _api_auth("GET", "/api/v1/users/me/activity")
     if _ok(resp) and resp.status_code == 200:

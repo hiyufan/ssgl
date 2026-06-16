@@ -324,6 +324,11 @@ export const statsAPI = {
     const response = await api.get('/stats/export/competitions', { responseType: 'blob' });
     return response.data;
   },
+
+  trends: async (): Promise<Record<string, unknown>> => {
+    const response = await api.get('/stats/trends');
+    return response.data;
+  },
 };
 
 // Audit Logs API

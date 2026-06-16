@@ -255,3 +255,33 @@ func TestLeaderboardScoreFormula(t *testing.T) {
 		})
 	}
 }
+
+func TestTrendPointFields(t *testing.T) {
+	tp := TrendPoint{
+		Month:        "2026-06",
+		Competitions: 5,
+		Teams:        12,
+		Awards:       3,
+		PrePlans:     8,
+		PrizeAmount:  15000.00,
+	}
+
+	if tp.Month != "2026-06" {
+		t.Errorf("expected Month='2026-06', got '%s'", tp.Month)
+	}
+	if tp.Competitions != 5 {
+		t.Errorf("expected Competitions=5, got %d", tp.Competitions)
+	}
+	if tp.Teams != 12 {
+		t.Errorf("expected Teams=12, got %d", tp.Teams)
+	}
+	if tp.Awards != 3 {
+		t.Errorf("expected Awards=3, got %d", tp.Awards)
+	}
+	if tp.PrePlans != 8 {
+		t.Errorf("expected PrePlans=8, got %d", tp.PrePlans)
+	}
+	if tp.PrizeAmount != 15000.00 {
+		t.Errorf("expected PrizeAmount=15000, got %.2f", tp.PrizeAmount)
+	}
+}

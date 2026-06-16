@@ -69,7 +69,12 @@ async def answer(body: AnswerRequest):
                 question_id=body.question_id,
                 answer=body.answer,
             ):
-                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                # Wrap plain string chunks in a dict for consistent SSE format
+                if isinstance(chunk, str):
+                    payload = {"chunk": chunk}
+                else:
+                    payload = chunk
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
         except SessionExpiredError:
             yield "data: [EXPIRED]\n\n"

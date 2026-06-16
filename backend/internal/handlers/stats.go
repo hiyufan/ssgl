@@ -689,3 +689,81 @@ func (h *StatsHandler) RecentActivity(c *gin.Context) {
 		"total":      len(activities),
 	})
 }
+
+// TrendPoint holds one month's aggregate counts.
+type TrendPoint struct {
+	Month         string  `json:"month"`          // "2026-01"
+	Competitions  int64   `json:"competitions"`
+	Teams         int64   `json:"teams"`
+	Awards        int64   `json:"awards"`
+	PrePlans      int64   `json:"pre_plans"`
+	PrizeAmount   float64 `json:"prize_amount"`
+}
+
+// Trends handles GET /stats/trends — returns monthly time-series data
+// for competitions, teams, awards, and pre-plans over the last N months.
+func (h *StatsHandler) Trends(c *gin.Context) {
+	db := database.GetDB()
+
+	// Default to 12 months
+	monthsStr := c.DefaultQuery("months", "12")
+	months := 12
+	if m, err := strconv.Atoi(monthsStr); err == nil && m > 0 && m <= 24 {
+		months = m
+	}
+
+	startDate := time.Now().AddDate(0, -months, 0)
+	startDate = time.Date(startDate.Year(), startDate.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	// Build list of month labels
+	type monthKey struct{ year, month int }
+	var points []TrendPoint
+	cursor := startDate
+	now := time.Now()
+	for cursor.Before(now) || cursor.Format("2006-01") == now.Format("2006-01") {
+		label := cursor.Format("2006-01")
+		nextMonth := cursor.AddDate(0, 1, 0)
+
+		var compCount int64
+		db.Model(&models.Competition{}).
+			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
+			Count(&compCount)
+
+		var teamCount int64
+		db.Model(&models.Team{}).
+			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
+			Count(&teamCount)
+
+		var awardCount int64
+		db.Model(&models.Award{}).
+			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
+			Count(&awardCount)
+
+		var prePlanCount int64
+		db.Model(&models.PrePlan{}).
+			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
+			Count(&prePlanCount)
+
+		var prizeAmount float64
+		db.Model(&models.Award{}).
+			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
+			Select("COALESCE(SUM(prize_amount), 0)").
+			Row().Scan(&prizeAmount)
+
+		points = append(points, TrendPoint{
+			Month:        label,
+			Competitions: compCount,
+			Teams:        teamCount,
+			Awards:       awardCount,
+			PrePlans:     prePlanCount,
+			PrizeAmount:  prizeAmount,
+		})
+
+		cursor = nextMonth
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"trends": points,
+		"total":  len(points),
+	})
+}

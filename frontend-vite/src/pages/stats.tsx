@@ -15,6 +15,15 @@ interface CompetitionStat {
   pre_plan_count: number;
 }
 
+interface TrendPoint {
+  month: string;
+  competitions: number;
+  teams: number;
+  awards: number;
+  pre_plans: number;
+  prize_amount: number;
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -38,15 +47,17 @@ export function StatsPage() {
   const [overview, setOverview] = useState<StatsOverview | null>(null);
   const [teachers, setTeachers] = useState<TeacherStat[]>([]);
   const [competitions, setCompetitions] = useState<CompetitionStat[]>([]);
+  const [trends, setTrends] = useState<TrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([statsAPI.overview(), statsAPI.teachers(), statsAPI.competitions()])
-      .then(([o, t, c]) => {
+    Promise.all([statsAPI.overview(), statsAPI.teachers(), statsAPI.competitions(), statsAPI.trends()])
+      .then(([o, t, c, tr]) => {
         setOverview(o);
         setTeachers(t.teachers || []);
         setCompetitions((c as Record<string, unknown>).competitions as CompetitionStat[] || []);
+        setTrends((tr as Record<string, unknown>).trends as TrendPoint[] || []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -101,6 +112,17 @@ export function StatsPage() {
         <div className="anim-in d4"><StatCard label="已发奖项" value={overview?.total_awards || 0} icon="gift" color="var(--green)"/></div>
         <div className="anim-in d5"><StatCard label="进行中" value={overview?.ongoing_competitions || 0} icon="sparkles" color="var(--teal)"/></div>
       </div>
+
+      {/* Trends Area Chart */}
+      {trends.length > 0 && (
+        <div className="card anim-in d2" style={{ padding: 22, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <SectionLabel label="平台增长趋势"/>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{trends.length} 个月</span>
+          </div>
+          <TrendChart data={trends} />
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16, marginBottom: 16 }}>
         <div className="card anim-in d2" style={{ padding: 22 }}>
@@ -207,6 +229,78 @@ export function StatsPage() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Simple SVG area chart for trends data */
+function TrendChart({ data }: { data: TrendPoint[] }) {
+  const W = 700, H = 200, PAD = 40;
+  const chartW = W - PAD * 2;
+  const chartH = H - PAD * 2;
+
+  // Data series config
+  const series = [
+    { key: 'teams' as const, label: '团队', color: 'var(--teal)' },
+    { key: 'competitions' as const, label: '赛事', color: 'var(--amber)' },
+    { key: 'awards' as const, label: '奖项', color: 'var(--green)' },
+  ];
+
+  const maxVal = Math.max(1, ...data.flatMap(d => series.map(s => d[s.key])));
+
+  const toX = (i: number) => PAD + (i / Math.max(data.length - 1, 1)) * chartW;
+  const toY = (v: number) => PAD + chartH - (v / maxVal) * chartH;
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 200 }}>
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map(pct => {
+          const y = PAD + chartH * (1 - pct);
+          const val = Math.round(maxVal * pct);
+          return (
+            <g key={pct}>
+              <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="var(--border)" strokeWidth={0.5} />
+              <text x={PAD - 6} y={y + 4} textAnchor="end" fontSize={9} fill="var(--text-3)" fontFamily="var(--font-mono)">{val}</text>
+            </g>
+          );
+        })}
+
+        {/* X axis labels */}
+        {data.map((d, i) => (
+          i % Math.max(1, Math.floor(data.length / 6)) === 0 && (
+            <text key={i} x={toX(i)} y={H - 4} textAnchor="middle" fontSize={9} fill="var(--text-3)" fontFamily="var(--font-mono)">
+              {d.month.slice(5)}
+            </text>
+          )
+        ))}
+
+        {/* Area fills + lines */}
+        {series.map(s => {
+          const linePath = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${toX(i)} ${toY(d[s.key])}`).join(' ');
+          const areaPath = `${linePath} L ${toX(data.length - 1)} ${PAD + chartH} L ${PAD} ${PAD + chartH} Z`;
+          return (
+            <g key={s.key}>
+              <path d={areaPath} fill={s.color} opacity={0.08} />
+              <path d={linePath} fill="none" stroke={s.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              {/* Dots */}
+              {data.map((d, i) => (
+                <circle key={i} cx={toX(i)} cy={toY(d[s.key])} r={2.5} fill={s.color} />
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginTop: 8 }}>
+        {series.map(s => (
+          <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 12, height: 3, borderRadius: 2, background: s.color }} />
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
