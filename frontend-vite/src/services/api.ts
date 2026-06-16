@@ -433,6 +433,40 @@ export const statsAPI = {
   },
 };
 
+// System Diagnostics API
+export const systemAPI = {
+  diagnostics: async (): Promise<{
+    status: string;
+    uptime_seconds: number;
+    uptime_human: string;
+    go_version: string;
+    num_cpu: number;
+    num_goroutine: number;
+    db_pool_stats: {
+      open_connections: number;
+      in_use: number;
+      idle: number;
+      wait_count: number;
+      wait_duration: string;
+      max_open_conns: number;
+    };
+    memory_stats: {
+      alloc_mb: number;
+      total_alloc_mb: number;
+      sys_mb: number;
+      num_gc: number;
+      heap_alloc_mb: number;
+      heap_sys_mb: number;
+      heap_idle_mb: number;
+      heap_inuse_mb: number;
+    };
+    timestamp: string;
+  }> => {
+    const response = await api.get('/system/diagnostics');
+    return response.data;
+  },
+};
+
 // Audit Logs API
 export const auditAPI = {
   list: async (params?: { page?: number; page_size?: number; action?: string; user_id?: number }): Promise<{ logs: AuditLog[]; total: number; page: number; page_size: number; total_pages: number }> => {

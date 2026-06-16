@@ -28,6 +28,7 @@ const NAV_CONFIG: Record<string, { id?: string; icon?: string; label?: string; s
     { id: 'knowledge-base', icon: 'db', label: '知识库管理' },
     { section: '系统管理' },
     { id: 'audit-logs', icon: 'shield', label: '审计日志' },
+    { id: 'diagnostics', icon: 'zap', label: '系统诊断' },
     { section: '账户' },
     { id: 'profile', icon: 'users', label: '个人中心' },
   ],

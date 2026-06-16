@@ -23,6 +23,7 @@ import { CalendarPage } from '@/pages/calendar';
 import { LeaderboardPage } from '@/pages/leaderboard';
 import { ShowcasePage } from '@/pages/showcase';
 import { ProfilePage } from '@/pages/profile';
+import { DiagnosticsPage } from '@/pages/diagnostics';
 
 /** Restricts a route to one or more roles; otherwise redirects to the dashboard. */
 function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
@@ -59,6 +60,7 @@ function AppRoutes() {
 
         {/* admin only */}
         <Route path="/audit-logs" element={<RequireRole roles={['admin']}><AuditLogsPage /></RequireRole>} />
+        <Route path="/diagnostics" element={<RequireRole roles={['admin']}><DiagnosticsPage /></RequireRole>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
