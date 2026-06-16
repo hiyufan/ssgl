@@ -5,6 +5,8 @@ import { PageHeader, SectionLabel } from '@/components/ui/page-helpers';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { RAGDocument, RAGStats } from '@/types';
 
+type RagResult = { content: string; metadata: Record<string, unknown>; score: number };
+
 export function KnowledgeBasePage() {
   const [docs, setDocs] = useState<RAGDocument[]>([]);
   const [stats, setStats] = useState<RAGStats | null>(null);
@@ -12,7 +14,7 @@ export function KnowledgeBasePage() {
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
   const [ragQuery, setRagQuery] = useState('');
-  const [ragResults, setRagResults] = useState<Array<{ content: string; metadata: Record<string, unknown>; score: number }> | null>(null);
+  const [ragResults, setRagResults] = useState<RagResult[] | null>(null);
   const [ragLoading, setRagLoading] = useState(false);
   const [ragAnswer, setRagAnswer] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,7 +71,7 @@ export function KnowledgeBasePage() {
     try {
       const res = await ragAPI.query(ragQuery);
       setRagAnswer(res.answer || null);
-      setRagResults(res.sources || res.results || []);
+      setRagResults((res.sources || []) as RagResult[]);
     } catch (err) {
       console.error('RAG query error:', err);
       setRagAnswer('查询失败，请稍后重试');
@@ -85,7 +87,7 @@ export function KnowledgeBasePage() {
     setRagAnswer(null);
     try {
       const res = await ragAPI.search(ragQuery);
-      setRagResults(res.results || []);
+      setRagResults((res.results || []) as RagResult[]);
     } catch (err) {
       console.error('RAG search error:', err);
     } finally {
@@ -178,7 +180,7 @@ export function KnowledgeBasePage() {
                         相似度: {(r.score * 100).toFixed(1)}%
                       </span>
                     )}
-                    {r.metadata?.filename && (
+                    {Boolean(r.metadata?.filename) && (
                       <span style={{ fontSize: 10, color: 'var(--text-3)' }}>来源: {String(r.metadata.filename)}</span>
                     )}
                   </div>

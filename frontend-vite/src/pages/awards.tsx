@@ -75,7 +75,7 @@ function CreateAwardModal({ onClose, onCreated }: {
         rank: Number(rank) || 1,
         rank_name: rankName || undefined,
         prize_name: prizeName || undefined,
-        prize_amount: Number(prizeAmount) || 0,
+        prize_amount: String(Number(prizeAmount) || 0),
       });
       toast.success('奖项创建成功');
       onCreated(res.award);

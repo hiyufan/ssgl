@@ -83,14 +83,17 @@ export function Select({ value, onChange, options, placeholder, disabled }: {
 }
 
 /** datetime-local 控件，value/onChange 走 RFC3339(ISO) 字符串。 */
-export function DateTimeInput({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
+export function DateTimeInput({ value, onChange, label }: { value: string; onChange: (iso: string) => void; label?: string }) {
   return (
-    <input
-      type="datetime-local"
-      className="forge-input"
-      value={isoToLocalInput(value)}
-      onChange={(e) => onChange(localInputToISO(e.target.value))}
-    />
+    <div>
+      {label && <label style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4, display: 'block' }}>{label}</label>}
+      <input
+        type="datetime-local"
+        className="forge-input"
+        value={isoToLocalInput(value)}
+        onChange={(e) => onChange(localInputToISO(e.target.value))}
+      />
+    </div>
   );
 }
 

@@ -45,6 +45,15 @@ export interface TeamMember {
   user?: User;
 }
 
+// UserSummary – lightweight user representation for search results etc.
+export interface UserSummary {
+  id: number;
+  username: string;
+  name: string;
+  dept?: string;
+  avatar?: string;
+}
+
 export interface Team {
   id: number;
   name: string;
@@ -100,7 +109,7 @@ export interface PrePlan {
   ai_review_score?: number;
   ai_review_notes?: string;
   ai_dimensions?: { label: string; score: number }[];
-  status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected';
+  status: 'draft' | 'submitted' | 'under_review' | 'reviewed' | 'approved' | 'rejected';
   submitted_at?: string;
   created_at: string;
   updated_at: string;
@@ -336,4 +345,13 @@ export interface TokenPair {
   access_token: string;
   refresh_token: string;
   expires_in: number;
+}
+
+// Lightweight user summary for search results / member lists.
+export interface UserSummary {
+  id: number;
+  username: string;
+  name: string;
+  dept?: string;
+  role?: string;
 }

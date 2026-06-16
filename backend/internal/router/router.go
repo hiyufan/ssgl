@@ -83,6 +83,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	milestoneHandler := handlers.NewMilestoneHandler()
 	globalSearchHandler := handlers.NewGlobalSearchHandler()
 	diagnosticsHandler := handlers.NewDiagnosticsHandler()
+	importHandler := handlers.NewImportHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -191,6 +192,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/export/overview", statsHandler.ExportOverview)
 		protected.GET("/stats/export/competitions", statsHandler.ExportCompetitions)
 		protected.GET("/stats/export/teams", statsHandler.ExportTeams)
+		protected.GET("/stats/export/full", importHandler.ExportFull)
 
 		// Milestones (read — any authenticated user).
 		protected.GET("/competitions/:id/milestones", milestoneHandler.List)
@@ -205,6 +207,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		staff.PUT("/competitions/:id", compHandler.Update)
 		staff.DELETE("/competitions/:id", compHandler.Delete)
 		staff.POST("/competitions/:id/publish", compHandler.Publish)
+
+		// Batch import — teacher/admin only.
+		staff.POST("/competitions/import", importHandler.BatchImport)
 
 		// Award nomination — teacher/admin only.
 		staff.POST("/awards", awardHandler.Create)

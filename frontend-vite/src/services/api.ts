@@ -704,6 +704,21 @@ export const notificationsAPI = {
   },
 };
 
+// Global Search API
+export interface SearchResult {
+  type: 'competition' | 'team' | 'user';
+  id: number;
+  title: string;
+  desc: string;
+}
+
+export const searchAPI = {
+  search: async (query: string): Promise<{ results: SearchResult[]; total: number; query: string }> => {
+    const response = await api.get<{ results: SearchResult[]; total: number; query: string }>('/search', { params: { q: query } });
+    return response.data;
+  },
+};
+
 export { api, aiApi };
 
 // Profile API
