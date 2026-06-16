@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { teamsAPI, competitionsAPI } from '@/services/api';
+import { teamsAPI, competitionsAPI, profileAPI } from '@/services/api';
 import { useRole } from '@/hooks/use-role';
 import { useAuthStore } from '@/stores/auth';
 import { StatusBadge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormModal, Field, TextInput, Select } from '@/components/ui/form';
 import { toast } from '@/components/ui/toast';
 import { getApiError } from '@/lib/form-utils';
-import type { Team, Competition, MatchResult } from '@/types';
+import type { Team, Competition, MatchResult, TeamInvite, UserSummary } from '@/types';
 
 /** 建队表单。competitions 页「报名参加」会以 fixedCompetition 复用本组件。 */
 export function TeamForm({ onClose, competitions, fixedCompetition, onCreated }: {
@@ -61,13 +61,6 @@ export function TeamsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedComp, setSelectedComp] = useState('all');
 
-  useEffect(() => {
-    Promise.all([teamsAPI.list(), competitionsAPI.list()])
-      .then(([t, c]) => { setTeams(t.teams || []); setCompetitions(c.competitions || []); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
   const currentUser = useAuthStore((s) => s.user);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailTeam, setDetailTeam] = useState<Team | null>(null);
@@ -75,6 +68,24 @@ export function TeamsPage() {
   const [matchCompId, setMatchCompId] = useState<string>('');
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [matching, setMatching] = useState(false);
+  const [myInvites, setMyInvites] = useState<TeamInvite[]>([]);
+  const [invitesLoading, setInvitesLoading] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteTeamId, setInviteTeamId] = useState<number | null>(null);
+
+  useEffect(() => {
+    Promise.all([teamsAPI.list(), competitionsAPI.list()])
+      .then(([t, c]) => { setTeams(t.teams || []); setCompetitions(c.competitions || []); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+    if (role === 'student') {
+      setInvitesLoading(true);
+      teamsAPI.myInvites()
+        .then(res => setMyInvites(res.invitations || []))
+        .catch(() => {})
+        .finally(() => setInvitesLoading(false));
+    }
+  }, [role]);
 
   const onCreated = (team: Team) => setTeams((prev) => [team, ...prev]);
   const onLeft = (teamId: number) => {
@@ -134,6 +145,42 @@ export function TeamsPage() {
           }}>{c.title}</button>
         ))}
       </div>
+
+      {/* Pending Invites Banner */}
+      {role === 'student' && myInvites.length > 0 && (
+        <div className="card anim-in d1" style={{ padding: 16, marginBottom: 16, border: '1px solid var(--amber)', background: 'var(--amber-bg)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <Icon name="gift" size={16} />
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--amber)' }}>你有 {myInvites.length} 条团队邀请</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {myInvites.map(inv => (
+              <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <Icon name="users" size={16} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{inv.team?.name || `团队 #${inv.team_id}`}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>邀请人: {inv.inviter?.name || '未知'}</div>
+                </div>
+                <Button variant="primary" size="sm" onClick={async () => {
+                  try {
+                    await teamsAPI.acceptInvite(inv.code);
+                    toast.success('已接受邀请');
+                    setMyInvites(prev => prev.filter(i => i.id !== inv.id));
+                    window.location.reload();
+                  } catch (err) { toast.error(getApiError(err, '接受失败')); }
+                }}>接受</Button>
+                <Button variant="outline" size="sm" onClick={async () => {
+                  try {
+                    await teamsAPI.declineInvite(inv.code);
+                    toast.success('已拒绝邀请');
+                    setMyInvites(prev => prev.filter(i => i.id !== inv.id));
+                  } catch (err) { toast.error(getApiError(err, '拒绝失败')); }
+                }}>拒绝</Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <EmptyState icon="users" title="暂无团队"/>
@@ -234,7 +281,7 @@ export function TeamsPage() {
             </div>
           )}
           {!matching && matchCompId && matches.length === 0 && (
-            <EmptyState icon="users" title="暂无匹配" subtitle="该赛事下没有可匹配的空闲学生" />
+            <EmptyState icon="users" title="暂无匹配" desc="该赛事下没有可匹配的空闲学生" />
           )}
         </div>
       </Modal>
@@ -250,10 +297,13 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
 }) {
   const [leaving, setLeaving] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [teamInvites, setTeamInvites] = useState<TeamInvite[]>([]);
   if (!team) return null;
   const myMembership = team.members?.find((m) => m.user_id === currentUserId);
   const canLeave = !!myMembership && myMembership.role !== 'leader';
   const canJoin = !myMembership && currentUserId;
+  const isLeader = myMembership?.role === 'leader';
 
   const leave = async () => {
     if (!confirm(`确认退出团队「${team.name}」？`)) return;
@@ -274,7 +324,6 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
     try {
       await teamsAPI.join(team.id);
       toast.success('已加入团队');
-      // Reload page to reflect changes
       window.location.reload();
     } catch (err) {
       toast.error(getApiError(err, '加入失败'));
@@ -304,14 +353,104 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
             ))}
           </div>
         </div>
-        {canLeave && (
-          <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-            <Button variant="danger" size="sm" loading={leaving} onClick={leave}>退出团队</Button>
+        {/* Pending Invites (visible to leader) */}
+        {isLeader && teamInvites.length > 0 && (
+          <div>
+            <SectionLabel label={`待处理邀请 (${teamInvites.length})`} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {teamInvites.filter(i => i.status === 'pending').map(inv => (
+                <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--surface)', borderRadius: 8, fontSize: 12 }}>
+                  <Icon name="gift" size={14} />
+                  <span style={{ color: 'var(--text)' }}>{inv.invitee?.name || `用户 #${inv.invitee_id}`}</span>
+                  <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 11 }}>{inv.status}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
-        {canJoin && (
-          <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+          {isLeader && (
+            <Button variant="primary" size="sm" icon={<Icon name="plus" size={12}/>} onClick={() => { setInviteOpen(true); loadInvites(); }}>邀请成员</Button>
+          )}
+          {canLeave && (
+            <Button variant="danger" size="sm" loading={leaving} onClick={leave}>退出团队</Button>
+          )}
+          {canJoin && (
             <Button variant="primary" size="sm" loading={joining} onClick={join}>加入团队</Button>
+          )}
+        </div>
+      </div>
+      {inviteOpen && (
+        <InviteModal
+          teamId={team.id}
+          onClose={() => setInviteOpen(false)}
+          onInvited={() => loadInvites()}
+        />
+      )}
+    </Modal>
+  );
+
+  function loadInvites() {
+    teamsAPI.listInvites(team.id).then(res => setTeamInvites(res.invitations || [])).catch(() => {});
+  }
+}
+
+/** 邀请成员弹窗 — 搜索用户并发送邀请 */
+function InviteModal({ teamId, onClose, onInvited }: {
+  teamId: number;
+  onClose: () => void;
+  onInvited: () => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<UserSummary[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [inviting, setInviting] = useState<number | null>(null);
+
+  const doSearch = async (q: string) => {
+    if (!q.trim()) { setResults([]); return; }
+    setSearching(true);
+    try {
+      const res = await profileAPI.searchUsers(q, 'student');
+      setResults(res.users || []);
+    } catch { setResults([]); }
+    finally { setSearching(false); }
+  };
+
+  const invite = async (userId: number) => {
+    setInviting(userId);
+    try {
+      await teamsAPI.invite(teamId, userId);
+      toast.success('邀请已发送');
+      onInvited();
+    } catch (err) {
+      toast.error(getApiError(err, '邀请失败'));
+    } finally { setInviting(null); }
+  };
+
+  return (
+    <Modal open={true} onClose={onClose} title="邀请成员" width={460}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <TextInput
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); doSearch(e.target.value); }}
+          placeholder="搜索学生姓名或用户名…"
+        />
+        {searching && <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12, padding: 12 }}>搜索中...</div>}
+        {!searching && results.length === 0 && query.trim() && (
+          <EmptyState icon="users" title="未找到" desc="没有匹配的学生" />
+        )}
+        {results.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+            {results.map(u => (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <Avatar name={u.name} size={32} index={u.id} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{u.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{u.dept || u.username}</div>
+                </div>
+                <Button variant="primary" size="sm" loading={inviting === u.id} onClick={() => invite(u.id)}>邀请</Button>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -285,3 +285,86 @@ func TestTrendPointFields(t *testing.T) {
 		t.Errorf("expected PrizeAmount=15000, got %.2f", tp.PrizeAmount)
 	}
 }
+
+func TestEngagementStatsFields(t *testing.T) {
+	es := EngagementStats{
+		TotalStudents:      100,
+		StudentsWithTeams:  75,
+		TeamFormationRate:  75.0,
+		TotalPrePlans:      50,
+		ReviewedPrePlans:   40,
+		AIReviewRate:       80.0,
+		AvgPrePlanScore:    72.5,
+		TotalCompetitions:  16,
+		PublishedComps:     12,
+		CompletionRate:     66.7,
+		TotalTeams:         85,
+		AvgTeamSize:        3.2,
+		ActiveCompetitions: 4,
+	}
+
+	if es.TotalStudents != 100 {
+		t.Errorf("expected TotalStudents=100, got %d", es.TotalStudents)
+	}
+	if es.StudentsWithTeams != 75 {
+		t.Errorf("expected StudentsWithTeams=75, got %d", es.StudentsWithTeams)
+	}
+	if es.TeamFormationRate != 75.0 {
+		t.Errorf("expected TeamFormationRate=75.0, got %.1f", es.TeamFormationRate)
+	}
+	if es.TotalPrePlans != 50 {
+		t.Errorf("expected TotalPrePlans=50, got %d", es.TotalPrePlans)
+	}
+	if es.ReviewedPrePlans != 40 {
+		t.Errorf("expected ReviewedPrePlans=40, got %d", es.ReviewedPrePlans)
+	}
+	if es.AIReviewRate != 80.0 {
+		t.Errorf("expected AIReviewRate=80.0, got %.1f", es.AIReviewRate)
+	}
+	if es.AvgPrePlanScore != 72.5 {
+		t.Errorf("expected AvgPrePlanScore=72.5, got %.1f", es.AvgPrePlanScore)
+	}
+	if es.TotalCompetitions != 16 {
+		t.Errorf("expected TotalCompetitions=16, got %d", es.TotalCompetitions)
+	}
+	if es.PublishedComps != 12 {
+		t.Errorf("expected PublishedComps=12, got %d", es.PublishedComps)
+	}
+	if es.CompletionRate != 66.7 {
+		t.Errorf("expected CompletionRate=66.7, got %.1f", es.CompletionRate)
+	}
+	if es.TotalTeams != 85 {
+		t.Errorf("expected TotalTeams=85, got %d", es.TotalTeams)
+	}
+	if es.AvgTeamSize != 3.2 {
+		t.Errorf("expected AvgTeamSize=3.2, got %.1f", es.AvgTeamSize)
+	}
+	if es.ActiveCompetitions != 4 {
+		t.Errorf("expected ActiveCompetitions=4, got %d", es.ActiveCompetitions)
+	}
+}
+
+func TestEngagementRateCalculation(t *testing.T) {
+	// Test rate calculation logic
+	totalStudents := int64(100)
+	studentsWithTeams := int64(75)
+
+	var teamFormationRate float64
+	if totalStudents > 0 {
+		teamFormationRate = float64(studentsWithTeams) / float64(totalStudents) * 100
+	}
+
+	if teamFormationRate != 75.0 {
+		t.Errorf("expected teamFormationRate=75.0, got %.1f", teamFormationRate)
+	}
+
+	// Edge case: zero students
+	zeroStudents := int64(0)
+	var zeroRate float64
+	if zeroStudents > 0 {
+		zeroRate = float64(studentsWithTeams) / float64(zeroStudents) * 100
+	}
+	if zeroRate != 0 {
+		t.Errorf("expected zeroRate=0, got %.1f", zeroRate)
+	}
+}

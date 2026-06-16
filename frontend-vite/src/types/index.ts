@@ -154,15 +154,22 @@ export interface StatsOverview {
   total_students: number;
   total_teachers: number;
   total_awards: number;
+  total_pre_plans?: number;
+  total_evaluations?: number;
+  published_competitions?: number;
+  settled_awards?: number;
 }
 
 export interface TeacherStat {
   id: number;
+  teacher_id?: number;
   name: string;
   dept: string;
   guided: number;
   win_rate: number;
   avg_rating: number;
+  avg_overall?: number;
+  avg_score?: number;
   eval_count: number;
 }
 
@@ -225,6 +232,20 @@ export interface CalendarEvent {
   end_date: string;
   location?: string;
   tags?: string;
+}
+
+// Team Invite types
+export interface TeamInvite {
+  id: number;
+  team_id: number;
+  inviter_id: number;
+  invitee_id: number;
+  code: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  created_at: string;
+  team?: Team;
+  inviter?: User;
+  invitee?: User;
 }
 
 // Teammate Matching types

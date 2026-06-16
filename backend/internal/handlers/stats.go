@@ -767,3 +767,93 @@ func (h *StatsHandler) Trends(c *gin.Context) {
 		"total":  len(points),
 	})
 }
+
+// EngagementStats represents platform engagement metrics.
+type EngagementStats struct {
+	TotalStudents      int64   `json:"total_students"`
+	StudentsWithTeams  int64   `json:"students_with_teams"`
+	TeamFormationRate  float64 `json:"team_formation_rate"`
+	TotalPrePlans      int64   `json:"total_pre_plans"`
+	ReviewedPrePlans   int64   `json:"reviewed_pre_plans"`
+	AIReviewRate       float64 `json:"ai_review_rate"`
+	AvgPrePlanScore    float64 `json:"avg_pre_plan_score"`
+	TotalCompetitions  int64   `json:"total_competitions"`
+	PublishedComps     int64   `json:"published_competitions"`
+	CompletionRate     float64 `json:"completion_rate"`
+	TotalTeams         int64   `json:"total_teams"`
+	AvgTeamSize        float64 `json:"avg_team_size"`
+	ActiveCompetitions int64   `json:"active_competitions"`
+}
+
+// Engagement handles GET /stats/engagement — returns platform engagement metrics.
+func (h *StatsHandler) Engagement(c *gin.Context) {
+	db := database.GetDB()
+
+	var totalStudents int64
+	db.Model(&models.User{}).Where("role = ?", models.RoleStudent).Count(&totalStudents)
+
+	var studentsWithTeams int64
+	db.Raw(`SELECT COUNT(DISTINCT user_id) FROM team_members tm
+		INNER JOIN users u ON u.id = tm.user_id AND u.role = 'student'`).Scan(&studentsWithTeams)
+
+	var totalPrePlans int64
+	db.Model(&models.PrePlan{}).Count(&totalPrePlans)
+
+	var reviewedPrePlans int64
+	db.Model(&models.PrePlan{}).Where("ai_review_score IS NOT NULL AND ai_review_score > 0").Count(&reviewedPrePlans)
+
+	var avgScore float64
+	db.Model(&models.PrePlan{}).
+		Where("ai_review_score IS NOT NULL AND ai_review_score > 0").
+		Select("COALESCE(AVG(ai_review_score), 0)").
+		Row().Scan(&avgScore)
+
+	var totalCompetitions int64
+	db.Model(&models.Competition{}).Count(&totalCompetitions)
+
+	var publishedComps int64
+	db.Model(&models.Competition{}).Where("status IN ?", []string{models.CompStatusPublished, models.CompStatusOngoing, "completed"}).Count(&publishedComps)
+
+	var completedComps int64
+	db.Model(&models.Competition{}).Where("status = ?", "completed").Count(&completedComps)
+
+	var totalTeams int64
+	db.Model(&models.Team{}).Count(&totalTeams)
+
+	var avgTeamSize float64
+	db.Raw(`SELECT COALESCE(AVG(cnt), 0) FROM (SELECT COUNT(*) as cnt FROM team_members GROUP BY team_id) sub`).Scan(&avgTeamSize)
+
+	var activeCompetitions int64
+	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusOngoing).Count(&activeCompetitions)
+
+	teamFormationRate := float64(0)
+	if totalStudents > 0 {
+		teamFormationRate = float64(studentsWithTeams) / float64(totalStudents) * 100
+	}
+
+	aiReviewRate := float64(0)
+	if totalPrePlans > 0 {
+		aiReviewRate = float64(reviewedPrePlans) / float64(totalPrePlans) * 100
+	}
+
+	completionRate := float64(0)
+	if publishedComps > 0 {
+		completionRate = float64(completedComps) / float64(publishedComps) * 100
+	}
+
+	c.JSON(http.StatusOK, EngagementStats{
+		TotalStudents:      totalStudents,
+		StudentsWithTeams:  studentsWithTeams,
+		TeamFormationRate:  teamFormationRate,
+		TotalPrePlans:      totalPrePlans,
+		ReviewedPrePlans:   reviewedPrePlans,
+		AIReviewRate:       aiReviewRate,
+		AvgPrePlanScore:    avgScore,
+		TotalCompetitions:  totalCompetitions,
+		PublishedComps:     publishedComps,
+		CompletionRate:     completionRate,
+		TotalTeams:         totalTeams,
+		AvgTeamSize:        avgTeamSize,
+		ActiveCompetitions: activeCompetitions,
+	})
+}

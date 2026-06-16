@@ -153,6 +153,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/type-distribution", statsHandler.TypeDistribution)
 		protected.GET("/stats/recent-activity", statsHandler.RecentActivity)
 		protected.GET("/stats/trends", statsHandler.Trends)
+		protected.GET("/stats/engagement", statsHandler.Engagement)
 
 		// Notifications (read for all users).
 		protected.GET("/notifications", notifHandler.List)

@@ -5,7 +5,7 @@ import type {
   LoginRequest, LoginResponse, TokenPair,
   AuditLog, AuditStats, RAGDocument, RAGStats,
   CalendarEvent, ShowcaseData,
-  LeaderboardEntry, MatchResult,
+  LeaderboardEntry, MatchResult, TeamInvite,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -199,6 +199,30 @@ export const teamsAPI = {
     const response = await api.get('/teams/match', { params });
     return response.data;
   },
+
+  // Team invite endpoints
+  invite: async (teamId: number, userId: number): Promise<{ invitation: TeamInvite }> => {
+    const response = await api.post<{ invitation: TeamInvite }>(`/teams/${teamId}/invite`, { user_id: userId });
+    return response.data;
+  },
+
+  listInvites: async (teamId: number): Promise<{ invitations: TeamInvite[] }> => {
+    const response = await api.get<{ invitations: TeamInvite[] }>(`/teams/${teamId}/invites`);
+    return response.data;
+  },
+
+  myInvites: async (): Promise<{ invitations: TeamInvite[] }> => {
+    const response = await api.get<{ invitations: TeamInvite[] }>('/teams/invites/me');
+    return response.data;
+  },
+
+  acceptInvite: async (code: string): Promise<void> => {
+    await api.post(`/teams/invite/${code}/accept`);
+  },
+
+  declineInvite: async (code: string): Promise<void> => {
+    await api.post(`/teams/invite/${code}/decline`);
+  },
 };
 
 // Workflows API
@@ -327,6 +351,33 @@ export const statsAPI = {
 
   trends: async (): Promise<Record<string, unknown>> => {
     const response = await api.get('/stats/trends');
+    return response.data;
+  },
+
+  students: async (): Promise<Record<string, unknown>> => {
+    const response = await api.get('/stats/students');
+    return response.data;
+  },
+
+  progress: async (): Promise<Record<string, unknown>> => {
+    const response = await api.get('/stats/progress');
+    return response.data;
+  },
+
+  typeDistribution: async (): Promise<Record<string, unknown>> => {
+    const response = await api.get('/stats/type-distribution');
+    return response.data;
+  },
+
+  recentActivity: async (limit?: number): Promise<Record<string, unknown>> => {
+    const params: Record<string, string> = {};
+    if (limit) params.limit = String(limit);
+    const response = await api.get('/stats/recent-activity', { params });
+    return response.data;
+  },
+
+  exportTeams: async (): Promise<Blob> => {
+    const response = await api.get('/stats/export/teams', { responseType: 'blob' });
     return response.data;
   },
 };

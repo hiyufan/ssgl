@@ -48,30 +48,43 @@ export function StatsPage() {
   const [teachers, setTeachers] = useState<TeacherStat[]>([]);
   const [competitions, setCompetitions] = useState<CompetitionStat[]>([]);
   const [trends, setTrends] = useState<TrendPoint[]>([]);
+  const [typeDistribution, setTypeDistribution] = useState<{ types: { type: string; count: number }[] }>({ types: [] });
+  const [recentActivity, setRecentActivity] = useState<{ activities: { action: string; description: string; time: string; icon: string }[] }>({ activities: [] });
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([statsAPI.overview(), statsAPI.teachers(), statsAPI.competitions(), statsAPI.trends()])
-      .then(([o, t, c, tr]) => {
+    Promise.all([
+      statsAPI.overview(), statsAPI.teachers(), statsAPI.competitions(), statsAPI.trends(),
+      statsAPI.typeDistribution(), statsAPI.recentActivity(10),
+    ])
+      .then(([o, t, c, tr, td, ra]) => {
         setOverview(o);
         setTeachers(t.teachers || []);
         setCompetitions((c as Record<string, unknown>).competitions as CompetitionStat[] || []);
         setTrends((tr as Record<string, unknown>).trends as TrendPoint[] || []);
+        setTypeDistribution(td as { types: { type: string; count: number }[] });
+        setRecentActivity(ra as { activities: { action: string; description: string; time: string; icon: string }[] });
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const handleExport = async (type: 'overview' | 'competitions') => {
+  const handleExport = async (type: 'overview' | 'competitions' | 'teams') => {
     setExporting(type);
     try {
-      const blob = type === 'overview'
-        ? await statsAPI.exportOverview()
-        : await statsAPI.exportCompetitions();
-      const filename = type === 'overview'
-        ? `平台统计_${new Date().toISOString().slice(0, 10)}.csv`
-        : `赛事明细_${new Date().toISOString().slice(0, 10)}.csv`;
+      let blob: Blob;
+      let filename: string;
+      if (type === 'overview') {
+        blob = await statsAPI.exportOverview();
+        filename = `平台统计_${new Date().toISOString().slice(0, 10)}.csv`;
+      } else if (type === 'competitions') {
+        blob = await statsAPI.exportCompetitions();
+        filename = `赛事明细_${new Date().toISOString().slice(0, 10)}.csv`;
+      } else {
+        blob = await statsAPI.exportTeams();
+        filename = `团队数据_${new Date().toISOString().slice(0, 10)}.csv`;
+      }
       downloadBlob(blob, filename);
     } catch (e) {
       console.error('Export failed:', e);
@@ -101,6 +114,9 @@ export function StatsPage() {
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => handleExport('competitions')} disabled={exporting === 'competitions'}>
             <Icon name="download" size={14}/> {exporting === 'competitions' ? '导出中…' : '导出赛事明细'}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => handleExport('teams')} disabled={exporting === 'teams'}>
+            <Icon name="download" size={14}/> {exporting === 'teams' ? '导出中…' : '导出团队数据'}
           </button>
         </div>
       </div>
@@ -205,6 +221,55 @@ export function StatsPage() {
           </div>
         </div>
       )}
+
+      {/* Type Distribution + Recent Activity */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        {/* Type Distribution */}
+        {typeDistribution.types.length > 0 && (
+          <div className="card anim-in d5" style={{ padding: 22 }}>
+            <SectionLabel label="赛事类型分布"/>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+              {typeDistribution.types.map((t, i) => {
+                const maxCount = Math.max(...typeDistribution.types.map(x => x.count), 1);
+                const typeLabels: Record<string, { label: string; color: string }> = {
+                  hackathon: { label: '黑客松', color: 'var(--teal)' },
+                  innovation: { label: '创新创业', color: 'var(--amber)' },
+                  research: { label: '科研竞赛', color: 'var(--purple)' },
+                };
+                const info = typeLabels[t.type] || { label: t.type, color: 'var(--text-3)' };
+                return (
+                  <div key={t.type} className={`anim-in d${Math.min(i + 1, 3)}`}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{info.label}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: info.color }}>{t.count}</span>
+                    </div>
+                    <ProgressBar value={t.count} max={maxCount} color={info.color} height={8}/>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Activity */}
+        {recentActivity.activities.length > 0 && (
+          <div className="card anim-in d5" style={{ padding: 22 }}>
+            <SectionLabel label="最近动态"/>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+              {recentActivity.activities.slice(0, 8).map((a, i) => (
+                <div key={i} className={`anim-in d${Math.min(i + 1, 5)}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  background: 'var(--surface)', borderRadius: 8, fontSize: 12,
+                }}>
+                  <span style={{ fontSize: 14 }}>{a.icon || '📌'}</span>
+                  <span style={{ flex: 1, color: 'var(--text)', fontWeight: 500 }}>{a.description}</span>
+                  <span style={{ color: 'var(--text-3)', fontSize: 11, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>{a.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Teacher leaderboard */}
       {teachers.length > 0 && (

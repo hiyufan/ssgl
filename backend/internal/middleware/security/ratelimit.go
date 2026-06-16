@@ -188,9 +188,9 @@ func (rl *LocalRateLimiter) Middleware() gin.HandlerFunc {
 	}
 }
 
-// DefaultRateLimiter returns a default rate limiter (100 requests per minute per IP)
+// DefaultRateLimiter returns a default rate limiter (300 requests per minute per IP)
 func DefaultRateLimiter() *LocalRateLimiter {
-	return NewLocalRateLimiter(100, time.Minute)
+	return NewLocalRateLimiter(300, time.Minute)
 }
 
 // StrictRateLimiter returns a strict rate limiter (10 requests per minute per IP)

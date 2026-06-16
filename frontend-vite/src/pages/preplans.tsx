@@ -37,7 +37,7 @@ function AIReviewPanel({ plan, onRefresh }: { plan: PrePlan; onRefresh?: () => v
       toast.success('AI 评审完成');
       onRefresh?.();
     } catch (e: unknown) {
-      toast.error(getApiError(e));
+      toast.error(getApiError(e, 'AI 评审失败'));
     } finally {
       setReviewing(false);
     }

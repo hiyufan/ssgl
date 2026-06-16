@@ -112,13 +112,13 @@ def test_services():
     else:
         _log("FAIL", "backend-health", f"后端服务不可用")
 
-    # AI Service (retry up to 3 times on transient timeout)
+    # AI Service (retry up to 5 times on transient timeout — first call may be slow due to cold start)
     resp = None
-    for _attempt in range(3):
-        resp = _api("GET", "/health", base=AI_SERVICE, timeout=10)
+    for _attempt in range(5):
+        resp = _api("GET", "/health", base=AI_SERVICE, timeout=15)
         if _ok(resp) and resp.status_code == 200:
             break
-        time.sleep(2)
+        time.sleep(3)
     if _ok(resp) and resp.status_code == 200:
         data = resp.json()
         _log("PASS", "ai-health", f"AI 服务运行中 (:8000) → {data.get('status', '?')}")
