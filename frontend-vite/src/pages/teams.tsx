@@ -304,6 +304,31 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
   const canLeave = !!myMembership && myMembership.role !== 'leader';
   const canJoin = !myMembership && currentUserId;
   const isLeader = myMembership?.role === 'leader';
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState(team?.name || '');
+  const [deleting, setDeleting] = useState(false);
+
+  const saveName = async () => {
+    if (!newName.trim()) { toast.error('名称不能为空'); return; }
+    try {
+      await teamsAPI.update(team.id, { name: newName.trim() });
+      team.name = newName.trim();
+      setEditingName(false);
+      toast.success('团队名称已更新');
+    } catch (err) { toast.error(getApiError(err, '更新失败')); }
+  };
+
+  const deleteTeam = async () => {
+    if (!confirm(`确认删除团队「${team.name}」？此操作不可撤销。`)) return;
+    setDeleting(true);
+    try {
+      await teamsAPI.delete(team.id);
+      toast.success('团队已删除');
+      onLeft(team.id);
+    } catch (err) {
+      toast.error(getApiError(err, '删除失败'));
+    } finally { setDeleting(false); }
+  };
 
   const leave = async () => {
     if (!confirm(`确认退出团队「${team.name}」？`)) return;
@@ -339,6 +364,26 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
           <StatusBadge status={team.status} />
           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{team.competition?.title || '未关联赛事'}</span>
         </div>
+
+        {/* Team name edit */}
+        {isLeader && (
+          <div style={{ padding: '10px 14px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 6 }}>团队名称</div>
+            {editingName ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={newName} onChange={e => setNewName(e.target.value)} style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
+                <Button variant="primary" size="sm" onClick={saveName}>保存</Button>
+                <Button variant="ghost" size="sm" onClick={() => { setEditingName(false); setNewName(team?.name || ''); }}>取消</Button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', flex: 1 }}>{team.name}</span>
+                <Button variant="outline" size="sm" icon={<Icon name="edit" size={12}/>} onClick={() => setEditingName(true)}>编辑</Button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div>
           <SectionLabel label={`成员 (${team.members?.length || 0})`} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -372,6 +417,9 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
           {isLeader && (
             <Button variant="primary" size="sm" icon={<Icon name="plus" size={12}/>} onClick={() => { setInviteOpen(true); loadInvites(); }}>邀请成员</Button>
           )}
+          {isLeader && (
+            <Button variant="danger" size="sm" loading={deleting} icon={<Icon name="trash" size={12}/>} onClick={deleteTeam}>删除团队</Button>
+          )}
           {canLeave && (
             <Button variant="danger" size="sm" loading={leaving} onClick={leave}>退出团队</Button>
           )}
@@ -391,6 +439,7 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
   );
 
   function loadInvites() {
+    if (!team) return;
     teamsAPI.listInvites(team.id).then(res => setTeamInvites(res.invitations || [])).catch(() => {});
   }
 }

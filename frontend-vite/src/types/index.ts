@@ -286,6 +286,23 @@ export interface ShowcaseData {
   top_teams: ShowcaseEntry[];
 }
 
+// Milestone types
+export interface Milestone {
+  id: number;
+  competition_id: number;
+  title: string;
+  description?: string;
+  type: 'registration' | 'submission' | 'review' | 'defense' | 'award' | 'custom';
+  status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  start_date?: string;
+  due_date: string;
+  completed_at?: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  competition?: Competition;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   data?: T;

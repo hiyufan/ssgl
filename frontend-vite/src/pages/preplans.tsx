@@ -200,6 +200,7 @@ export function PrePlansPage() {
 
   const [myTeams, setMyTeams] = useState<Team[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   useEffect(() => { teamsAPI.list().then((r) => setMyTeams(r.teams || [])).catch(() => {}); }, []);
 
   const onCreated = (plan: PrePlan) => {
@@ -290,6 +291,9 @@ export function PrePlansPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', flex: 1 }}>{selected.title}</h3>
                     <StatusBadge status={selected.status}/>
+                    {role === 'student' && (selected.status === 'draft' || selected.status === 'reviewed') && (
+                      <Button variant="outline" size="sm" icon={<Icon name="edit" size={12}/>} onClick={() => setEditOpen(true)}>编辑</Button>
+                    )}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
                     {[
@@ -323,6 +327,72 @@ export function PrePlansPage() {
         )}
       </div>
       {createOpen && <PrePlanForm onClose={() => setCreateOpen(false)} teams={myTeams} onCreated={onCreated} />}
+      {editOpen && selected && (
+        <PrePlanEditForm
+          plan={selected}
+          onClose={() => setEditOpen(false)}
+          onSaved={(updated) => {
+            setPreplans(prev => prev.map(p => p.id === updated.id ? updated : p));
+            setSelected(updated);
+            setEditOpen(false);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** 编辑预计划表单 */
+function PrePlanEditForm({ plan, onClose, onSaved }: {
+  plan: PrePlan;
+  onClose: () => void;
+  onSaved: (plan: PrePlan) => void;
+}) {
+  const [form, setForm] = useState({
+    title: plan.title || '',
+    tech_stack: plan.tech_stack || '',
+    target_audience: plan.target_audience || '',
+    market_analysis: plan.market_analysis || '',
+    innovation: plan.innovation || '',
+    expected_outcome: plan.expected_outcome || '',
+    timeline: plan.timeline || '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const set = (key: string) => (val: string) => setForm(f => ({ ...f, [key]: val }));
+
+  const submit = async () => {
+    if (!form.title.trim()) { setError('请填写方案标题'); return; }
+    setSubmitting(true); setError(null);
+    try {
+      const res = await prePlansAPI.update(plan.id, {
+        title: form.title.trim(),
+        tech_stack: form.tech_stack,
+        target_audience: form.target_audience,
+        market_analysis: form.market_analysis,
+        innovation: form.innovation,
+        expected_outcome: form.expected_outcome,
+        timeline: form.timeline,
+      });
+      toast.success('预计划已更新');
+      onSaved(res.pre_plan);
+    } catch (err) {
+      setError(getApiError(err, '更新失败'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <FormModal open={true} onClose={onClose} title="编辑预计划" onSubmit={submit} submitting={submitting} error={error} submitLabel="保存" width={640}>
+      <Field label="方案标题" required><TextInput value={form.title} onChange={(e) => set('title')(e.target.value)} placeholder="项目名称" /></Field>
+      <Field label="技术栈"><TextArea value={form.tech_stack} onChange={(e) => set('tech_stack')(e.target.value)} /></Field>
+      <Field label="目标用户"><TextArea value={form.target_audience} onChange={(e) => set('target_audience')(e.target.value)} /></Field>
+      <Field label="市场分析"><TextArea value={form.market_analysis} onChange={(e) => set('market_analysis')(e.target.value)} /></Field>
+      <Field label="创新点"><TextArea value={form.innovation} onChange={(e) => set('innovation')(e.target.value)} /></Field>
+      <Field label="预期成果"><TextArea value={form.expected_outcome} onChange={(e) => set('expected_outcome')(e.target.value)} /></Field>
+      <Field label="时间规划"><TextArea value={form.timeline} onChange={(e) => set('timeline')(e.target.value)} /></Field>
+    </FormModal>
   );
 }

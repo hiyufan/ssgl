@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { competitionsAPI } from '@/services/api';
+import { competitionsAPI, milestonesAPI } from '@/services/api';
 import { useRole } from '@/hooks/use-role';
 import { StatusBadge, TypeBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { PageHeader } from '@/components/ui/page-helpers';
 import { EmptyState } from '@/components/ui/empty-state';
-import type { Competition } from '@/types';
+import type { Competition, Milestone } from '@/types';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormModal, Field, TextInput, TextArea, NumberInput, Select, DateTimeInput } from '@/components/ui/form';
@@ -392,16 +392,74 @@ export function CompetitionsPage() {
         />
       )}
 
-      <CompetitionDetail comp={detailId ? detail : null} onClose={() => { setDetailId(null); setDetail(null); }} />
+      <CompetitionDetail comp={detailId ? detail : null} onClose={() => { setDetailId(null); setDetail(null); }} canManage={canManage} />
     </div>
   );
 }
 
-function CompetitionDetail({ comp, onClose }: { comp: Competition | null; onClose: () => void }) {
+const MILESTONE_TYPE_LABELS: Record<string, string> = { registration: '报名', submission: '提交', review: '评审', defense: '答辩', award: '颁奖', custom: '自定义' };
+const MILESTONE_TYPE_ICONS: Record<string, string> = { registration: 'users', submission: 'file', review: 'search', defense: 'target', award: 'trophy', custom: 'star' };
+const MILESTONE_STATUS_COLORS: Record<string, string> = { pending: 'var(--text-3)', in_progress: 'var(--amber)', completed: 'var(--green)', skipped: 'var(--text-3)' };
+
+function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | null; onClose: () => void; canManage?: boolean }) {
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [msProgress, setMsProgress] = useState(0);
+  const [msLoading, setMsLoading] = useState(false);
+  const [addMs, setAddMs] = useState(false);
+  const [msForm, setMsForm] = useState({ title: '', type: 'submission', due_date: '', description: '' });
+  const [msSaving, setMsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!comp) return;
+    setMsLoading(true);
+    milestonesAPI.list(comp.id)
+      .then(res => { setMilestones(res.milestones || []); setMsProgress(res.progress || 0); })
+      .catch(() => {})
+      .finally(() => setMsLoading(false));
+  }, [comp?.id]);
+
   if (!comp) return null;
   const fmt = (s?: string) => (s ? new Date(s).toLocaleString('zh-CN') : '—');
+
+  const toggleMsStatus = async (ms: Milestone) => {
+    const next = ms.status === 'completed' ? 'pending' : 'completed';
+    try {
+      const res = await milestonesAPI.update(ms.id, { status: next });
+      setMilestones(prev => prev.map(m => m.id === ms.id ? res.milestone : m));
+      // recalc progress
+      const done = milestones.filter(m => (m.id === ms.id ? next : m.status) === 'completed').length;
+      setMsProgress(milestones.length > 0 ? (done / milestones.length) * 100 : 0);
+    } catch (err) { toast.error(getApiError(err, '更新失败')); }
+  };
+
+  const deleteMs = async (ms: Milestone) => {
+    if (!confirm(`删除里程碑「${ms.title}」？`)) return;
+    try {
+      await milestonesAPI.delete(ms.id);
+      setMilestones(prev => prev.filter(m => m.id !== ms.id));
+      toast.success('已删除');
+    } catch (err) { toast.error(getApiError(err, '删除失败')); }
+  };
+
+  const createMs = async () => {
+    if (!msForm.title.trim() || !msForm.due_date) { toast.error('请填写标题和截止日期'); return; }
+    setMsSaving(true);
+    try {
+      const res = await milestonesAPI.create({
+        competition_id: comp.id, title: msForm.title.trim(), type: msForm.type,
+        due_date: new Date(msForm.due_date).toISOString(), sort_order: milestones.length + 1,
+        description: msForm.description || undefined,
+      });
+      setMilestones(prev => [...prev, res.milestone]);
+      setAddMs(false);
+      setMsForm({ title: '', type: 'submission', due_date: '', description: '' });
+      toast.success('里程碑已创建');
+    } catch (err) { toast.error(getApiError(err, '创建失败')); }
+    finally { setMsSaving(false); }
+  };
+
   return (
-    <Modal open={!!comp} onClose={onClose} title={comp.title} width={620}>
+    <Modal open={!!comp} onClose={onClose} title={comp.title} width={680}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <StatusBadge status={comp.status} />
@@ -422,6 +480,94 @@ function CompetitionDetail({ comp, onClose }: { comp: Competition | null; onClos
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{v}</div>
             </div>
           ))}
+        </div>
+
+        {/* Milestones Section */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="target" size={15} />
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>赛事里程碑</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>({milestones.length})</span>
+            </div>
+            {canManage && (
+              <Button variant="outline" size="sm" icon={<Icon name="plus" size={12}/>} onClick={() => setAddMs(!addMs)}>添加</Button>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          {milestones.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>
+                <span>进度</span>
+                <span>{Math.round(msProgress)}%</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${msProgress}%`, borderRadius: 3, background: 'var(--green)', transition: 'width 0.3s' }}/>
+              </div>
+            </div>
+          )}
+
+          {/* Add milestone form */}
+          {addMs && (
+            <div style={{ padding: 14, background: 'var(--surface-2)', borderRadius: 10, marginBottom: 12, border: '1px solid var(--border)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                <TextInput value={msForm.title} onChange={e => setMsForm(f => ({...f, title: e.target.value}))} placeholder="里程碑标题" />
+                <Select value={msForm.type} onChange={v => setMsForm(f => ({...f, type: v}))}
+                  options={Object.entries(MILESTONE_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                <DateTimeInput value={msForm.due_date} onChange={v => setMsForm(f => ({...f, due_date: v}))} label="截止日期" />
+                <div/>
+              </div>
+              <TextArea value={msForm.description} onChange={e => setMsForm(f => ({...f, description: e.target.value}))} placeholder="描述（可选）" />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+                <Button variant="ghost" size="sm" onClick={() => setAddMs(false)}>取消</Button>
+                <Button variant="primary" size="sm" loading={msSaving} onClick={createMs}>创建</Button>
+              </div>
+            </div>
+          )}
+
+          {/* Milestone list */}
+          {msLoading ? (
+            <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-3)', fontSize: 12 }}>加载中...</div>
+          ) : milestones.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-3)', fontSize: 12 }}>暂无里程碑</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {milestones.sort((a, b) => a.sort_order - b.sort_order).map(ms => (
+                <div key={ms.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                  borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)',
+                  opacity: ms.status === 'completed' ? 0.7 : 1,
+                }}>
+                  <button onClick={() => toggleMsStatus(ms)} style={{
+                    width: 20, height: 20, borderRadius: 6, border: `2px solid ${MILESTONE_STATUS_COLORS[ms.status]}`,
+                    background: ms.status === 'completed' ? 'var(--green)' : 'transparent',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    {ms.status === 'completed' && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+                  </button>
+                  <Icon name={MILESTONE_TYPE_ICONS[ms.type] || 'star'} size={14} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', textDecoration: ms.status === 'completed' ? 'line-through' : 'none' }}>{ms.title}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      {MILESTONE_TYPE_LABELS[ms.type] || ms.type} · 截止 {new Date(ms.due_date).toLocaleDateString('zh-CN')}
+                      {ms.status === 'completed' && ms.completed_at && ` · 完成于 ${new Date(ms.completed_at).toLocaleDateString('zh-CN')}`}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: ms.status === 'completed' ? 'var(--green-dim)' : ms.status === 'in_progress' ? 'var(--amber-dim)' : 'var(--surface)', color: MILESTONE_STATUS_COLORS[ms.status], fontWeight: 600 }}>
+                    {ms.status === 'completed' ? '已完成' : ms.status === 'in_progress' ? '进行中' : ms.status === 'skipped' ? '已跳过' : '待办'}
+                  </span>
+                  {canManage && (
+                    <button onClick={() => deleteMs(ms)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4 }} title="删除">
+                      <Icon name="trash" size={13} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </Modal>

@@ -5,7 +5,7 @@ import type {
   LoginRequest, LoginResponse, TokenPair,
   AuditLog, AuditStats, RAGDocument, RAGStats,
   CalendarEvent, ShowcaseData,
-  LeaderboardEntry, MatchResult, TeamInvite,
+  LeaderboardEntry, MatchResult, TeamInvite, Milestone,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -155,6 +155,38 @@ export const competitionsAPI = {
 
   recommend: async (): Promise<{ recommendations: Array<Competition & { match_score: number; match_tags: string[]; reason: string }> }> => {
     const response = await api.get('/competitions/recommend');
+    return response.data;
+  },
+};
+
+// Milestones API
+export const milestonesAPI = {
+  list: async (competitionId: number, params?: Record<string, string>): Promise<{ milestones: Milestone[]; total: number; completed: number; overdue: number; progress: number }> => {
+    const response = await api.get(`/competitions/${competitionId}/milestones`, { params });
+    return response.data;
+  },
+
+  get: async (id: number): Promise<{ milestone: Milestone }> => {
+    const response = await api.get<{ milestone: Milestone }>(`/milestones/${id}`);
+    return response.data;
+  },
+
+  create: async (data: { competition_id: number; title: string; type: string; due_date: string; sort_order?: number; description?: string; start_date?: string }): Promise<{ milestone: Milestone }> => {
+    const response = await api.post<{ milestone: Milestone }>('/milestones', data);
+    return response.data;
+  },
+
+  update: async (id: number, data: Partial<{ title: string; type: string; status: string; due_date: string; start_date: string; description: string; sort_order: number }>): Promise<{ milestone: Milestone }> => {
+    const response = await api.put<{ milestone: Milestone }>(`/milestones/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/milestones/${id}`);
+  },
+
+  batchCreate: async (competitionId: number, milestones: Array<{ title: string; type: string; due_date: string; sort_order?: number }>): Promise<{ milestones: Milestone[]; total: number }> => {
+    const response = await api.post(`/competitions/${competitionId}/milestones/batch`, milestones);
     return response.data;
   },
 };
