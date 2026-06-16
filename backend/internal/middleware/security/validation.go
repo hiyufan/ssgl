@@ -1,6 +1,10 @@
 package security
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -95,6 +99,110 @@ func SanitizeInput(input string) string {
 	input = strings.TrimSpace(input)
 
 	return input
+}
+
+// SanitizeHTML escapes HTML special characters to prevent stored XSS.
+// Use this on user-supplied strings before persisting to the database.
+func SanitizeHTML(input string) string {
+	input = strings.ReplaceAll(input, "&", "&amp;")
+	input = strings.ReplaceAll(input, "<", "&lt;")
+	input = strings.ReplaceAll(input, ">", "&gt;")
+	input = strings.ReplaceAll(input, "\"", "&quot;")
+	input = strings.ReplaceAll(input, "'", "&#39;")
+	return input
+}
+
+// BodySanitizer returns middleware that walks every string value in a JSON
+// request body and escapes HTML entities. This prevents stored XSS when
+// user input is later rendered in an HTML context.
+func BodySanitizer() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Only process requests with a JSON body
+		ct := c.GetHeader("Content-Type")
+		if !strings.Contains(ct, "application/json") {
+			c.Next()
+			return
+		}
+
+		// Read body
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil || len(body) == 0 {
+			c.Next()
+			return
+		}
+		c.Request.Body.Close()
+
+		// Parse and sanitize
+		var data interface{}
+		if err := json.Unmarshal(body, &data); err != nil {
+			// Not valid JSON — pass through and let handler deal with it
+			c.Request.Body = io.NopCloser(bytes.NewReader(body))
+			c.Next()
+			return
+		}
+
+		sanitized := sanitizeValue(data)
+		newBody, _ := json.Marshal(sanitized)
+		c.Request.Body = io.NopCloser(bytes.NewReader(newBody))
+		c.Request.ContentLength = int64(len(newBody))
+		c.Header("X-Content-Sanitized", "true")
+		c.Next()
+	}
+}
+
+// sanitizeValue recursively walks a JSON-decoded value and sanitizes all strings.
+func sanitizeValue(v interface{}) interface{} {
+	switch val := v.(type) {
+	case string:
+		// Only sanitize if the string contains HTML-like content
+		if containsXSS(val) {
+			return SanitizeHTML(val)
+		}
+		return SanitizeInput(val)
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(val))
+		for k, item := range val {
+			out[k] = sanitizeValue(item)
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(val))
+		for i, item := range val {
+			out[i] = sanitizeValue(item)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+// isJSONBody checks if the request has a JSON content type.
+func isJSONBody(c *gin.Context) bool {
+	ct := c.GetHeader("Content-Type")
+	return strings.HasPrefix(ct, "application/json")
+}
+
+// ReadBodyString reads the request body as a string (useful for logging).
+func ReadBodyString(c *gin.Context) string {
+	if c.Request.Body == nil {
+		return ""
+	}
+	body, _ := io.ReadAll(c.Request.Body)
+	c.Request.Body = io.NopCloser(bytes.NewReader(body))
+	return string(body)
+}
+
+// ValidateBodyField validates a specific field in the request body.
+// Returns an error if the field contains malicious content.
+func ValidateBodyField(body map[string]interface{}, field string) error {
+	if val, ok := body[field]; ok {
+		if s, ok := val.(string); ok {
+			if containsXSS(s) {
+				return fmt.Errorf("field '%s' contains potentially malicious content", field)
+			}
+		}
+	}
+	return nil
 }
 
 // ValidateEmail validates email format

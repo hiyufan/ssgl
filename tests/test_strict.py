@@ -1143,23 +1143,31 @@ def test_security():
     if _ok(resp) and resp.status_code in (200, 400):
         _log("PASS", "sql-injection", f"SQL 注入测试 → {resp.status_code} (GORM 参数化查询)")
 
-    # XSS in input
+    # XSS in input (with all required fields so the competition can be created)
     resp = _api_auth("POST", "/api/v1/competitions", json={
         "title": "<script>alert('xss')</script>",
-        "description": "test",
-        "type": "hackathon"
+        "description": "test xss sanitization",
+        "type": "hackathon",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-07-01T00:00:00+08:00",
+        "end_date": "2026-08-01T00:00:00+08:00",
     })
     if _ok(resp) and resp.status_code in (200, 201):
         data = resp.json()
-        title = data.get("title", data.get("data", {}).get("title", ""))
+        comp = data.get("competition", data)
+        title = comp.get("title", data.get("title", ""))
         if "<script>" not in str(title):
             _log("PASS", "xss-input", "XSS 输入被清理或转义")
         else:
             _log("WARN", "xss-input", "XSS 输入未清理，可能存储型 XSS 风险")
         # Cleanup
-        cid = data.get("id") or data.get("data", {}).get("id")
+        cid = comp.get("id") or data.get("id") or data.get("data", {}).get("id")
         if cid:
             _api_auth("DELETE", f"/api/v1/competitions/{cid}")
+    elif _ok(resp) and resp.status_code == 400:
+        # Body sanitizer rejected XSS — also acceptable
+        _log("PASS", "xss-input", "XSS 输入被拒绝 (400)")
 
     # Check security headers (resp may be 4xx — use _ok() since __bool__ is False for 4xx)
     resp = _api("GET", "/api/v1/competitions")

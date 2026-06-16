@@ -94,3 +94,117 @@ func TestIsPasswordBreached_Strong(t *testing.T) {
 		t.Error("strong password incorrectly flagged as breached")
 	}
 }
+
+func TestSanitizeHTML_ScriptTag(t *testing.T) {
+	input := "<script>alert('xss')</script>"
+	got := SanitizeHTML(input)
+	want := "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;"
+	if got != want {
+		t.Errorf("SanitizeHTML(%q) = %q, want %q", input, got, want)
+	}
+}
+
+func TestSanitizeHTML_Ampersand(t *testing.T) {
+	got := SanitizeHTML("A & B")
+	if got != "A &amp; B" {
+		t.Errorf("expected 'A &amp; B', got %q", got)
+	}
+}
+
+func TestSanitizeHTML_SafeString(t *testing.T) {
+	input := "Hello World 123"
+	got := SanitizeHTML(input)
+	if got != input {
+		t.Errorf("SanitizeHTML(%q) = %q, want unchanged", input, got)
+	}
+}
+
+func TestSanitizeHTML_DoubleQuotes(t *testing.T) {
+	got := SanitizeHTML(`say "hello"`)
+	want := "say &quot;hello&quot;"
+	if got != want {
+		t.Errorf("expected %q, got %q", want, got)
+	}
+}
+
+func TestSanitizeValue_Map(t *testing.T) {
+	input := map[string]interface{}{
+		"title":       "<script>alert('xss')</script>",
+		"description": "normal text",
+		"count":       42,
+	}
+	result := sanitizeValue(input).(map[string]interface{})
+
+	// XSS title should be sanitized
+	if result["title"] == input["title"] {
+		t.Error("XSS in title was not sanitized")
+	}
+	if result["title"] != "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;" {
+		t.Errorf("sanitized title = %q", result["title"])
+	}
+
+	// Safe description should pass through
+	if result["description"] != "normal text" {
+		t.Errorf("safe description was changed to %q", result["description"])
+	}
+
+	// Non-string should pass through
+	if result["count"] != 42 {
+		t.Error("non-string value was modified")
+	}
+}
+
+func TestSanitizeValue_NestedSlice(t *testing.T) {
+	input := []interface{}{
+		"<img onerror=alert(1)>",
+		"safe text",
+	}
+	result := sanitizeValue(input).([]interface{})
+	if result[0] == input[0] {
+		t.Error("XSS in slice was not sanitized")
+	}
+	if result[1] != "safe text" {
+		t.Error("safe text in slice was changed")
+	}
+}
+
+func TestSanitizeValue_NestedMap(t *testing.T) {
+	input := map[string]interface{}{
+		"outer": map[string]interface{}{
+			"inner": "<iframe src=evil></iframe>",
+		},
+	}
+	result := sanitizeValue(input).(map[string]interface{})
+	outer := result["outer"].(map[string]interface{})
+	if outer["inner"] == "<iframe src=evil></iframe>" {
+		t.Error("nested XSS was not sanitized")
+	}
+}
+
+func TestValidateBodyField_XSS(t *testing.T) {
+	body := map[string]interface{}{
+		"title": "<script>alert(1)</script>",
+	}
+	err := ValidateBodyField(body, "title")
+	if err == nil {
+		t.Error("expected error for XSS in title")
+	}
+}
+
+func TestValidateBodyField_Safe(t *testing.T) {
+	body := map[string]interface{}{
+		"title": "正常标题",
+	}
+	err := ValidateBodyField(body, "title")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateBodyField_MissingField(t *testing.T) {
+	body := map[string]interface{}{}
+	err := ValidateBodyField(body, "title")
+	if err != nil {
+		t.Errorf("unexpected error for missing field: %v", err)
+	}
+}

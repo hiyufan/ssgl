@@ -67,6 +67,9 @@ func ApplySecurity(r *gin.Engine, config *SecurityConfig) {
 	// 5. Input Validation
 	r.Use(InputValidation())
 
+	// 5b. Body Sanitization (XSS prevention for JSON bodies)
+	r.Use(BodySanitizer())
+
 	// 6. Recovery (panic recovery)
 	r.Use(gin.Recovery())
 }
