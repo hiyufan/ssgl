@@ -299,6 +299,9 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
   const [joining, setJoining] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [teamInvites, setTeamInvites] = useState<TeamInvite[]>([]);
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   if (!team) return null;
   const myMembership = team.members?.find((m) => m.user_id === currentUserId);
   const canLeave = !!myMembership && myMembership.role !== 'leader';
@@ -414,6 +417,7 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
           </div>
         )}
         <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+          <Button variant="outline" size="sm" icon={<Icon name="sparkles" size={12}/>} loading={analysisLoading} onClick={loadAnalysis}>能力分析</Button>
           {isLeader && (
             <Button variant="primary" size="sm" icon={<Icon name="plus" size={12}/>} onClick={() => { setInviteOpen(true); loadInvites(); }}>邀请成员</Button>
           )}
@@ -427,6 +431,69 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
             <Button variant="primary" size="sm" loading={joining} onClick={join}>加入团队</Button>
           )}
         </div>
+        {/* Team Analysis Display */}
+        {showAnalysis && analysis && (
+          <div style={{ padding: 16, background: 'var(--surface-2)', borderRadius: 12, border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>📊 团队能力分析</div>
+              <button onClick={() => setShowAnalysis(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 16 }}>×</button>
+            </div>
+
+            {/* Overall Score */}
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 36, fontWeight: 800, color: analysis.overall_score >= 70 ? 'var(--green)' : analysis.overall_score >= 50 ? 'var(--amber)' : 'var(--red)', fontFamily: 'var(--font-mono)' }}>
+                {Math.round(analysis.overall_score)}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>综合评分</div>
+            </div>
+
+            {/* Stats Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+              <div style={{ textAlign: 'center', padding: 8, background: 'var(--surface)', borderRadius: 8 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>{analysis.member_count}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-3)' }}>成员</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: 8, background: 'var(--surface)', borderRadius: 8 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--purple)', fontFamily: 'var(--font-mono)' }}>{analysis.dept_diversity}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-3)' }}>学科</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: 8, background: 'var(--surface)', borderRadius: 8 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--amber)', fontFamily: 'var(--font-mono)' }}>{analysis.avg_experience.toFixed(1)}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-3)' }}>经验值</div>
+              </div>
+            </div>
+
+            {/* Strengths */}
+            {analysis.strengths?.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--green)', marginBottom: 6 }}>✅ 优势</div>
+                {analysis.strengths.map((s: string, i: number) => (
+                  <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', padding: '4px 0', paddingLeft: 12 }}>{s}</div>
+                ))}
+              </div>
+            )}
+
+            {/* Gaps */}
+            {analysis.gaps?.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--amber)', marginBottom: 6 }}>⚠️ 短板</div>
+                {analysis.gaps.map((g: string, i: number) => (
+                  <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', padding: '4px 0', paddingLeft: 12 }}>{g}</div>
+                ))}
+              </div>
+            )}
+
+            {/* Recommendations */}
+            {analysis.recommendations?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--teal)', marginBottom: 6 }}>💡 建议</div>
+                {analysis.recommendations.map((r: string, i: number) => (
+                  <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', padding: '4px 0', paddingLeft: 12 }}>{r}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {inviteOpen && (
         <InviteModal
@@ -441,6 +508,20 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
   function loadInvites() {
     if (!team) return;
     teamsAPI.listInvites(team.id).then(res => setTeamInvites(res.invitations || [])).catch(() => {});
+  }
+
+  async function loadAnalysis() {
+    if (!team) return;
+    setAnalysisLoading(true);
+    try {
+      const res = await teamsAPI.analysis(team.id);
+      setAnalysis(res);
+      setShowAnalysis(true);
+    } catch (err) {
+      toast.error('分析加载失败');
+    } finally {
+      setAnalysisLoading(false);
+    }
   }
 }
 

@@ -256,6 +256,11 @@ export const teamsAPI = {
   declineInvite: async (code: string): Promise<void> => {
     await api.post(`/teams/invite/${code}/decline`);
   },
+
+  analysis: async (teamId: number): Promise<TeamAnalysis> => {
+    const response = await api.get<TeamAnalysis>(`/teams/${teamId}/analysis`);
+    return response.data;
+  },
 };
 
 // Workflows API

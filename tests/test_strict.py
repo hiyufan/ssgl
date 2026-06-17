@@ -977,6 +977,43 @@ def test_crud():
     else:
         _log("WARN", "eval-create", "缺少赛事ID或学生token，跳过评价创建")
 
+    # --- Team Analysis (new feature) ---
+    # Test with existing team (id=1 should exist from seed data)
+    resp = _api_auth("GET", "/api/v1/teams/1/analysis")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        strengths = data.get("strengths", [])
+        gaps = data.get("gaps", [])
+        recommendations = data.get("recommendations", [])
+        score = data.get("overall_score", 0)
+        members = data.get("members", [])
+        dept_diversity = data.get("dept_diversity", 0)
+        _log("PASS", "team-analysis-seed", f"种子团队分析成功, 综合分={score}, "
+             f"成员={len(members)}, 学科多样性={dept_diversity}, "
+             f"优势={len(strengths)}, 短板={len(gaps)}, 建议={len(recommendations)}")
+    else:
+        _log("FAIL", "team-analysis-seed", f"种子团队分析失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test with non-existent team
+    resp = _api_auth("GET", "/api/v1/teams/999999/analysis")
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "team-analysis-404", "不存在的团队 → 404 ✓")
+    else:
+        _log("WARN", "team-analysis-404", f"不存在的团队 → {resp.status_code if _ok(resp) else 'None'}")
+
+    if team_id:
+        resp = _api_auth("GET", f"/api/v1/teams/{team_id}/analysis")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            strengths = data.get("strengths", [])
+            gaps = data.get("gaps", [])
+            recommendations = data.get("recommendations", [])
+            score = data.get("overall_score", 0)
+            _log("PASS", "team-analysis", f"测试团队分析成功, 综合分={score}, "
+                 f"优势={len(strengths)}, 短板={len(gaps)}, 建议={len(recommendations)}")
+        else:
+            _log("FAIL", "team-analysis", f"测试团队分析失败 → {resp.status_code if _ok(resp) else 'None'}")
+
     # Cleanup: delete competition (cascades)
     if team_comp_id:
         resp = _api_auth("DELETE", f"/api/v1/competitions/{team_comp_id}")

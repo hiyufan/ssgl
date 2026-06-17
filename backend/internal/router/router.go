@@ -85,6 +85,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	diagnosticsHandler := handlers.NewDiagnosticsHandler()
 	importHandler := handlers.NewImportHandler()
 	registrationHandler := handlers.NewRegistrationHandler()
+	teamAnalysisHandler := handlers.NewTeamAnalysisHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -183,6 +184,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Teammate matching.
 		protected.GET("/teams/match", matchHandler.Match)
+
+		// Team capability analysis.
+		protected.GET("/teams/:id/analysis", teamAnalysisHandler.Analyze)
 
 		// Calendar.
 		protected.GET("/calendar", calendarHandler.List)

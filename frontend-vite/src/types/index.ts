@@ -283,6 +283,35 @@ export interface MatchResult {
   reason: string;
 }
 
+export interface TeamMemberAnalysis {
+  user_id: number;
+  name: string;
+  dept: string;
+  role: string;
+  team_count: number;
+  award_count: number;
+  pre_plan_count: number;
+  eval_score: number;
+  experience: string;
+}
+
+export interface TeamAnalysis {
+  team_id: number;
+  team_name: string;
+  competition_id: number;
+  comp_title: string;
+  member_count: number;
+  avg_experience: number;
+  dept_diversity: number;
+  dept_breakdown: Record<string, number>;
+  experience_dist: Record<string, number>;
+  strengths: string[];
+  gaps: string[];
+  recommendations: string[];
+  members: TeamMemberAnalysis[];
+  overall_score: number;
+}
+
 export interface ShowcaseEntry {
   id: number;
   competition_id: number;
