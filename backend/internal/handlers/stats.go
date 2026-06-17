@@ -983,3 +983,107 @@ func (h *StatsHandler) KanbanBoard(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"columns": columns})
 }
+
+// CountdownItem represents an upcoming competition deadline.
+type CountdownItem struct {
+	ID             uint   `json:"id"`
+	Title          string `json:"title"`
+	Type           string `json:"type"`
+	Status         string `json:"status"`
+	StartDate      string `json:"start_date"`
+	EndDate        string `json:"end_date"`
+	DaysUntilStart int    `json:"days_until_start"`
+	DaysUntilEnd   int    `json:"days_until_end"`
+	Phase          string `json:"phase"` // "upcoming", "registration", "ongoing", "ending"
+	Location       string `json:"location"`
+	Prize          string `json:"prize"`
+}
+
+// Countdown handles GET /stats/countdown — returns upcoming competitions
+// sorted by urgency (nearest deadline first). Includes registration deadlines,
+// start dates, and end dates. Useful for dashboard widgets and notifications.
+func (h *StatsHandler) Countdown(c *gin.Context) {
+	db := database.GetDB()
+
+	var competitions []models.Competition
+	if err := db.
+		Where("status IN ?", []string{models.CompStatusPublished, models.CompStatusOngoing}).
+		Order("start_date ASC").
+		Find(&competitions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
+		return
+	}
+
+	now := time.Now()
+	var items []CountdownItem
+
+	for _, comp := range competitions {
+		daysUntilStart := int(comp.StartDate.Sub(now).Hours() / 24)
+		daysUntilEnd := int(comp.EndDate.Sub(now).Hours() / 24)
+
+		phase := "upcoming"
+		if comp.Status == models.CompStatusOngoing {
+			phase = "ongoing"
+			if daysUntilEnd <= 7 {
+				phase = "ending"
+			}
+		} else if !comp.RegistrationDeadline.IsZero() && now.Before(comp.RegistrationDeadline) {
+			phase = "registration"
+		}
+
+		if daysUntilStart < -1 {
+			continue // Skip competitions that started more than 1 day ago
+		}
+
+		items = append(items, CountdownItem{
+			ID:             comp.ID,
+			Title:          comp.Title,
+			Type:           comp.Type,
+			Status:         comp.Status,
+			StartDate:      comp.StartDate.Format("2006-01-02"),
+			EndDate:        comp.EndDate.Format("2006-01-02"),
+			DaysUntilStart: daysUntilStart,
+			DaysUntilEnd:   daysUntilEnd,
+			Phase:          phase,
+			Location:       comp.Location,
+			Prize:          comp.Prize,
+		})
+	}
+
+	// Sort: ongoing-ending first, then by days_until_start ascending
+	for i := 0; i < len(items); i++ {
+		for j := i + 1; j < len(items); j++ {
+			pi, pj := phasePriority(items[i].Phase), phasePriority(items[j].Phase)
+			if pj < pi || (pj == pi && items[j].DaysUntilStart < items[i].DaysUntilStart) {
+				items[i], items[j] = items[j], items[i]
+			}
+		}
+	}
+
+	// Limit to 10 items
+	limit := 10
+	if len(items) < limit {
+		limit = len(items)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"countdown": items[:limit],
+		"total":     len(items),
+	})
+}
+
+// phasePriority returns a sort priority for competition phases (lower = more urgent).
+func phasePriority(phase string) int {
+	switch phase {
+	case "ending":
+		return 0
+	case "ongoing":
+		return 1
+	case "registration":
+		return 2
+	case "upcoming":
+		return 3
+	default:
+		return 4
+	}
+}

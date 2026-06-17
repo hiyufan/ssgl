@@ -458,6 +458,23 @@ def test_crud():
     else:
         _log("FAIL", "stat-kanban", f"看板总览失败 → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Countdown endpoint ---
+    resp = _api_auth("GET", "/api/v1/stats/countdown")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        items = data.get("countdown", [])
+        total = data.get("total", 0)
+        valid_phases = {"upcoming", "registration", "ongoing", "ending"}
+        all_valid = all(item.get("phase") in valid_phases for item in items)
+        if items:
+            _log("PASS", "stat-countdown",
+                 f"赛事倒计时成功, {total} 个赛事, 首个={items[0].get('title','?')}, "
+                 f"phase={items[0].get('phase','?')}, days={items[0].get('days_until_start','?')}")
+        else:
+            _log("PASS", "stat-countdown", f"赛事倒计时成功, 0 个即将到来的赛事")
+    else:
+        _log("FAIL", "stat-countdown", f"赛事倒计时失败 → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- Competition trends endpoint ---
     resp = _api_auth("GET", "/api/v1/stats/trends")
     if _ok(resp) and resp.status_code == 200:

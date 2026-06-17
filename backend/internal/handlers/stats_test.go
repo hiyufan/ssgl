@@ -3,6 +3,7 @@ package handlers
 import (
 	"math"
 	"testing"
+	"time"
 )
 
 func TestCompetitionStatsFields(t *testing.T) {
@@ -491,5 +492,102 @@ func TestKanbanColumnEmpty(t *testing.T) {
 	}
 	if len(col.Competitions) != 0 {
 		t.Errorf("expected 0 competitions, got %d", len(col.Competitions))
+	}
+}
+
+func TestPhasePriority(t *testing.T) {
+	tests := []struct {
+		phase string
+		want  int
+	}{
+		{"ending", 0},
+		{"ongoing", 1},
+		{"registration", 2},
+		{"upcoming", 3},
+		{"unknown", 4},
+		{"", 4},
+	}
+
+	for _, tt := range tests {
+		got := phasePriority(tt.phase)
+		if got != tt.want {
+			t.Errorf("phasePriority(%q) = %d, want %d", tt.phase, got, tt.want)
+		}
+	}
+}
+
+func TestPhasePriorityOrdering(t *testing.T) {
+	// ending should be more urgent than ongoing, which is more urgent than upcoming
+	if phasePriority("ending") >= phasePriority("ongoing") {
+		t.Error("ending should be more urgent than ongoing")
+	}
+	if phasePriority("ongoing") >= phasePriority("registration") {
+		t.Error("ongoing should be more urgent than registration")
+	}
+	if phasePriority("registration") >= phasePriority("upcoming") {
+		t.Error("registration should be more urgent than upcoming")
+	}
+}
+
+func TestCountdownItemFields(t *testing.T) {
+	item := CountdownItem{
+		ID:             1,
+		Title:          "蓝桥杯",
+		Type:           "innovation",
+		Status:         "published",
+		StartDate:      "2026-07-01",
+		EndDate:        "2026-07-05",
+		DaysUntilStart: 13,
+		DaysUntilEnd:   17,
+		Phase:          "upcoming",
+		Location:       "北京",
+		Prize:          "¥50,000",
+	}
+
+	if item.ID != 1 {
+		t.Errorf("expected ID=1, got %d", item.ID)
+	}
+	if item.Phase != "upcoming" {
+		t.Errorf("expected Phase='upcoming', got '%s'", item.Phase)
+	}
+	if item.DaysUntilStart != 13 {
+		t.Errorf("expected DaysUntilStart=13, got %d", item.DaysUntilStart)
+	}
+}
+
+func TestCountdownItemPhases(t *testing.T) {
+	phases := []string{"upcoming", "registration", "ongoing", "ending"}
+	for _, p := range phases {
+		item := CountdownItem{Phase: p}
+		if item.Phase != p {
+			t.Errorf("expected Phase='%s', got '%s'", p, item.Phase)
+		}
+	}
+}
+
+func TestCountdownItemDateParsing(t *testing.T) {
+	item := CountdownItem{
+		StartDate: "2026-07-01",
+		EndDate:   "2026-07-05",
+	}
+
+	// Dates should be parseable
+	start, err := time.Parse("2006-01-02", item.StartDate)
+	if err != nil {
+		t.Errorf("failed to parse start date: %v", err)
+	}
+	end, err := time.Parse("2006-01-02", item.EndDate)
+	if err != nil {
+		t.Errorf("failed to parse end date: %v", err)
+	}
+	if !start.Before(end) {
+		t.Error("start date should be before end date")
+	}
+}
+
+func TestNewStatsHandlerReturnsInstance(t *testing.T) {
+	h := NewStatsHandler()
+	if h == nil {
+		t.Error("NewStatsHandler returned nil")
 	}
 }
