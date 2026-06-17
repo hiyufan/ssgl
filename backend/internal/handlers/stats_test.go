@@ -368,3 +368,26 @@ func TestEngagementRateCalculation(t *testing.T) {
 		t.Errorf("expected zeroRate=0, got %.1f", zeroRate)
 	}
 }
+
+func TestTypeDistributionFields(t *testing.T) {
+	td := TypeDistribution{
+		Type:  "hackathon",
+		Count: 10,
+	}
+	if td.Type != "hackathon" {
+		t.Errorf("expected Type='hackathon', got '%s'", td.Type)
+	}
+	if td.Count != 10 {
+		t.Errorf("expected Count=10, got %d", td.Count)
+	}
+}
+
+func TestTypeDistributionTypes(t *testing.T) {
+	validTypes := []string{"hackathon", "innovation", "research", "business_plan", "ai_innovation", "data_science"}
+	for _, vt := range validTypes {
+		td := TypeDistribution{Type: vt, Count: 1}
+		if td.Type != vt {
+			t.Errorf("expected Type='%s', got '%s'", vt, td.Type)
+		}
+	}
+}

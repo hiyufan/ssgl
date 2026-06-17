@@ -30,6 +30,7 @@ func Migrate() {
 		&models.AIAnalysisLog{},
 		&security.AuditLog{},
 		&models.Milestone{},
+		&models.CompetitionRegistration{},
 	); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}

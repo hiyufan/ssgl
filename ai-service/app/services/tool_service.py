@@ -149,7 +149,35 @@ class ToolService:
         return llm_service.chat(system_prompt=system_prompt, user_message=user_message)
 
     # ------------------------------------------------------------------
-    # 6. Competition Advisor
+    # 6. Pitch Deck Outline
+    # ------------------------------------------------------------------
+
+    def pitch_deck(self, project_info: str, duration: str = "10分钟") -> str:
+        """Generate a pitch deck / presentation outline."""
+        system_prompt = (
+            "你是一位资深创业路演教练，曾指导过数百个获奖项目。根据项目信息和答辩时长，"
+            "生成一份结构化的路演PPT大纲（Markdown格式），包含：\n"
+            "1. 开场设计（Hook / 痛点引入）\n"
+            "2. 问题与机遇（背景数据 + 用户画像）\n"
+            "3. 解决方案（产品/服务亮点 + 技术架构概要）\n"
+            "4. 市场分析（TAM/SAM/SOM + 竞争格局）\n"
+            "5. 商业模式（盈利方式 + 定价策略）\n"
+            "6. 项目进展（里程碑 + 数据验证 + MVP展示）\n"
+            "7. 团队介绍（核心成员 + 技能互补）\n"
+            "8. 发展规划（短期/中期/长期目标）\n"
+            "9. 资金需求与用途\n"
+            "10. 收尾设计（金句 / Call to Action）\n\n"
+            "每页建议注明：页标题、核心信息点、建议视觉元素、预估时长。"
+            "根据答辩总时长合理分配每页时间。"
+        )
+
+        user_message = f"项目信息：\n{project_info}\n\n答辩时长：{duration}"
+        user_message += _rag_context(f"路演答辩 演示技巧 {project_info}")
+
+        return llm_service.chat(system_prompt=system_prompt, user_message=user_message)
+
+    # ------------------------------------------------------------------
+    # 7. Competition Advisor
     # ------------------------------------------------------------------
 
     def competition_advisor(

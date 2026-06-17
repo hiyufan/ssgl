@@ -9,26 +9,50 @@ import { SectionLabel } from '@/components/ui/page-helpers';
 import { BarChart, DonutChart, AreaChart } from '@/components/ui/charts';
 import type { StatsOverview, ApprovalWorkflow } from '@/types';
 
+const TYPE_LABELS: Record<string, string> = {
+  hackathon: '黑客松',
+  innovation: '创新赛',
+  research: '科研赛',
+  business_plan: '商业计划',
+  ai_innovation: 'AI创新',
+  data_science: '数据科学',
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  hackathon: 'var(--amber)',
+  innovation: 'var(--teal)',
+  research: 'var(--purple)',
+  business_plan: 'var(--green)',
+  ai_innovation: 'var(--red)',
+  data_science: 'var(--orange)',
+};
+
 export function AdminDashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [stats, setStats] = useState<StatsOverview | null>(null);
   const [pending, setPending] = useState<ApprovalWorkflow[]>([]);
   const [engagement, setEngagement] = useState<Record<string, number> | null>(null);
+  const [typeDist, setTypeDist] = useState<Array<{ type: string; count: number }>>([]);
+  const [trends, setTrends] = useState<Array<{ month: string; competitions: number; teams: number; awards: number }>>([]);
   const [loading, setLoading] = useState(true);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, wfRes, engRes] = await Promise.all([
+        const [statsRes, wfRes, engRes, typeRes, trendsRes] = await Promise.all([
           statsAPI.overview(),
           workflowsAPI.list({ tab: 'pending' }),
           statsAPI.engagement().catch(() => null),
+          statsAPI.typeDistribution().catch(() => ({ types: [] })),
+          statsAPI.trends().catch(() => ({ trends: [] })),
         ]);
         setStats(statsRes);
         setPending(wfRes.workflows || []);
         setEngagement(engRes);
+        setTypeDist(typeRes.types || []);
+        setTrends(trendsRes.trends || []);
       } catch (e) {
         console.error('Dashboard fetch error:', e);
       } finally {
@@ -177,11 +201,11 @@ export function AdminDashboard() {
       </div>
 
       {/* ── Charts Section ─────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 24 }}>
         {/* User Distribution Donut */}
         <div className="card" style={{ padding: '20px 24px' }}>
           <SectionLabel label="用户分布" />
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
             <DonutChart
               segments={[
                 { label: '学生', value: stats?.total_students || 0 },
@@ -194,6 +218,36 @@ export function AdminDashboard() {
               size={140}
             />
           </div>
+        </div>
+
+        {/* Competition Type Distribution */}
+        <div className="card" style={{ padding: '20px 24px' }}>
+          <SectionLabel label="赛事类型分布" />
+          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
+            {typeDist.length > 0 ? (
+              <DonutChart
+                segments={typeDist.map(t => ({
+                  label: TYPE_LABELS[t.type] || t.type,
+                  value: t.count,
+                }))}
+                size={140}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)', fontSize: 13 }}>暂无数据</div>
+            )}
+          </div>
+          {/* Legend */}
+          {typeDist.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', marginTop: 12, justifyContent: 'center' }}>
+              {typeDist.map(t => (
+                <div key={t.type} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: TYPE_COLORS[t.type] || 'var(--text-3)' }} />
+                  <span style={{ color: 'var(--text-2)' }}>{TYPE_LABELS[t.type] || t.type}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-3)', fontWeight: 600 }}>{t.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Activity Bar Chart */}
@@ -214,6 +268,27 @@ export function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Trends Chart ──────────────────────────────── */}
+      {trends.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel label="月度趋势" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 12 }}>
+            <div className="card" style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.05em' }}>赛事</div>
+              <AreaChart data={trends.map(t => ({ label: t.month.slice(5), value: t.competitions }))} color="var(--amber)" h={80} />
+            </div>
+            <div className="card" style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.05em' }}>团队</div>
+              <AreaChart data={trends.map(t => ({ label: t.month.slice(5), value: t.teams }))} color="var(--teal)" h={80} />
+            </div>
+            <div className="card" style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.05em' }}>奖项</div>
+              <AreaChart data={trends.map(t => ({ label: t.month.slice(5), value: t.awards }))} color="var(--purple)" h={80} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Engagement Metrics ─────────────────────────── */}
       {engagement && (

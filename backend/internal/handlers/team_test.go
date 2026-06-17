@@ -45,3 +45,23 @@ func TestCreateTeamRequest_LongName(t *testing.T) {
 		t.Errorf("expected Name length=200, got %d", len(req.Name))
 	}
 }
+
+func TestTeamHandler_Constructor(t *testing.T) {
+	handler := NewTeamHandler()
+	if handler == nil {
+		t.Error("NewTeamHandler returned nil")
+	}
+}
+
+func TestCreateTeamRequest_RequiredFields(t *testing.T) {
+	req := CreateTeamRequest{
+		Name:          "测试团队",
+		CompetitionID: 5,
+	}
+	if req.Name == "" {
+		t.Error("Name should not be empty")
+	}
+	if req.CompetitionID == 0 {
+		t.Error("CompetitionID should not be zero")
+	}
+}

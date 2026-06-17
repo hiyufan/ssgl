@@ -51,6 +51,15 @@ async def resource_integration(body: ToolRequest) -> dict:
     return {"result": result}
 
 
+@router.post("/pitch-deck")
+async def pitch_deck(body: ToolRequest) -> dict:
+    """Generate a pitch deck / presentation outline."""
+    project_info = body.input
+    duration = body.extra or "10分钟"
+    result = tool_service.pitch_deck(project_info=project_info, duration=duration)
+    return {"result": result}
+
+
 @router.post("/advisor")
 async def competition_advisor(body: ToolRequest) -> dict:
     """Provide strategic competition advice."""

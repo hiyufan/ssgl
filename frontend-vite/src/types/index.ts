@@ -154,6 +154,18 @@ export interface StudentEvaluation {
   competition?: Competition;
 }
 
+export interface CompetitionRegistration {
+  id: number;
+  competition_id: number;
+  user_id: number;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  remark?: string;
+  created_at: string;
+  updated_at: string;
+  competition?: Competition;
+  user?: User;
+}
+
 // Stats types
 export interface StatsOverview {
   total_competitions: number;

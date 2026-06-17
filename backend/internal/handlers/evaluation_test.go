@@ -83,3 +83,63 @@ func TestNewEvaluationHandler(t *testing.T) {
 		t.Error("NewEvaluationHandler returned nil")
 	}
 }
+
+func TestCreateEvaluationRequest_FeedbackOptional(t *testing.T) {
+	req := CreateEvaluationRequest{
+		TeacherID:     1,
+		CompetitionID: 2,
+		Teaching:      5,
+		Communication: 4,
+		Availability:  3,
+		Overall:       4,
+	}
+	// Feedback is optional (no binding:"required")
+	if req.Feedback != "" {
+		t.Errorf("expected empty feedback, got '%s'", req.Feedback)
+	}
+}
+
+func TestCreateEvaluationRequest_AllScoresMax(t *testing.T) {
+	req := CreateEvaluationRequest{
+		TeacherID:     10,
+		CompetitionID: 20,
+		Teaching:      5,
+		Communication: 5,
+		Availability:  5,
+		Overall:       5,
+		Feedback:      "Excellent across all dimensions",
+	}
+	if req.Teaching != 5 || req.Communication != 5 || req.Availability != 5 || req.Overall != 5 {
+		t.Error("all scores should be 5")
+	}
+}
+
+func TestCreateEvaluationRequest_AllScoresMin(t *testing.T) {
+	req := CreateEvaluationRequest{
+		TeacherID:     10,
+		CompetitionID: 20,
+		Teaching:      1,
+		Communication: 1,
+		Availability:  1,
+		Overall:       1,
+		Feedback:      "Needs improvement",
+	}
+	if req.Teaching != 1 || req.Communication != 1 || req.Availability != 1 || req.Overall != 1 {
+		t.Error("all scores should be 1")
+	}
+}
+
+func TestCreateEvaluationRequest_UnicodeFeedback(t *testing.T) {
+	req := CreateEvaluationRequest{
+		TeacherID:     1,
+		CompetitionID: 1,
+		Teaching:      4,
+		Communication: 4,
+		Availability:  4,
+		Overall:       4,
+		Feedback:      "老师的教学质量非常高，讲解清晰，沟通顺畅！👍",
+	}
+	if len(req.Feedback) == 0 {
+		t.Error("unicode feedback should be preserved")
+	}
+}

@@ -84,6 +84,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	globalSearchHandler := handlers.NewGlobalSearchHandler()
 	diagnosticsHandler := handlers.NewDiagnosticsHandler()
 	importHandler := handlers.NewImportHandler()
+	registrationHandler := handlers.NewRegistrationHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -156,6 +157,13 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/evaluations/:id", evalHandler.Get)
 		protected.POST("/evaluations", evalHandler.Create)
 
+		// Competition registrations (student self-register).
+		protected.GET("/registrations", registrationHandler.List)
+		protected.GET("/registrations/:id", registrationHandler.Get)
+		protected.POST("/competitions/:id/register", registrationHandler.Register)
+		protected.DELETE("/competitions/:id/register", registrationHandler.Deregister)
+		protected.GET("/competitions/:id/registrations", registrationHandler.CompetitionRegistrations)
+
 		// Stats.
 		protected.GET("/stats/overview", statsHandler.Overview)
 		protected.GET("/stats/competitions", statsHandler.Competitions)
@@ -219,6 +227,10 @@ func Setup(cfg *config.Config) *gin.Engine {
 		staff.PUT("/milestones/:id", milestoneHandler.Update)
 		staff.DELETE("/milestones/:id", milestoneHandler.Delete)
 		staff.POST("/competitions/:id/milestones/batch", milestoneHandler.BatchCreate)
+
+		// Registration approval — teacher/admin only.
+		staff.POST("/registrations/:id/approve", registrationHandler.Approve)
+		staff.POST("/registrations/:id/reject", registrationHandler.Reject)
 	}
 
 	// Admin-only routes.

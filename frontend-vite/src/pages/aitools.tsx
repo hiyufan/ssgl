@@ -9,6 +9,7 @@ const TOOLS = [
   { id: 'improvement', name: '项目改进建议', desc: '结合往届优秀项目 AI 对比，给出针对性改进方向', tags: ['AI 建议', '历史对比'], color: 'purple' },
   { id: 'tech-route', name: '技术路线规划', desc: '根据功能需求和团队能力生成技术架构建议', tags: ['技术规划', 'RAG'], color: 'green' },
   { id: 'resource-match', name: '资源整合建议', desc: '分析团队技能差距并推荐补充资源与合作方向', tags: ['资源匹配', 'AI'], color: 'amber' },
+  { id: 'pitch-deck', name: '路演PPT大纲', desc: '根据项目信息和答辩时长，生成结构化路演PPT大纲与时间分配', tags: ['路演', '答辩教练'], color: 'purple' },
   { id: 'advisor', name: '赛事顾问', desc: '实时回答赛事规则、评审标准与参赛策略问题', tags: ['问答', 'RAG + LLM'], color: 'teal' },
 ];
 
@@ -60,7 +61,7 @@ export function AIToolsPage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>AI 工具箱</h1>
           <span className="badge badge-teal">RAG + LLM</span>
         </div>
-        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>6 个智能助手 · 基于往届项目知识库 · 实时生成</p>
+        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>7 个智能助手 · 基于往届项目知识库 · 实时生成</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, flex: 1, overflow: 'hidden' }}>

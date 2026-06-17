@@ -6,6 +6,7 @@ import type {
   AuditLog, AuditStats, RAGDocument, RAGStats,
   CalendarEvent, ShowcaseData,
   LeaderboardEntry, MatchResult, TeamInvite, Milestone,
+  CompetitionRegistration,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -340,6 +341,34 @@ export const evaluationsAPI = {
 
   create: async (data: Partial<StudentEvaluation>): Promise<{ evaluation: StudentEvaluation }> => {
     const response = await api.post<{ evaluation: StudentEvaluation }>('/evaluations', data);
+    return response.data;
+  },
+};
+
+// Registrations API
+export const registrationsAPI = {
+  list: async (params?: Record<string, string>): Promise<{ registrations: CompetitionRegistration[]; total: number; page: number; page_size: number }> => {
+    const response = await api.get('/registrations', { params });
+    return response.data;
+  },
+
+  get: async (id: number): Promise<{ registration: CompetitionRegistration }> => {
+    const response = await api.get(`/registrations/${id}`);
+    return response.data;
+  },
+
+  approve: async (id: number): Promise<{ message: string }> => {
+    const response = await api.post(`/registrations/${id}/approve`);
+    return response.data;
+  },
+
+  reject: async (id: number, reason?: string): Promise<{ message: string }> => {
+    const response = await api.post(`/registrations/${id}/reject`, { reason });
+    return response.data;
+  },
+
+  competitionRegistrations: async (compId: number, params?: Record<string, string>): Promise<{ registrations: CompetitionRegistration[]; total: number; stats: Record<string, number> }> => {
+    const response = await api.get(`/competitions/${compId}/registrations`, { params });
     return response.data;
   },
 };

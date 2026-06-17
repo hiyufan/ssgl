@@ -344,6 +344,15 @@ def test_crud():
     else:
         _log("FAIL", "workflow-list", f"审批列表失败 → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Registrations ---
+    resp = _api_auth("GET", "/api/v1/registrations")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        regs = data.get("registrations", [])
+        _log("PASS", "reg-list", f"报名列表成功, {len(regs)} 条")
+    else:
+        _log("FAIL", "reg-list", f"报名列表失败 → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- Competition Recommendation ---
     resp = _api_auth("GET", "/api/v1/competitions/recommend")
     if _ok(resp) and resp.status_code == 200:

@@ -153,3 +153,122 @@ func TestCompetition_NewTypes(t *testing.T) {
 		}
 	}
 }
+
+// Team model tests
+func TestTeam_Fields(t *testing.T) {
+	team := Team{
+		ID:            1,
+		Name:          "Code Masters",
+		CompetitionID: 10,
+		LeaderID:      5,
+		Status:        "active",
+	}
+	if team.Name != "Code Masters" {
+		t.Errorf("expected team name 'Code Masters', got '%s'", team.Name)
+	}
+	if team.CompetitionID != 10 {
+		t.Errorf("expected CompetitionID 10, got %d", team.CompetitionID)
+	}
+	if team.LeaderID != 5 {
+		t.Errorf("expected LeaderID 5, got %d", team.LeaderID)
+	}
+}
+
+func TestTeamMember_Fields(t *testing.T) {
+	member := TeamMember{
+		ID:     1,
+		TeamID: 10,
+		UserID: 5,
+		Role:   "leader",
+	}
+	if member.TeamID != 10 {
+		t.Errorf("expected TeamID 10, got %d", member.TeamID)
+	}
+	if member.Role != "leader" {
+		t.Errorf("expected role 'leader', got '%s'", member.Role)
+	}
+}
+
+// TeamInvite model tests
+func TestTeamInvite_Fields(t *testing.T) {
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	invite := TeamInvite{
+		ID:        1,
+		TeamID:    10,
+		InviterID: 1,
+		InviteeID: 5,
+		Code:      "abc123def456",
+		Status:    "pending",
+		Message:   "欢迎加入我们的团队",
+		ExpiresAt: expiresAt,
+	}
+	if invite.TeamID != 10 {
+		t.Errorf("expected TeamID 10, got %d", invite.TeamID)
+	}
+	if invite.Code != "abc123def456" {
+		t.Errorf("expected code 'abc123def456', got '%s'", invite.Code)
+	}
+	if invite.Status != "pending" {
+		t.Errorf("expected status 'pending', got '%s'", invite.Status)
+	}
+	if !invite.ExpiresAt.After(time.Now()) {
+		t.Error("expected ExpiresAt to be in the future")
+	}
+}
+
+// CompetitionRegistration model tests
+func TestCompetitionRegistration_StatusConstants(t *testing.T) {
+	statuses := []struct {
+		val      string
+		expected string
+	}{
+		{RegStatusPending, "pending"},
+		{RegStatusApproved, "approved"},
+		{RegStatusRejected, "rejected"},
+		{RegStatusCancelled, "cancelled"},
+	}
+	for _, s := range statuses {
+		if s.val != s.expected {
+			t.Errorf("expected RegStatus '%s', got '%s'", s.expected, s.val)
+		}
+	}
+}
+
+func TestCompetitionRegistration_Fields(t *testing.T) {
+	reg := CompetitionRegistration{
+		ID:            1,
+		CompetitionID: 10,
+		UserID:        5,
+		Status:        RegStatusPending,
+		Remark:        "希望参加",
+	}
+	if reg.CompetitionID != 10 {
+		t.Errorf("expected CompetitionID 10, got %d", reg.CompetitionID)
+	}
+	if reg.Status != RegStatusPending {
+		t.Errorf("expected status '%s', got '%s'", RegStatusPending, reg.Status)
+	}
+}
+
+// User profile fields test
+func TestUser_ProfileFields(t *testing.T) {
+	user := User{
+		ID:       1,
+		Username: "student1",
+		Name:     "张三",
+		Email:    "zhangsan@example.com",
+		Phone:    "13800138000",
+		Dept:     "计算机科学系",
+		Avatar:   "https://example.com/avatar.png",
+		Role:     RoleStudent,
+	}
+	if user.Phone != "13800138000" {
+		t.Errorf("expected phone '13800138000', got '%s'", user.Phone)
+	}
+	if user.Dept != "计算机科学系" {
+		t.Errorf("expected dept '计算机科学系', got '%s'", user.Dept)
+	}
+	if user.Avatar != "https://example.com/avatar.png" {
+		t.Errorf("expected avatar URL, got '%s'", user.Avatar)
+	}
+}

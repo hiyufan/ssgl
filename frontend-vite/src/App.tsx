@@ -19,6 +19,7 @@ import { AIToolsPage } from '@/pages/aitools';
 import { CoachPage } from '@/pages/coach';
 import { KnowledgeBasePage } from '@/pages/knowledge-base';
 import { AuditLogsPage } from '@/pages/audit-logs';
+import { RegistrationsPage } from '@/pages/registrations';
 import { CalendarPage } from '@/pages/calendar';
 import { LeaderboardPage } from '@/pages/leaderboard';
 import { ShowcasePage } from '@/pages/showcase';
@@ -51,6 +52,7 @@ function AppRoutes() {
 
         {/* teacher + admin */}
         <Route path="/approvals" element={<RequireRole roles={['teacher', 'admin']}><ApprovalsPage /></RequireRole>} />
+        <Route path="/registrations" element={<RequireRole roles={['teacher', 'admin']}><RegistrationsPage /></RequireRole>} />
         <Route path="/awards" element={<RequireRole roles={['teacher', 'admin']}><AwardsPage /></RequireRole>} />
         <Route path="/stats" element={<RequireRole roles={['teacher', 'admin']}><StatsPage /></RequireRole>} />
         <Route path="/knowledge-base" element={<RequireRole roles={['teacher', 'admin']}><KnowledgeBasePage /></RequireRole>} />

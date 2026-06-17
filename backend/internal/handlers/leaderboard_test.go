@@ -61,3 +61,31 @@ func TestLeaderboardEntry_DefaultValues(t *testing.T) {
 		t.Errorf("default score should be 0, got %f", entry.Score)
 	}
 }
+
+func TestLeaderboardEntry_HighScore(t *testing.T) {
+	entry := LeaderboardEntry{
+		Rank:             1,
+		AwardCount:       100,
+		CompetitionCount: 50,
+		PrePlanCount:     30,
+		Score:            1180.0, // 100*10 + 50*3 + 30*1
+	}
+	expected := float64(100)*10 + float64(50)*3 + float64(30)
+	if entry.Score != expected {
+		t.Errorf("expected score %f, got %f", expected, entry.Score)
+	}
+}
+
+func TestLeaderboardEntry_TeamIDAndLeader(t *testing.T) {
+	entry := LeaderboardEntry{
+		TeamID:     42,
+		TeamName:   "Code Masters",
+		LeaderName: "李四",
+	}
+	if entry.TeamID != 42 {
+		t.Errorf("expected TeamID 42, got %d", entry.TeamID)
+	}
+	if entry.LeaderName != "李四" {
+		t.Errorf("expected LeaderName '李四', got '%s'", entry.LeaderName)
+	}
+}
