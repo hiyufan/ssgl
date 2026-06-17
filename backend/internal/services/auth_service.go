@@ -133,6 +133,30 @@ func (s *AuthService) RefreshToken(refreshToken string) (*TokenPair, error) {
 	return s.generateTokenPair(claims.UserID, claims.Role)
 }
 
+// ChangePassword verifies the old password and sets a new one.
+func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword string) error {
+	db := database.GetDB()
+	if db == nil {
+		return errors.New("database not connected")
+	}
+
+	var user models.User
+	if err := db.First(&user, userID).Error; err != nil {
+		return errors.New("user not found")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
+		return errors.New("current password is incorrect")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.New("failed to hash password")
+	}
+
+	return db.Model(&user).Update("password", string(hashed)).Error
+}
+
 // GetUserByID returns the user with the given ID.
 func (s *AuthService) GetUserByID(id uint) (*models.User, error) {
 	db := database.GetDB()

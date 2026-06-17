@@ -1024,6 +1024,230 @@ def test_crud():
 
 
 # ============================================================
+# 3b. Registration Flow Tests
+# ============================================================
+def test_registration_flow():
+    """Full registration lifecycle: student register → teacher approve/reject → deregister."""
+    print("\n📝 3b. 报名流程测试")
+
+    if not _student_token:
+        _log("SKIP", "reg-flow", "无学生 token，跳过报名流程测试")
+        return
+
+    # Create a competition for testing
+    comp_data = {
+        "title": f"报名测试赛事-{int(time.time())}",
+        "description": "用于报名流程测试",
+        "type": "innovation",
+        "max_team_size": 3,
+        "min_team_size": 1,
+        "start_date": "2026-09-01T00:00:00+08:00",
+        "end_date": "2026-10-01T00:00:00+08:00",
+        "location": "线上",
+    }
+    resp = _api_auth("POST", "/api/v1/competitions", json=comp_data)
+    reg_comp_id = None
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        comp = data.get("competition", data)
+        reg_comp_id = comp.get("id") or data.get("id")
+        _log("PASS", "reg-comp-create", f"报名测试赛事创建成功, id={reg_comp_id}")
+    else:
+        _log("FAIL", "reg-comp-create", f"报名测试赛事创建失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    # Publish the competition
+    resp = _api_auth("POST", f"/api/v1/competitions/{reg_comp_id}/publish")
+    if _ok(resp) and resp.status_code == 200:
+        _log("PASS", "reg-comp-publish", f"发布赛事 {reg_comp_id} 成功")
+    else:
+        _log("WARN", "reg-comp-publish", f"发布赛事 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Student registers for competition
+    reg_id = None
+    resp = _api_auth("POST", f"/api/v1/competitions/{reg_comp_id}/register",
+                     token=_student_token, json={"remark": "测试报名"})
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        reg = data.get("registration", data)
+        reg_id = reg.get("id") or data.get("id")
+        _log("PASS", "reg-register", f"学生报名成功, registration_id={reg_id}")
+    else:
+        _log("FAIL", "reg-register", f"学生报名失败 → {resp.status_code if _ok(resp) else 'None'}",
+             resp.text[:200] if _ok(resp) else "")
+
+    # Duplicate registration should fail (409)
+    if reg_id:
+        resp = _api_auth("POST", f"/api/v1/competitions/{reg_comp_id}/register",
+                         token=_student_token, json={})
+        if _ok(resp) and resp.status_code == 409:
+            _log("PASS", "reg-duplicate", "重复报名被拒绝 (409) ✓")
+        else:
+            _log("WARN", "reg-duplicate", f"重复报名 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Competition registrations list
+    resp = _api_auth("GET", f"/api/v1/competitions/{reg_comp_id}/registrations")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        regs = data.get("registrations", [])
+        _log("PASS", "reg-comp-list", f"赛事报名列表成功, {len(regs)} 条, total={data.get('total', '?')}")
+    else:
+        _log("FAIL", "reg-comp-list", f"赛事报名列表失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Admin approves registration
+    if reg_id:
+        resp = _api_auth("POST", f"/api/v1/registrations/{reg_id}/approve")
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "reg-approve", f"审核通过报名 {reg_id} 成功")
+        else:
+            _log("WARN", "reg-approve", f"审核通过 → {resp.status_code if _ok(resp) else 'None'}",
+                 resp.text[:200] if _ok(resp) else "")
+
+    # Student can view own registrations
+    resp = _api_auth("GET", "/api/v1/registrations", token=_student_token)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        regs = data.get("registrations", [])
+        _log("PASS", "reg-my-list", f"学生报名列表成功, {len(regs)} 条")
+    else:
+        _log("FAIL", "reg-my-list", f"学生报名列表失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Now test a second registration that gets rejected
+    # Create another student to test reject flow
+    resp = _api("POST", "/api/v1/auth/register", json={
+        "username": "test_student_reject",
+        "password": "TestPass456!",
+        "name": "待拒绝学生",
+        "role": "student",
+        "email": "reject@ssgl.test"
+    })
+    reject_token = None
+    if _ok(resp) and resp.status_code in (200, 201):
+        reject_token = _login("test_student_reject", "TestPass456!")
+    elif _ok(resp) and resp.status_code in (400, 409):
+        reject_token = _login("test_student_reject", "TestPass456!")
+
+    reject_reg_id = None
+    if reject_token and reg_comp_id:
+        resp = _api_auth("POST", f"/api/v1/competitions/{reg_comp_id}/register",
+                         token=reject_token, json={"remark": "待拒绝"})
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            reg = data.get("registration", data)
+            reject_reg_id = reg.get("id") or data.get("id")
+            _log("PASS", "reg-register-2", f"第二个学生报名成功, id={reject_reg_id}")
+
+    if reject_reg_id:
+        resp = _api_auth("POST", f"/api/v1/registrations/{reject_reg_id}/reject",
+                         json={"reason": "材料不全"})
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "reg-reject", f"拒绝报名 {reject_reg_id} 成功")
+        else:
+            _log("WARN", "reg-reject", f"拒绝报名 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Cleanup
+    if reg_comp_id:
+        _api_auth("DELETE", f"/api/v1/competitions/{reg_comp_id}")
+
+
+# ============================================================
+# 3c. Password Change Tests
+# ============================================================
+def test_password_change():
+    """Test the password change flow."""
+    global _student_token
+    print("\n🔑 3c. 修改密码测试")
+
+    if not _student_token:
+        _log("SKIP", "pwd-change", "无学生 token，跳过密码修改测试")
+        return
+
+    # Wrong old password → 400
+    resp = _api_auth("PUT", "/api/v1/auth/password", token=_student_token, json={
+        "old_password": "wrongOldPass!",
+        "new_password": "NewSecurePass789!"
+    })
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "pwd-wrong-old", "错误旧密码 → 400 ✓")
+    else:
+        _log("WARN", "pwd-wrong-old", f"错误旧密码 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Same old and new password → 400
+    resp = _api_auth("PUT", "/api/v1/auth/password", token=_student_token, json={
+        "old_password": "TestPass123!",
+        "new_password": "TestPass123!"
+    })
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "pwd-same", "新旧密码相同 → 400 ✓")
+    else:
+        _log("WARN", "pwd-same", f"新旧密码相同 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Weak new password → 400
+    resp = _api_auth("PUT", "/api/v1/auth/password", token=_student_token, json={
+        "old_password": "TestPass123!",
+        "new_password": "123"
+    })
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "pwd-weak", "弱密码被拒绝 → 400 ✓")
+    else:
+        _log("WARN", "pwd-weak", f"弱密码 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Successful password change
+    resp = _api_auth("PUT", "/api/v1/auth/password", token=_student_token, json={
+        "old_password": "TestPass123!",
+        "new_password": "NewTestPass456!"
+    })
+    if _ok(resp) and resp.status_code == 200:
+        _log("PASS", "pwd-change-ok", "修改密码成功 ✓")
+        # Verify login with new password
+        new_token = _login("test_student_001", "NewTestPass456!")
+        if new_token:
+            _log("PASS", "pwd-login-new", "新密码登录成功 ✓")
+            # Restore original password for subsequent tests
+            _student_token = new_token
+            resp = _api_auth("PUT", "/api/v1/auth/password", token=new_token, json={
+                "old_password": "NewTestPass456!",
+                "new_password": "TestPass123!"
+            })
+            if _ok(resp) and resp.status_code == 200:
+                _log("PASS", "pwd-restore", "密码已还原 ✓")
+                _student_token = _login("test_student_001", "TestPass123!")
+            else:
+                _log("WARN", "pwd-restore", "密码还原失败，后续测试可能受影响")
+        else:
+            _log("FAIL", "pwd-login-new", "新密码登录失败")
+    else:
+        _log("WARN", "pwd-change-ok", f"修改密码 → {resp.status_code if _ok(resp) else 'None'}",
+             resp.text[:200] if _ok(resp) else "")
+
+    # No auth → 401
+    resp = _api("PUT", "/api/v1/auth/password", json={
+        "old_password": "any",
+        "new_password": "NewPass123!"
+    })
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "pwd-no-auth", "无 token 修改密码 → 401 ✓")
+    else:
+        _log("WARN", "pwd-no-auth", f"无 token → {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
+# 3d. Export Full Data Test
+# ============================================================
+def test_export_full():
+    """Test the full data export endpoint."""
+    print("\n📤 3d. 全量数据导出测试")
+
+    resp = _api_auth("GET", "/api/v1/stats/export/full")
+    if _ok(resp) and resp.status_code == 200:
+        content_type = resp.headers.get("Content-Type", "")
+        size = len(resp.content)
+        _log("PASS", "export-full", f"全量导出成功, Content-Type={content_type}, {size} bytes")
+    else:
+        _log("WARN", "export-full", f"全量导出 → {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
 # 4. AI Service Tests
 # ============================================================
 def test_ai_service():
@@ -1522,6 +1746,9 @@ def run_all():
     test_services()
     test_auth()
     test_crud()
+    test_registration_flow()
+    test_password_change()
+    test_export_full()
     test_ai_service()
     test_coach_flow()
     test_knowledge_base()

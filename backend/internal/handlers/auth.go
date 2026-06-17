@@ -106,6 +106,62 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"tokens": tokens})
 }
 
+// ChangePasswordRequest is the payload for the change-password endpoint.
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6,max=128"`
+}
+
+// ChangePassword handles PUT /auth/password — change the current user's password.
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	uid, ok := userID.(uint)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id in context"})
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate password strength
+	config := security.DefaultPasswordConfig()
+	valid, msg := security.ValidatePasswordWithConfig(req.NewPassword, config)
+	if !valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	if security.IsPasswordBreached(req.NewPassword) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "This password is too common. Please choose a stronger password."})
+		return
+	}
+
+	if req.OldPassword == req.NewPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "new password must be different from current password"})
+		return
+	}
+
+	if err := h.authService.ChangePassword(uid, req.OldPassword, req.NewPassword); err != nil {
+		if err.Error() == "current password is incorrect" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
+}
+
 // GetMe handles GET /auth/me and returns the currently authenticated user.
 func (h *AuthHandler) GetMe(c *gin.Context) {
 	userID, exists := c.Get("user_id")

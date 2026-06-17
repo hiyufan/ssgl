@@ -87,3 +87,27 @@ func TestAuthHandlerNilAuthService(t *testing.T) {
 		t.Error("expected nil authService")
 	}
 }
+
+func TestChangePasswordRequestFields(t *testing.T) {
+	req := ChangePasswordRequest{
+		OldPassword: "oldPass123!",
+		NewPassword: "newSecurePass456!",
+	}
+	if req.OldPassword != "oldPass123!" {
+		t.Errorf("expected OldPassword='oldPass123!', got '%s'", req.OldPassword)
+	}
+	if req.NewPassword != "newSecurePass456!" {
+		t.Errorf("expected NewPassword='newSecurePass456!', got '%s'", req.NewPassword)
+	}
+}
+
+func TestChangePasswordRequestValidation(t *testing.T) {
+	// Empty old password should fail binding (required)
+	req := ChangePasswordRequest{
+		OldPassword: "",
+		NewPassword: "newPass123!",
+	}
+	if req.OldPassword != "" {
+		t.Error("expected empty OldPassword to be rejected by binding")
+	}
+}

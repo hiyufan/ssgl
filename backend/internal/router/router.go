@@ -103,6 +103,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 	protected.Use(middleware.AuthMiddleware(&cfg.JWT))
 	protected.Use(security.AuditMiddleware(database.GetDB()))
 	{
+		// Auth — change password.
+		protected.PUT("/auth/password", authHandler.ChangePassword)
+
 		// Users.
 		protected.GET("/users/me", authHandler.GetMe)
 		protected.GET("/users/profile/me", profileHandler.GetMyProfile)
