@@ -175,3 +175,50 @@ func TestParseTimeField_VariousFormats(t *testing.T) {
 		})
 	}
 }
+
+func TestCompetitionStatsResponse_Fields(t *testing.T) {
+	// Test that the CompetitionStats response has all expected fields
+	type CompStatsResponse struct {
+		CompetitionID     uint    `json:"competition_id"`
+		Title             string  `json:"title"`
+		Status            string  `json:"status"`
+		TeamCount         int64   `json:"team_count"`
+		StudentCount      int64   `json:"student_count"`
+		PreplanCount      int64   `json:"preplan_count"`
+		ReviewedCount     int64   `json:"reviewed_count"`
+		ApprovedCount     int64   `json:"approved_count"`
+		AwardCount        int64   `json:"award_count"`
+		MilestoneCount    int64   `json:"milestone_count"`
+		MilestoneCompleted int64  `json:"milestone_completed"`
+		AvgTeamSize       float64 `json:"avg_team_size"`
+	}
+	resp := CompStatsResponse{
+		CompetitionID:      1,
+		Title:              "蓝桥杯",
+		Status:             "ongoing",
+		TeamCount:          10,
+		StudentCount:       35,
+		PreplanCount:       8,
+		ReviewedCount:      5,
+		ApprovedCount:      3,
+		AwardCount:         2,
+		MilestoneCount:     6,
+		MilestoneCompleted: 4,
+		AvgTeamSize:        3.5,
+	}
+	if resp.CompetitionID != 1 {
+		t.Errorf("expected CompetitionID=1, got %d", resp.CompetitionID)
+	}
+	if resp.TeamCount != 10 {
+		t.Errorf("expected TeamCount=10, got %d", resp.TeamCount)
+	}
+	if resp.StudentCount != 35 {
+		t.Errorf("expected StudentCount=35, got %d", resp.StudentCount)
+	}
+	if resp.AvgTeamSize != 3.5 {
+		t.Errorf("expected AvgTeamSize=3.5, got %f", resp.AvgTeamSize)
+	}
+	if resp.MilestoneCompleted > resp.MilestoneCount {
+		t.Error("MilestoneCompleted should not exceed MilestoneCount")
+	}
+}
