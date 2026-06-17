@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
 import { useNavigate } from 'react-router-dom';
 import { teamsAPI, prePlansAPI, competitionsAPI, notificationsAPI, profileAPI, type Notification } from '@/services/api';
+import type { Competition } from '@/types';
 import { SectionLabel } from '@/components/ui/page-helpers';
 import { Avatar } from '@/components/ui/page-helpers';
 import { Icon } from '@/components/ui/icon';
@@ -18,6 +19,8 @@ export function StudentDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Array<{ id: number; type: string; title: string; detail: string; created_at: string }>>([]);
+  const [recommendations, setRecommendations] = useState<Array<Competition & { match_score: number; match_tags: string[]; reason: string }>>([]);
+  const [loadingRecs, setLoadingRecs] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,6 +46,15 @@ export function StudentDashboard() {
       }
     };
     fetchData();
+  }, []);
+
+  /* Fetch AI recommendations lazily */
+  useEffect(() => {
+    setLoadingRecs(true);
+    competitionsAPI.recommend()
+      .then(res => setRecommendations(res.recommendations || []))
+      .catch(() => {})
+      .finally(() => setLoadingRecs(false));
   }, []);
 
   /* GSAP stagger entrance + magnetic hover */
@@ -412,6 +424,85 @@ export function StudentDashboard() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Row 6: AI Competition Recommendations */}
+      {recommendations.length > 0 && (
+        <div className="card anim-in" style={{ overflow: 'hidden', marginBottom: 24 }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <SectionLabel label="✨ AI 赛事推荐" />
+              <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 6 }}>基于你的预案智能匹配</span>
+            </div>
+            <button className="btn btn-outline btn-sm" onClick={() => navigate('/competitions')}>查看全部</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, padding: 16 }}>
+            {recommendations.slice(0, 3).map((rec) => {
+              const TYPE_COLORS: Record<string, string> = {
+                hackathon: 'var(--amber)', innovation: 'var(--teal)', research: 'var(--purple)',
+                business_plan: 'var(--green)', ai_innovation: 'var(--red)', data_science: 'var(--orange)',
+              };
+              const TYPE_LABELS: Record<string, string> = {
+                hackathon: '黑客松', innovation: '创新赛', research: '科研赛',
+                business_plan: '商业计划', ai_innovation: 'AI创新', data_science: '数据科学',
+              };
+              const color = TYPE_COLORS[rec.type] || 'var(--text-3)';
+              return (
+                <div key={rec.id} onClick={() => navigate('/competitions')} style={{
+                  padding: '16px', borderRadius: 10, background: 'var(--surface-2)',
+                  border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.2s',
+                }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = color;
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = `0 4px 12px ${color}22`;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color, padding: '2px 8px', borderRadius: 6,
+                      background: `${color}18`, letterSpacing: '0.05em',
+                    }}>{TYPE_LABELS[rec.type] || rec.type}</span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: 'var(--amber)',
+                      fontFamily: 'var(--font-mono)',
+                    }}>匹配 {rec.match_score}%</span>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {rec.title}
+                  </div>
+                  {rec.reason && (
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {rec.reason}
+                    </div>
+                  )}
+                  {rec.match_tags && rec.match_tags.length > 0 && (
+                    <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+                      {rec.match_tags.slice(0, 3).map((tag, i) => (
+                        <span key={i} style={{
+                          fontSize: 9, color: 'var(--text-3)', padding: '2px 6px', borderRadius: 4,
+                          background: 'var(--surface)', border: '1px solid var(--border)',
+                        }}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Loading indicator for recommendations */}
+      {loadingRecs && recommendations.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-3)', fontSize: 12 }}>
+          ✨ AI 正在为你匹配最适合的赛事...
         </div>
       )}
     </div>

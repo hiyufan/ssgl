@@ -3,6 +3,8 @@ package handlers
 import (
 	"testing"
 	"time"
+
+	"github.com/ssgl/competition-platform/internal/models"
 )
 
 func TestNewCalendarHandler(t *testing.T) {
@@ -57,9 +59,9 @@ func TestMonthParsing(t *testing.T) {
 		{"2026-12", false},
 		{"2025-01", false},
 		{"invalid", true},
-		{"", true},          // empty should fail when parsing directly
-		{"2026", true},      // year only
-		{"2026-13", true},   // invalid month
+		{"", true},
+		{"2026", true},
+		{"2026-13", true},
 	}
 
 	for _, tt := range tests {
@@ -71,7 +73,6 @@ func TestMonthParsing(t *testing.T) {
 }
 
 func TestMonthBoundaryCalculation(t *testing.T) {
-	// Verify that monthStart and monthEnd are calculated correctly.
 	monthStart, err := time.Parse("2006-01", "2026-06")
 	if err != nil {
 		t.Fatalf("unexpected parse error: %v", err)
@@ -85,26 +86,125 @@ func TestMonthBoundaryCalculation(t *testing.T) {
 		t.Errorf("expected 2026-07-01, got %s", monthEnd.Format("2006-01-02"))
 	}
 
-	// A competition inside the month.
 	insideStart := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
 	insideEnd := time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC)
 	if !(insideStart.Before(monthEnd) && !insideEnd.Before(monthStart)) {
 		t.Error("competition inside month should match filter")
 	}
 
-	// A competition outside the month.
 	outsideStart := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	outsideEnd := time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC)
 	if outsideStart.Before(monthEnd) && !outsideEnd.Before(monthStart) {
-		// outsideStart (July 1) is NOT before monthEnd (July 1) — equal means not strictly less.
-		// This is correct: a competition starting on the first of next month should not appear.
-		// Actually, outsideStart == monthEnd, so outsideStart < monthEnd is false. Good.
+		// Expected: outsideStart == monthEnd, so not strictly less
 	}
 
-	// A competition spanning across the month boundary.
 	spanStart := time.Date(2026, 5, 28, 0, 0, 0, 0, time.UTC)
 	spanEnd := time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)
 	if !(spanStart.Before(monthEnd) && !spanEnd.Before(monthStart)) {
 		t.Error("competition spanning into month should match filter")
+	}
+}
+
+func TestCalendarEvent_CompetitionTypes(t *testing.T) {
+	types := []string{"hackathon", "innovation", "research", "business_plan", "ai_innovation", "data_science"}
+	for _, typ := range types {
+		event := CalendarEvent{Type: typ}
+		if event.Type != typ {
+			t.Errorf("expected Type='%s', got '%s'", typ, event.Type)
+		}
+	}
+}
+
+func TestCalendarEvent_StatusValues(t *testing.T) {
+	statuses := []string{"draft", "published", "ongoing", "completed"}
+	for _, status := range statuses {
+		event := CalendarEvent{Status: status}
+		if event.Status != status {
+			t.Errorf("expected Status='%s', got '%s'", status, event.Status)
+		}
+	}
+}
+
+func TestCalendarEvent_DateRange(t *testing.T) {
+	start := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	event := CalendarEvent{
+		StartDate: start,
+		EndDate:   end,
+	}
+
+	if !event.StartDate.Before(event.EndDate) {
+		t.Error("expected StartDate before EndDate")
+	}
+
+	duration := event.EndDate.Sub(event.StartDate)
+	if duration.Hours() != 24*31 { // July has 31 days
+		t.Errorf("expected 31 days duration, got %f hours", duration.Hours())
+	}
+}
+
+func TestCalendarEvent_SameDay(t *testing.T) {
+	day := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
+	event := CalendarEvent{
+		StartDate: day,
+		EndDate:   day,
+	}
+
+	if !event.StartDate.Equal(event.EndDate) {
+		t.Error("expected StartDate equal to EndDate for same-day event")
+	}
+}
+
+func TestCalendarEvent_EmptyFields(t *testing.T) {
+	event := CalendarEvent{}
+	if event.Title != "" {
+		t.Errorf("expected empty Title, got '%s'", event.Title)
+	}
+	if event.Type != "" {
+		t.Errorf("expected empty Type, got '%s'", event.Type)
+	}
+	if event.Status != "" {
+		t.Errorf("expected empty Status, got '%s'", event.Status)
+	}
+	if event.Location != "" {
+		t.Errorf("expected empty Location, got '%s'", event.Location)
+	}
+	if event.Tags != "" {
+		t.Errorf("expected empty Tags, got '%s'", event.Tags)
+	}
+}
+
+func TestCalendarEvent_CompetitionModelMapping(t *testing.T) {
+	// Calendar events map to Competition model fields
+	comp := models.Competition{
+		ID:       1,
+		Title:    "Test Competition",
+		Type:     "hackathon",
+		Status:   "published",
+		Location: "福州",
+	}
+
+	event := CalendarEvent{
+		ID:       comp.ID,
+		Title:    comp.Title,
+		Type:     comp.Type,
+		Status:   comp.Status,
+		Location: comp.Location,
+	}
+
+	if event.ID != comp.ID {
+		t.Errorf("expected ID=%d, got %d", comp.ID, event.ID)
+	}
+	if event.Title != comp.Title {
+		t.Errorf("expected Title='%s', got '%s'", comp.Title, event.Title)
+	}
+	if event.Type != comp.Type {
+		t.Errorf("expected Type='%s', got '%s'", comp.Type, event.Type)
+	}
+	if event.Status != comp.Status {
+		t.Errorf("expected Status='%s', got '%s'", comp.Status, event.Status)
+	}
+	if event.Location != comp.Location {
+		t.Errorf("expected Location='%s', got '%s'", comp.Location, event.Location)
 	}
 }
