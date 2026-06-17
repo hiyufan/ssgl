@@ -51,6 +51,7 @@ export function CalendarPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -78,6 +79,26 @@ export function CalendarPage() {
     setCurrentMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     setSelectedDay(null);
   }, [year, month]);
+
+  // Export calendar as iCal (.ics) file
+  const handleExportICS = useCallback(async () => {
+    setExporting(true);
+    try {
+      const blob = await calendarAPI.exportICS();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ssgl_calendar_${new Date().toISOString().slice(0, 10)}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('iCal export failed:', err);
+    } finally {
+      setExporting(false);
+    }
+  }, []);
 
   const monthLabel = `${year}年${month}月`;
 
@@ -161,6 +182,18 @@ export function CalendarPage() {
         subtitle={`${monthLabel} · ${total} 个赛事`}
         actions={
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <button
+              onClick={handleExportICS}
+              disabled={exporting}
+              style={{
+                height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid var(--teal)',
+                background: 'var(--teal-bg)', color: 'var(--teal)', cursor: exporting ? 'wait' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 600, gap: 4, opacity: exporting ? 0.6 : 1,
+              }}
+            >
+              <Icon name="download" size={12} /> {exporting ? '导出中…' : 'iCal 订阅'}
+            </button>
             <button
               onClick={() => {
                 const now = new Date();

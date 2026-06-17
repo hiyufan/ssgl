@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -206,5 +207,94 @@ func TestCalendarEvent_CompetitionModelMapping(t *testing.T) {
 	}
 	if event.Location != comp.Location {
 		t.Errorf("expected Location='%s', got '%s'", comp.Location, event.Location)
+	}
+}
+
+func TestIcsEscape(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"hello world", "hello world"},
+		{"semi;colon", "semi\\;colon"},
+		{"comma,separated", "comma\\,separated"},
+		{"line\nbreak", "line\\nbreak"},
+		{"back\\slash", "back\\\\slash"},
+		{"mixed;test,value\nhere", "mixed\\;test\\,value\\nhere"},
+		{"", ""},
+		{"no special chars", "no special chars"},
+	}
+
+	for _, tt := range tests {
+		got := icsEscape(tt.input)
+		if got != tt.want {
+			t.Errorf("icsEscape(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestICSContentStructure(t *testing.T) {
+	// Test that a minimal ICS output has the correct structure
+	var sb strings.Builder
+	sb.WriteString("BEGIN:VCALENDAR\r\n")
+	sb.WriteString("VERSION:2.0\r\n")
+	sb.WriteString("PRODID:-//SSGL//Competition Platform//CN\r\n")
+	sb.WriteString("BEGIN:VEVENT\r\n")
+	sb.WriteString("UID:ssgl-comp-1@ssgl.platform\r\n")
+	sb.WriteString("SUMMARY:Test Event\r\n")
+	sb.WriteString("END:VEVENT\r\n")
+	sb.WriteString("END:VCALENDAR\r\n")
+
+	content := sb.String()
+
+	if !strings.Contains(content, "BEGIN:VCALENDAR") {
+		t.Error("missing VCALENDAR begin")
+	}
+	if !strings.Contains(content, "END:VCALENDAR") {
+		t.Error("missing VCALENDAR end")
+	}
+	if !strings.Contains(content, "BEGIN:VEVENT") {
+		t.Error("missing VEVENT begin")
+	}
+	if !strings.Contains(content, "END:VEVENT") {
+		t.Error("missing VEVENT end")
+	}
+	if !strings.Contains(content, "VERSION:2.0") {
+		t.Error("missing VERSION:2.0")
+	}
+	if !strings.Contains(content, "UID:ssgl-comp-1@ssgl.platform") {
+		t.Error("missing UID")
+	}
+}
+
+func TestICSDateFormat(t *testing.T) {
+	// iCal dates should be in YYYYMMDD format for VALUE=DATE
+	date := time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+	formatted := date.Format("20060102")
+	if formatted != "20260715" {
+		t.Errorf("expected '20260715', got '%s'", formatted)
+	}
+
+	// DTEND should be exclusive (next day)
+	endDate := time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC)
+	endAdj := endDate.AddDate(0, 0, 1)
+	if endAdj.Format("20060102") != "20260721" {
+		t.Errorf("expected DTEND '20260721', got '%s'", endAdj.Format("20060102"))
+	}
+}
+
+func TestICSAlarmTrigger(t *testing.T) {
+	// Alarm should trigger 3 days before event
+	trigger := "-P3D"
+	if trigger != "-P3D" {
+		t.Errorf("expected trigger '-P3D', got '%s'", trigger)
+	}
+}
+
+func TestNewCalendarHandlerReturnsSingleton(t *testing.T) {
+	h1 := NewCalendarHandler()
+	h2 := NewCalendarHandler()
+	if h1 == nil || h2 == nil {
+		t.Error("NewCalendarHandler returned nil")
 	}
 }

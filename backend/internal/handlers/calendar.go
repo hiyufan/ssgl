@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -81,4 +83,102 @@ func (h *CalendarHandler) List(c *gin.Context) {
 		"month":  monthStr,
 		"total":  len(events),
 	})
+}
+
+// ExportICS handles GET /calendar/export — generates an iCalendar (.ics) file
+// containing all published competitions. Students can subscribe to this URL in
+// their calendar app (Google Calendar, Apple Calendar, Outlook, etc.).
+func (h *CalendarHandler) ExportICS(c *gin.Context) {
+	db := database.GetDB()
+
+	var competitions []models.Competition
+	if err := db.
+		Where("status IN ?", []string{models.CompStatusPublished, models.CompStatusOngoing}).
+		Order("start_date ASC").
+		Find(&competitions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString("BEGIN:VCALENDAR\r\n")
+	sb.WriteString("VERSION:2.0\r\n")
+	sb.WriteString("PRODID:-//SSGL//Competition Platform//CN\r\n")
+	sb.WriteString("CALSCALE:GREGORIAN\r\n")
+	sb.WriteString("METHOD:PUBLISH\r\n")
+	sb.WriteString("X-WR-CALNAME:SSGL 竞赛日历\r\n")
+	sb.WriteString("X-WR-TIMEZONE:Asia/Shanghai\r\n")
+
+	now := time.Now().UTC().Format("20060102T150405Z")
+	for _, comp := range competitions {
+		sb.WriteString("BEGIN:VEVENT\r\n")
+		sb.WriteString(fmt.Sprintf("UID:ssgl-comp-%d@ssgl.platform\r\n", comp.ID))
+		sb.WriteString(fmt.Sprintf("DTSTAMP:%s\r\n", now))
+
+		if !comp.StartDate.IsZero() {
+			sb.WriteString(fmt.Sprintf("DTSTART;VALUE=DATE:%s\r\n", comp.StartDate.Format("20060102")))
+		}
+		if !comp.EndDate.IsZero() {
+			// iCal DTEND is exclusive, so add one day for all-day events
+			endAdj := comp.EndDate.AddDate(0, 0, 1)
+			sb.WriteString(fmt.Sprintf("DTEND;VALUE=DATE:%s\r\n", endAdj.Format("20060102")))
+		}
+
+		sb.WriteString(fmt.Sprintf("SUMMARY:%s\r\n", icsEscape(comp.Title)))
+
+		// Build description from available fields
+		desc := fmt.Sprintf("类型: %s | 状态: %s", comp.Type, comp.Status)
+		if comp.Prize != "" {
+			desc += fmt.Sprintf("\n奖品: %s", comp.Prize)
+		}
+		if comp.Location != "" {
+			desc += fmt.Sprintf("\n地点: %s", comp.Location)
+		}
+		if comp.Description != "" {
+			// Truncate long descriptions
+			d := comp.Description
+			if len(d) > 200 {
+				d = d[:200] + "..."
+			}
+			desc += fmt.Sprintf("\n%s", d)
+		}
+		sb.WriteString(fmt.Sprintf("DESCRIPTION:%s\r\n", icsEscape(desc)))
+
+		if comp.Location != "" {
+			sb.WriteString(fmt.Sprintf("LOCATION:%s\r\n", icsEscape(comp.Location)))
+		}
+		if comp.Website != "" {
+			sb.WriteString(fmt.Sprintf("URL:%s\r\n", comp.Website))
+		}
+
+		// Categories from type
+		sb.WriteString(fmt.Sprintf("CATEGORIES:%s\r\n", comp.Type))
+
+		// Add alarm 3 days before start
+		if !comp.StartDate.IsZero() && comp.StartDate.After(time.Now()) {
+			sb.WriteString("BEGIN:VALARM\r\n")
+			sb.WriteString("TRIGGER:-P3D\r\n")
+			sb.WriteString("ACTION:DISPLAY\r\n")
+			sb.WriteString(fmt.Sprintf("DESCRIPTION:赛事「%s」即将开始！\r\n", icsEscape(comp.Title)))
+			sb.WriteString("END:VALARM\r\n")
+		}
+
+		sb.WriteString("END:VEVENT\r\n")
+	}
+	sb.WriteString("END:VCALENDAR\r\n")
+
+	filename := fmt.Sprintf("ssgl_calendar_%s.ics", time.Now().Format("20060102"))
+	c.Header("Content-Type", "text/calendar; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	c.Header("Cache-Control", "public, max-age=3600")
+	c.String(http.StatusOK, sb.String())
+}
+
+// icsEscape escapes special characters in iCalendar text values per RFC 5545.
+func icsEscape(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, ";", "\\;")
+	s = strings.ReplaceAll(s, ",", "\\,")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	return s
 }

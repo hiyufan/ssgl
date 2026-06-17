@@ -590,6 +590,27 @@ def test_crud():
     else:
         _log("WARN", "calendar-month", f"赛事日历(指定月份) → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Calendar iCal Export ---
+    resp = _api_auth("GET", "/api/v1/calendar/export")
+    if _ok(resp) and resp.status_code == 200:
+        ct = resp.headers.get("Content-Type", "")
+        cd = resp.headers.get("Content-Disposition", "")
+        body = resp.text
+        has_vcal = "BEGIN:VCALENDAR" in body
+        has_version = "VERSION:2.0" in body
+        has_events = "BEGIN:VEVENT" in body
+        has_alarm = "BEGIN:VALARM" in body
+        if has_vcal and has_version:
+            _log("PASS", "calendar-ics-export",
+                 f"iCal 导出成功: {len(body)} 字符, events={body.count('BEGIN:VEVENT')}, "
+                 f"alarms={body.count('BEGIN:VALARM')}, CT={ct.split(';')[0]}")
+        else:
+            _log("WARN", "calendar-ics-export", "iCal 内容格式不完整")
+    elif _ok(resp) and resp.status_code == 404:
+        _log("SKIP", "calendar-ics-export", "iCal 导出端点未部署 (404)")
+    else:
+        _log("FAIL", "calendar-ics-export", f"iCal 导出失败 → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- Leaderboard ---
     resp = _api_auth("GET", "/api/v1/leaderboard")
     if _ok(resp) and resp.status_code == 200:

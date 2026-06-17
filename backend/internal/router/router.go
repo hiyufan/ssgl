@@ -194,6 +194,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Calendar.
 		protected.GET("/calendar", calendarHandler.List)
+		protected.GET("/calendar/export", calendarHandler.ExportICS)
 
 		// Leaderboard.
 		protected.GET("/leaderboard", statsHandler.Leaderboard)

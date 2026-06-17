@@ -569,6 +569,10 @@ export const calendarAPI = {
     const response = await api.get<{ events: CalendarEvent[]; month: string; total: number }>('/calendar', { params: month ? { month } : {} });
     return response.data;
   },
+  exportICS: async (): Promise<Blob> => {
+    const response = await api.get('/calendar/export', { responseType: 'blob' });
+    return response.data;
+  },
 };
 
 // AI Tools API
