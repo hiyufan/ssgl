@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { competitionsAPI, milestonesAPI } from '@/services/api';
+import { competitionsAPI, milestonesAPI, registrationsAPI } from '@/services/api';
 import { useRole } from '@/hooks/use-role';
 import { StatusBadge, TypeBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
@@ -16,13 +16,16 @@ import axios from 'axios';
 
 const AI_BASE = import.meta.env.VITE_AI_BASE_URL || '/ai/api/v1';
 
-const TYPE_ICONS: Record<string, string> = { hackathon: 'trophy', innovation: 'zap', research: 'target' };
+const TYPE_ICONS: Record<string, string> = { hackathon: 'trophy', innovation: 'zap', research: 'target', business_plan: 'compass', ai_innovation: 'sparkles', data_science: 'chart' };
 const STATUS_ORDER = ['ongoing', 'published', 'completed', 'draft', 'cancelled'];
 
 const TYPE_OPTIONS = [
   { value: 'hackathon', label: 'Hackathon' },
   { value: 'innovation', label: '创新赛' },
   { value: 'research', label: '研究赛' },
+  { value: 'business_plan', label: '商业计划赛' },
+  { value: 'ai_innovation', label: 'AI创新赛' },
+  { value: 'data_science', label: '数据科学赛' },
 ];
 
 type CompFormState = {
@@ -217,6 +220,20 @@ export function CompetitionsPage() {
   const [detail, setDetail] = useState<Competition | null>(null);
   const [registerComp, setRegisterComp] = useState<Competition | null>(null);
   const canManage = role === 'teacher' || role === 'admin';
+  const [registering, setRegistering] = useState<number | null>(null);
+
+  const handleDirectRegister = async (comp: Competition) => {
+    setRegistering(comp.id);
+    try {
+      await registrationsAPI.register(comp.id);
+      toast.success(`已报名「${comp.title}」，等待审核`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || '报名失败';
+      toast.error(msg);
+    } finally {
+      setRegistering(null);
+    }
+  };
 
   const handleSaved = (comp: Competition, isNew: boolean) =>
     setCompetitions((prev) => (isNew ? [comp, ...prev] : prev.map((c) => (c.id === comp.id ? comp : c))));
@@ -361,8 +378,14 @@ export function CompetitionsPage() {
                     <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{comp.location || '线上'}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {role === 'student' && comp.status === 'published' && (
-                      <Button variant="primary" size="sm" onClick={() => setRegisterComp(comp)}>报名参加</Button>
+                    {role === 'student' && (comp.status === 'published' || comp.status === 'ongoing') && (
+                      <>
+                        <Button variant="primary" size="sm" disabled={registering === comp.id}
+                          onClick={() => handleDirectRegister(comp)}>
+                          {registering === comp.id ? '报名中...' : '快速报名'}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setRegisterComp(comp)}>组队报名</Button>
+                      </>
                     )}
                     {canManage && comp.status === 'draft' && (
                       <Button variant="teal" size="sm" onClick={() => publish(comp)}>发布</Button>
@@ -408,14 +431,19 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
   const [addMs, setAddMs] = useState(false);
   const [msForm, setMsForm] = useState({ title: '', type: 'submission', due_date: '', description: '' });
   const [msSaving, setMsSaving] = useState(false);
+  const [compStats, setCompStats] = useState<Record<string, number | string> | null>(null);
 
   useEffect(() => {
     if (!comp) return;
     setMsLoading(true);
-    milestonesAPI.list(comp.id)
-      .then(res => { setMilestones(res.milestones || []); setMsProgress(res.progress || 0); })
-      .catch(() => {})
-      .finally(() => setMsLoading(false));
+    Promise.all([
+      milestonesAPI.list(comp.id).catch(() => ({ milestones: [], progress: 0 })),
+      competitionsAPI.stats(comp.id).catch(() => null),
+    ]).then(([msRes, statsRes]) => {
+      setMilestones(msRes.milestones || []);
+      setMsProgress(msRes.progress || 0);
+      setCompStats(statsRes);
+    }).finally(() => setMsLoading(false));
   }, [comp?.id]);
 
   if (!comp) return null;
@@ -481,6 +509,23 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
             </div>
           ))}
         </div>
+
+        {/* Competition Stats */}
+        {compStats && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {[
+              { label: '团队数', value: compStats.team_count ?? 0, color: 'var(--teal)' },
+              { label: '学生数', value: compStats.student_count ?? 0, color: 'var(--purple)' },
+              { label: '预案数', value: compStats.preplan_count ?? 0, color: 'var(--amber)' },
+              { label: '奖项数', value: compStats.award_count ?? 0, color: 'var(--green)' },
+            ].map(s => (
+              <div key={s.label} style={{ textAlign: 'center', padding: '10px 8px', borderRadius: 8, background: 'var(--surface-2)' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: s.color }}>{String(s.value)}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Milestones Section */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>

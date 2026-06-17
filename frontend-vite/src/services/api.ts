@@ -6,7 +6,7 @@ import type {
   AuditLog, AuditStats, RAGDocument, RAGStats,
   CalendarEvent, ShowcaseData,
   LeaderboardEntry, MatchResult, TeamInvite, Milestone,
-  CompetitionRegistration,
+  CompetitionRegistration, TeamAnalysis,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -156,6 +156,11 @@ export const competitionsAPI = {
 
   recommend: async (): Promise<{ recommendations: Array<Competition & { match_score: number; match_tags: string[]; reason: string }> }> => {
     const response = await api.get('/competitions/recommend');
+    return response.data;
+  },
+
+  stats: async (id: number): Promise<Record<string, number | string>> => {
+    const response = await api.get(`/competitions/${id}/stats`);
     return response.data;
   },
 };
@@ -374,6 +379,16 @@ export const registrationsAPI = {
 
   competitionRegistrations: async (compId: number, params?: Record<string, string>): Promise<{ registrations: CompetitionRegistration[]; total: number; stats: Record<string, number> }> => {
     const response = await api.get(`/competitions/${compId}/registrations`, { params });
+    return response.data;
+  },
+
+  register: async (compId: number, remark?: string): Promise<{ registration: CompetitionRegistration; message: string }> => {
+    const response = await api.post(`/competitions/${compId}/register`, { remark });
+    return response.data;
+  },
+
+  deregister: async (compId: number): Promise<{ message: string }> => {
+    const response = await api.delete(`/competitions/${compId}/register`);
     return response.data;
   },
 };

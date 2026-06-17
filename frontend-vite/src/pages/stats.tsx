@@ -50,21 +50,23 @@ export function StatsPage() {
   const [trends, setTrends] = useState<TrendPoint[]>([]);
   const [typeDistribution, setTypeDistribution] = useState<{ types: { type: string; count: number }[] }>({ types: [] });
   const [recentActivity, setRecentActivity] = useState<{ activities: { action: string; description: string; time: string; icon: string }[] }>({ activities: [] });
+  const [studentStats, setStudentStats] = useState<{ total_students: number; students_with_teams: number; students_with_awards: number; avg_team_size: number; top_students: { id: number; name: string; team_count: number; award_count: number; pre_plan_count: number }[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
       statsAPI.overview(), statsAPI.teachers(), statsAPI.competitions(), statsAPI.trends(),
-      statsAPI.typeDistribution(), statsAPI.recentActivity(10),
+      statsAPI.typeDistribution(), statsAPI.recentActivity(10), statsAPI.students(),
     ])
-      .then(([o, t, c, tr, td, ra]) => {
+      .then(([o, t, c, tr, td, ra, ss]) => {
         setOverview(o);
         setTeachers(t.teachers || []);
         setCompetitions((c as Record<string, unknown>).competitions as CompetitionStat[] || []);
         setTrends((tr as Record<string, unknown>).trends as TrendPoint[] || []);
         setTypeDistribution(td as { types: { type: string; count: number }[] });
         setRecentActivity(ra as { activities: { action: string; description: string; time: string; icon: string }[] });
+        setStudentStats(ss as typeof studentStats);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -235,6 +237,9 @@ export function StatsPage() {
                   hackathon: { label: '黑客松', color: 'var(--teal)' },
                   innovation: { label: '创新创业', color: 'var(--amber)' },
                   research: { label: '科研竞赛', color: 'var(--purple)' },
+                  business_plan: { label: '商业计划', color: 'var(--green)' },
+                  ai_innovation: { label: 'AI创新', color: 'var(--blue)' },
+                  data_science: { label: '数据科学', color: 'var(--red)' },
                 };
                 const info = typeLabels[t.type] || { label: t.type, color: 'var(--text-3)' };
                 return (
@@ -270,6 +275,38 @@ export function StatsPage() {
           </div>
         )}
       </div>
+
+      {/* Top Students */}
+      {studentStats && studentStats.top_students && studentStats.top_students.length > 0 && (
+        <div className="card anim-in d5" style={{ overflow: 'hidden', marginBottom: 16 }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <SectionLabel label="学生排行榜 Top 10"/>
+            <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-3)' }}>
+              <span>总学生: <strong style={{ color: 'var(--text)' }}>{studentStats.total_students}</strong></span>
+              <span>已组队: <strong style={{ color: 'var(--teal)' }}>{studentStats.students_with_teams}</strong></span>
+              <span>已获奖: <strong style={{ color: 'var(--amber)' }}>{studentStats.students_with_awards}</strong></span>
+            </div>
+          </div>
+          <table className="forge-table">
+            <thead><tr><th>排名</th><th>学生</th><th>团队数</th><th>获奖数</th><th>预案数</th><th>综合分</th></tr></thead>
+            <tbody>
+              {studentStats.top_students.map((s, i) => {
+                const score = s.award_count * 10 + s.team_count * 3 + s.pre_plan_count;
+                return (
+                  <tr key={s.id}>
+                    <td><span style={{ width: 24, height: 24, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: i === 0 ? 'var(--amber-bg)' : i === 1 ? 'var(--surface-2)' : i === 2 ? 'var(--teal-bg)' : 'transparent', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: i === 0 ? 'var(--amber)' : i === 1 ? 'var(--text-2)' : i === 2 ? 'var(--teal)' : 'var(--text-3)' }}>{i + 1}</span></td>
+                    <td><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={s.name} size={26} index={i}/><span style={{ fontWeight: 600 }}>{s.name}</span></div></td>
+                    <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--teal)' }}>{s.team_count}</span></td>
+                    <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--amber)' }}>{s.award_count}</span></td>
+                    <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--purple)' }}>{s.pre_plan_count}</span></td>
+                    <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--green)' }}>{score}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Teacher leaderboard */}
       {teachers.length > 0 && (
