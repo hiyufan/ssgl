@@ -2,12 +2,11 @@ import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
 import { useNavigate } from 'react-router-dom';
-import { teamsAPI, prePlansAPI, competitionsAPI, notificationsAPI, profileAPI, type Notification } from '@/services/api';
-import type { Competition } from '@/types';
+import { teamsAPI, prePlansAPI, competitionsAPI, notificationsAPI, profileAPI, awardsAPI, calendarAPI, type Notification } from '@/services/api';
+import type { Competition, Award, Team, PrePlan } from '@/types';
 import { SectionLabel } from '@/components/ui/page-helpers';
 import { Avatar } from '@/components/ui/page-helpers';
 import { Icon } from '@/components/ui/icon';
-import type { Team, PrePlan, Competition } from '@/types';
 
 export function StudentDashboard() {
   const { user } = useAuthStore();
@@ -21,17 +20,21 @@ export function StudentDashboard() {
   const [activities, setActivities] = useState<Array<{ id: number; type: string; title: string; detail: string; created_at: string }>>([]);
   const [recommendations, setRecommendations] = useState<Array<Competition & { match_score: number; match_tags: string[]; reason: string }>>([]);
   const [loadingRecs, setLoadingRecs] = useState(false);
+  const [myAwards, setMyAwards] = useState<Award[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<Array<{ id: number; title: string; start_date: string; end_date: string; type: string; status: string }>>([]);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [teamRes, planRes, compRes, notifRes, actRes] = await Promise.all([
+        const [teamRes, planRes, compRes, notifRes, actRes, awardRes, calRes] = await Promise.all([
           teamsAPI.list(),
           prePlansAPI.list(),
           competitionsAPI.list(),
           notificationsAPI.list({ page: 1, page_size: 5 }).catch(() => ({ items: [], total: 0, unread_count: 0 })),
           profileAPI.myActivity(8).catch(() => ({ activities: [] })),
+          awardsAPI.list().catch(() => ({ awards: [] })),
+          calendarAPI.list().catch(() => ({ events: [] })),
         ]);
         setTeams(teamRes.teams || []);
         setPreplans(planRes.pre_plans || []);
@@ -39,6 +42,8 @@ export function StudentDashboard() {
         setNotifications(notifRes.items || []);
         setUnreadCount(notifRes.unread_count || 0);
         setActivities(actRes.activities || []);
+        setMyAwards(awardRes.awards || []);
+        setUpcomingEvents((calRes.events || []).filter((e: { start_date: string }) => new Date(e.start_date) >= new Date()).slice(0, 5));
       } catch (e) {
         console.error('Student dashboard fetch error:', e);
       } finally {
@@ -427,7 +432,85 @@ export function StudentDashboard() {
         </div>
       )}
 
-      {/* Row 6: AI Competition Recommendations */}
+      {/* Row 6: My Awards + Upcoming Events */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+        {/* My Awards */}
+        <div data-bento className="card" style={{ overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <SectionLabel label="我的奖项" />
+            <button className="btn btn-outline btn-sm" onClick={() => navigate('/awards')}>查看</button>
+          </div>
+          <div>
+            {myAwards.length === 0 ? (
+              <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>暂无奖项，继续加油！</div>
+            ) : myAwards.slice(0, 4).map((a) => (
+              <div key={a.id} style={{
+                padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12,
+                borderBottom: '1px solid var(--border)',
+              }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: a.status === 'settled' ? 'var(--amber-bg)' : 'var(--surface-2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, color: a.status === 'settled' ? 'var(--amber)' : 'var(--text-3)',
+                  flexShrink: 0,
+                }}>
+                  {a.status === 'settled' ? '★' : '☆'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.competition?.title || '—'} · {a.rank_name || `第 ${a.rank} 名`}
+                  </div>
+                  {a.team?.name && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{a.team.name}</div>}
+                </div>
+                {a.prize_amount && Number(a.prize_amount) > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
+                    ¥{Number(a.prize_amount).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Upcoming Events */}
+        <div data-bento className="card" style={{ overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <SectionLabel label="即将到来" />
+            <button className="btn btn-outline btn-sm" onClick={() => navigate('/calendar')}>日历</button>
+          </div>
+          <div>
+            {upcomingEvents.length === 0 ? (
+              <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>暂无近期日程</div>
+            ) : upcomingEvents.map((evt) => {
+              const daysLeft = Math.ceil((new Date(evt.start_date).getTime() - Date.now()) / 86400000);
+              const urgency = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--amber)' : 'var(--teal)';
+              return (
+                <div key={evt.id} style={{
+                  padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12,
+                  borderBottom: '1px solid var(--border)',
+                }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 7, background: `${urgency}18`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <Icon name="calendar" size={13} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{evt.title}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{new Date(evt.start_date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}</div>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: urgency, fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
+                    {daysLeft <= 0 ? '今天' : `${daysLeft}天后`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 7: AI Competition Recommendations */}
       {recommendations.length > 0 && (
         <div className="card anim-in" style={{ overflow: 'hidden', marginBottom: 24 }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

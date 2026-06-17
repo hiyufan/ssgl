@@ -18,7 +18,7 @@ export interface Competition {
   id: number;
   title: string;
   description?: string;
-  type: 'hackathon' | 'innovation' | 'research';
+  type: 'hackathon' | 'innovation' | 'research' | 'business_plan' | 'ai_innovation' | 'data_science';
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
   max_team_size: number;
   min_team_size: number;
@@ -247,7 +247,7 @@ export interface RAGStats {
 export interface CalendarEvent {
   id: number;
   title: string;
-  type: 'hackathon' | 'innovation' | 'research';
+  type: 'hackathon' | 'innovation' | 'research' | 'business_plan' | 'ai_innovation' | 'data_science';
   status: string;
   start_date: string;
   end_date: string;
