@@ -230,6 +230,37 @@ class ToolService:
 
         return llm_service.chat(system_prompt=system_prompt, user_message=user_message)
 
+    # ------------------------------------------------------------------
+    # 9. Competition Report — 赛事分析报告
+    # ------------------------------------------------------------------
+
+    def competition_report(self, competition_info: str) -> str:
+        """Generate a comprehensive competition analysis report."""
+        system_prompt = (
+            "你是一位资深竞赛分析师，曾为数百个高校竞赛团队提供过咨询服务。"
+            "根据赛事信息，生成一份详尽的赛事分析报告（Markdown格式），包含：\n"
+            "## 1. 赛事概览\n"
+            "赛事定位、历史沿革、影响力评估\n\n"
+            "## 2. 评审标准解读\n"
+            "常见评审维度、评分权重、评委关注点\n\n"
+            "## 3. 参赛建议\n"
+            "选题方向、团队配置、技术栈推荐\n\n"
+            "## 4. 时间规划\n"
+            "备赛各阶段建议时间分配、关键里程碑\n\n"
+            "## 5. 往届优秀项目特征\n"
+            "获奖项目的共同特点、创新点分析\n\n"
+            "## 6. 风险提示\n"
+            "常见失误、避坑指南\n\n"
+            "## 7. 资源推荐\n"
+            "学习资料、工具平台、参考案例\n\n"
+            "分析要具体、可操作，结合赛事特点给出针对性建议。"
+        )
+
+        user_message = f"赛事信息：\n{competition_info}"
+        user_message += _rag_context(f"竞赛分析 参赛指南 {competition_info}")
+
+        return llm_service.chat(system_prompt=system_prompt, user_message=user_message)
+
 
 # Module-level singleton
 tool_service = ToolService()

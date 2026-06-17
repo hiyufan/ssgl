@@ -80,6 +80,14 @@ async def competition_advisor(body: ToolRequest) -> dict:
     return {"result": result}
 
 
+@router.post("/competition-report")
+async def competition_report(body: ToolRequest) -> dict:
+    """Generate a comprehensive competition analysis report."""
+    competition_info = body.input
+    result = tool_service.competition_report(competition_info=competition_info)
+    return {"result": result}
+
+
 class ParseCompetitionRequest(BaseModel):
     content: str
 

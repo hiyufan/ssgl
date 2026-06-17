@@ -99,3 +99,30 @@ func TestUpdateProfileRequestNilFields(t *testing.T) {
 		t.Error("expected nil avatar")
 	}
 }
+
+func TestUserProfileZeroValues(t *testing.T) {
+	p := UserProfile{}
+	if p.ID != 0 {
+		t.Errorf("expected zero ID, got %d", p.ID)
+	}
+	if p.TeamCount != 0 {
+		t.Errorf("expected zero TeamCount, got %d", p.TeamCount)
+	}
+	if p.Username != "" {
+		t.Errorf("expected empty Username, got '%s'", p.Username)
+	}
+}
+
+func TestUserProfilePartialUpdate(t *testing.T) {
+	name := "Updated Name"
+	req := UpdateProfileRequest{Name: &name}
+	if req.Name == nil || *req.Name != "Updated Name" {
+		t.Error("partial update: Name not set correctly")
+	}
+	if req.Email != nil {
+		t.Error("partial update: Email should be nil")
+	}
+	if req.Phone != nil {
+		t.Error("partial update: Phone should be nil")
+	}
+}

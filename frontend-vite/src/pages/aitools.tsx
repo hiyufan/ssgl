@@ -12,6 +12,7 @@ const TOOLS = [
   { id: 'pitch-deck', name: '路演PPT大纲', desc: '根据项目信息和答辩时长，生成结构化路演PPT大纲与时间分配', tags: ['路演', '答辩教练'], color: 'purple' },
   { id: 'advisor', name: '赛事顾问', desc: '实时回答赛事规则、评审标准与参赛策略问题', tags: ['问答', 'RAG + LLM'], color: 'teal' },
   { id: 'swot-analysis', name: 'SWOT 分析', desc: '对项目进行优势/劣势/机会/威胁全面分析，含交叉策略矩阵', tags: ['战略分析', 'RAG'], color: 'green' },
+  { id: 'competition-report', name: '赛事分析报告', desc: '深度分析赛事评审标准、参赛建议、时间规划与往届优秀项目特征', tags: ['赛事分析', 'RAG'], color: 'teal' },
 ];
 
 const colorMap: Record<string, { accent: string; bg: string; border: string }> = {
@@ -62,7 +63,7 @@ export function AIToolsPage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>AI 工具箱</h1>
           <span className="badge badge-teal">RAG + LLM</span>
         </div>
-        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>8 个智能助手 · 基于往届项目知识库 · 实时生成</p>
+        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>9 个智能助手 · 基于往届项目知识库 · 实时生成</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, flex: 1, overflow: 'hidden' }}>

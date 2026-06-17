@@ -61,8 +61,8 @@ function AppRoutes() {
         <Route path="/kanban" element={<RequireRole roles={['teacher', 'admin']}><KanbanPage /></RequireRole>} />
         <Route path="/knowledge-base" element={<RequireRole roles={['teacher', 'admin']}><KnowledgeBasePage /></RequireRole>} />
 
-        {/* student only */}
-        <Route path="/preplans" element={<RequireRole roles={['student']}><PrePlansPage /></RequireRole>} />
+        {/* all roles — students manage, teachers review, admins oversee */}
+        <Route path="/preplans" element={<PrePlansPage />} />
 
         {/* admin only */}
         <Route path="/audit-logs" element={<RequireRole roles={['admin']}><AuditLogsPage /></RequireRole>} />

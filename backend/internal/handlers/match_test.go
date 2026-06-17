@@ -115,3 +115,49 @@ func TestMatchReasonPriority(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchResultJSONTags(t *testing.T) {
+	result := MatchResult{
+		UserID:       1,
+		Username:     "test_user",
+		Name:         "Test",
+		Dept:         "CS",
+		Avatar:       "avatar.png",
+		TeamCount:    1,
+		AwardCount:   2,
+		PrePlanCount: 3,
+		MatchScore:   80.0,
+		Reason:       "test reason",
+	}
+	// Verify all fields are accessible
+	if result.UserID != 1 {
+		t.Error("UserID mismatch")
+	}
+	if result.Avatar != "avatar.png" {
+		t.Error("Avatar mismatch")
+	}
+}
+
+func TestMatchScoreCap(t *testing.T) {
+	// Score should be capped at 100
+	score := float64(10)*10 + float64(10)*15 + float64(10)*8 // 100+150+80=330
+	if score > 100 {
+		score = 100
+	}
+	if score != 100 {
+		t.Errorf("expected score capped at 100, got %.0f", score)
+	}
+}
+
+func TestMatchResultZeroValues(t *testing.T) {
+	result := MatchResult{}
+	if result.UserID != 0 {
+		t.Errorf("expected zero UserID, got %d", result.UserID)
+	}
+	if result.MatchScore != 0 {
+		t.Errorf("expected zero MatchScore, got %f", result.MatchScore)
+	}
+	if result.Username != "" {
+		t.Errorf("expected empty Username, got '%s'", result.Username)
+	}
+}

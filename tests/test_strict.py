@@ -1373,6 +1373,7 @@ def test_ai_service():
         ("POST", "/ai/api/v1/tools/resource-match", {"input": "需要AI模型训练和云服务器资源", "extra": "GPU算力, 云服务器"}, 120),
         ("POST", "/ai/api/v1/tools/pitch-deck", {"input": "蓝桥杯AI学习助手项目的路演大纲"}, 120),
         ("POST", "/ai/api/v1/tools/swot-analysis", {"input": "基于AI的智能学习助手项目，面向高校学生"}, 120),
+        ("POST", "/ai/api/v1/tools/competition-report", {"input": "蓝桥杯全国软件和信息技术专业人才大赛"}, 120),
     ]
 
     for method, path, body, timeout in llm_endpoints:
