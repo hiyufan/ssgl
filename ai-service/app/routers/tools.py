@@ -1,4 +1,4 @@
-"""Tools router — six domain-specific AI generation endpoints."""
+"""Tools router — eight domain-specific AI generation endpoints."""
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -57,6 +57,15 @@ async def pitch_deck(body: ToolRequest) -> dict:
     project_info = body.input
     duration = body.extra or "10分钟"
     result = tool_service.pitch_deck(project_info=project_info, duration=duration)
+    return {"result": result}
+
+
+@router.post("/swot-analysis")
+async def swot_analysis(body: ToolRequest) -> dict:
+    """Generate a SWOT analysis for a competition project."""
+    project_info = body.input
+    competitors = body.extra or ""
+    result = tool_service.swot_analysis(project_info=project_info, competitors=competitors)
     return {"result": result}
 
 

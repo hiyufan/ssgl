@@ -1,6 +1,6 @@
 """AI Tools service.
 
-Provides six specialised generation tools for competition projects, each
+Provides eight specialised generation tools for competition projects, each
 backed by ``llm_service.chat()`` and optionally enriched with context
 retrieved via ``rag_service.search()``.
 """
@@ -21,7 +21,7 @@ def _rag_context(query: str, top_k: int = 3) -> str:
 
 
 class ToolService:
-    """Facade that exposes six domain-specific AI tools."""
+    """Facade that exposes eight domain-specific AI tools."""
 
     # ------------------------------------------------------------------
     # 1. Business Plan
@@ -177,7 +177,33 @@ class ToolService:
         return llm_service.chat(system_prompt=system_prompt, user_message=user_message)
 
     # ------------------------------------------------------------------
-    # 7. Competition Advisor
+    # 7. SWOT Analysis
+    # ------------------------------------------------------------------
+
+    def swot_analysis(self, project_info: str, competitors: str = "") -> str:
+        """Generate a SWOT analysis for a competition project."""
+        system_prompt = (
+            "你是一位资深战略分析师，擅长为大学生创新创业竞赛项目做SWOT分析。"
+            "根据项目信息，生成一份详尽的SWOT分析报告（Markdown格式），包含：\n"
+            "1. **优势 (Strengths)**：项目的核心竞争力、技术壁垒、团队优势\n"
+            "2. **劣势 (Weaknesses)**：资源不足、经验欠缺、技术短板\n"
+            "3. **机会 (Opportunities)**：市场趋势、政策红利、技术风口\n"
+            "4. **威胁 (Threats)**：竞争对手、市场风险、技术替代\n"
+            "5. **SWOT矩阵交叉分析**：SO策略（利用优势抓住机会）、WO策略（弥补劣势抓住机会）、"
+            "ST策略（利用优势应对威胁）、WT策略（弥补劣势规避威胁）\n"
+            "6. **行动建议**：基于SWOT分析的优先级行动清单\n\n"
+            "每条分析要具体、可操作，避免泛泛而谈。如有竞争者信息，做对比分析。"
+        )
+
+        user_message = f"项目信息：\n{project_info}"
+        if competitors:
+            user_message += f"\n\n竞争对手信息：\n{competitors}"
+        user_message += _rag_context(f"SWOT分析 竞争分析 {project_info}")
+
+        return llm_service.chat(system_prompt=system_prompt, user_message=user_message)
+
+    # ------------------------------------------------------------------
+    # 8. Competition Advisor
     # ------------------------------------------------------------------
 
     def competition_advisor(
@@ -210,7 +236,7 @@ tool_service = ToolService()
 
 
 # ---------------------------------------------------------------------------
-# 7. Parse Competition (standalone function, not on ToolService)
+# 9. Parse Competition (standalone function, not on ToolService)
 # ---------------------------------------------------------------------------
 
 import json as _json
