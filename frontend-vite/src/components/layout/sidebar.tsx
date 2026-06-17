@@ -31,6 +31,7 @@ const NAV_CONFIG: Record<string, { id?: string; icon?: string; label?: string; s
     { id: 'audit-logs', icon: 'shield', label: '审计日志' },
     { id: 'diagnostics', icon: 'zap', label: '系统诊断' },
     { section: '账户' },
+    { id: 'notifications', icon: 'bell', label: '通知中心', badgeKey: 'unread' },
     { id: 'profile', icon: 'users', label: '个人中心' },
   ],
   teacher: [
@@ -52,6 +53,7 @@ const NAV_CONFIG: Record<string, { id?: string; icon?: string; label?: string; s
     { id: 'aitools', icon: 'sparkles', label: 'AI 工具箱' },
     { id: 'coach', icon: 'target', label: '赛事陪练' },
     { section: '账户' },
+    { id: 'notifications', icon: 'bell', label: '通知中心', badgeKey: 'unread' },
     { id: 'profile', icon: 'users', label: '个人中心' },
   ],
   student: [
@@ -70,6 +72,7 @@ const NAV_CONFIG: Record<string, { id?: string; icon?: string; label?: string; s
     { section: '反馈' },
     { id: 'evaluations', icon: 'star', label: '评价导师' },
     { section: '账户' },
+    { id: 'notifications', icon: 'bell', label: '通知中心', badgeKey: 'unread' },
     { id: 'profile', icon: 'users', label: '个人中心' },
   ],
 };
@@ -108,7 +111,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
       try {
         // Fetch unread notifications count
         const notifRes = await notificationsAPI.getUnreadCount();
-        if (notifRes.unread_count > 0) newBadges['notifications'] = notifRes.unread_count;
+        if (notifRes.unread_count > 0) newBadges['unread'] = notifRes.unread_count;
       } catch { /* ignore */ }
       setBadges(newBadges);
     };

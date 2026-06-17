@@ -257,10 +257,10 @@ func TestLocalRateLimiter_DifferentIPs(t *testing.T) {
 	}
 }
 
-func TestDefaultRateLimiter_Limit300(t *testing.T) {
+func TestDefaultRateLimiter_Limit500(t *testing.T) {
 	rl := DefaultRateLimiter()
-	if rl.limit != 300 {
-		t.Errorf("expected limit=300, got %d", rl.limit)
+	if rl.limit != 500 {
+		t.Errorf("expected limit=500, got %d", rl.limit)
 	}
 	if rl.window != time.Minute {
 		t.Errorf("expected window=1m, got %v", rl.window)

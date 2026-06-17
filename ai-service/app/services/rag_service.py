@@ -227,14 +227,20 @@ class RAGService:
             if conditions:
                 where_clause = "WHERE " + " AND ".join(conditions)
 
+        similarity_condition = "1 - (embedding <=> CAST(:query_embedding AS vector)) >= :threshold"
+        if where_clause:
+            # Already has WHERE from metadata filter, use AND for similarity
+            combined_where = f"{where_clause} AND {similarity_condition}"
+        else:
+            combined_where = f"WHERE {similarity_condition}"
+
         with engine.begin() as conn:
             rows = conn.execute(
                 text(
                     f"SELECT id, content, metadata, "
                     f"  1 - (embedding <=> CAST(:query_embedding AS vector)) AS similarity "
                     f"FROM documents "
-                    f"{where_clause} "
-                    f"WHERE 1 - (embedding <=> CAST(:query_embedding AS vector)) >= :threshold "
+                    f"{combined_where} "
                     f"ORDER BY embedding <=> CAST(:query_embedding AS vector) "
                     f"LIMIT :top_k"
                 ),
