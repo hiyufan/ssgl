@@ -7,6 +7,9 @@ const typeLabels: Record<string, string> = {
   hackathon: '黑客松',
   innovation: '创新赛',
   research: '研究赛',
+  business_plan: '商业计划赛',
+  ai_innovation: 'AI创新赛',
+  data_science: '数据科学赛',
 };
 
 const rankEmoji = (rank: number) => {
@@ -118,6 +121,9 @@ export function ShowcasePage() {
           { key: 'hackathon', label: '黑客松' },
           { key: 'innovation', label: '创新赛' },
           { key: 'research', label: '研究赛' },
+          { key: 'business_plan', label: '商业计划' },
+          { key: 'ai_innovation', label: 'AI创新' },
+          { key: 'data_science', label: '数据科学' },
         ].map(t => (
           <button
             key={t.key}

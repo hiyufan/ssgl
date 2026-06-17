@@ -18,12 +18,18 @@ const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> 
   hackathon:  { bg: 'rgba(45,212,191,0.15)',  text: 'var(--teal, #2dd4bf)',   border: 'rgba(45,212,191,0.4)' },
   innovation: { bg: 'rgba(96,165,250,0.15)',   text: 'var(--blue, #60a5fa)',   border: 'rgba(96,165,250,0.4)' },
   research:   { bg: 'rgba(167,139,250,0.15)',  text: 'var(--purple, #a78bfa)', border: 'rgba(167,139,250,0.4)' },
+  business_plan: { bg: 'rgba(52,211,153,0.15)', text: 'var(--green, #34d399)', border: 'rgba(52,211,153,0.4)' },
+  ai_innovation: { bg: 'rgba(251,113,133,0.15)', text: 'var(--red, #fb7185)', border: 'rgba(251,113,133,0.4)' },
+  data_science: { bg: 'rgba(251,146,60,0.15)', text: 'var(--orange, #fb923c)', border: 'rgba(251,146,60,0.4)' },
 };
 
 const TYPE_LABELS: Record<string, string> = {
   hackathon: '黑客松',
   innovation: '创新赛',
   research: '研究赛',
+  business_plan: '商业计划赛',
+  ai_innovation: 'AI创新赛',
+  data_science: '数据科学赛',
 };
 
 const STATUS_LABELS: Record<string, string> = {
