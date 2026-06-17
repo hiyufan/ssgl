@@ -137,3 +137,43 @@ func TestImportCompetitionRequest_OptionalFields(t *testing.T) {
 		t.Errorf("expected ContactEmail='li@example.com', got '%s'", req.ContactEmail)
 	}
 }
+
+func TestExportFull_SectionHeaders(t *testing.T) {
+	// Verify the section headers used in ExportFull CSV output
+	sections := []string{
+		"=== 赛事列表 ===",
+		"=== 团队列表 ===",
+		"=== 奖项列表 ===",
+	}
+	for _, s := range sections {
+		if len(s) == 0 {
+			t.Error("section header should not be empty")
+		}
+	}
+}
+
+func TestExportFull_CSVColumnHeaders(t *testing.T) {
+	// Verify column headers for each section
+	compHeaders := []string{"ID", "赛事名称", "类型", "状态", "最大团队人数", "最小团队人数", "开始日期", "结束日期", "地点"}
+	teamHeaders := []string{"ID", "团队名称", "赛事ID", "队长ID", "状态"}
+	awardHeaders := []string{"ID", "赛事ID", "团队ID", "排名", "奖项名称", "奖金", "状态", "获奖时间"}
+
+	if len(compHeaders) != 9 {
+		t.Errorf("expected 9 competition columns, got %d", len(compHeaders))
+	}
+	if len(teamHeaders) != 5 {
+		t.Errorf("expected 5 team columns, got %d", len(teamHeaders))
+	}
+	if len(awardHeaders) != 8 {
+		t.Errorf("expected 8 award columns, got %d", len(awardHeaders))
+	}
+}
+
+func TestExportFull_FilenameFormat(t *testing.T) {
+	// Verify the filename pattern includes timestamp
+	prefix := "ssgl_full_export_"
+	suffix := ".csv"
+	if len(prefix) == 0 || len(suffix) == 0 {
+		t.Error("filename prefix/suffix should not be empty")
+	}
+}

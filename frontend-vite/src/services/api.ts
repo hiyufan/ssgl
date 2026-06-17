@@ -509,6 +509,11 @@ export const statsAPI = {
     const response = await api.get('/stats/kanban');
     return response.data;
   },
+
+  exportFull: async (): Promise<Blob> => {
+    const response = await api.get('/stats/export/full', { responseType: 'blob' });
+    return response.data;
+  },
 };
 
 // System Diagnostics API

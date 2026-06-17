@@ -51,6 +51,7 @@ export function StatsPage() {
   const [typeDistribution, setTypeDistribution] = useState<{ types: { type: string; count: number }[] }>({ types: [] });
   const [recentActivity, setRecentActivity] = useState<{ activities: { action: string; description: string; time: string; icon: string }[] }>({ activities: [] });
   const [studentStats, setStudentStats] = useState<{ total_students: number; students_with_teams: number; students_with_awards: number; avg_team_size: number; top_students: { id: number; name: string; team_count: number; award_count: number; pre_plan_count: number }[] } | null>(null);
+  const [engagement, setEngagement] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
 
@@ -58,8 +59,9 @@ export function StatsPage() {
     Promise.all([
       statsAPI.overview(), statsAPI.teachers(), statsAPI.competitions(), statsAPI.trends(),
       statsAPI.typeDistribution(), statsAPI.recentActivity(10), statsAPI.students(),
+      statsAPI.engagement().catch(() => null),
     ])
-      .then(([o, t, c, tr, td, ra, ss]) => {
+      .then(([o, t, c, tr, td, ra, ss, eg]) => {
         setOverview(o);
         setTeachers(t.teachers || []);
         setCompetitions((c as Record<string, unknown>).competitions as CompetitionStat[] || []);
@@ -67,12 +69,13 @@ export function StatsPage() {
         setTypeDistribution(td as { types: { type: string; count: number }[] });
         setRecentActivity(ra as { activities: { action: string; description: string; time: string; icon: string }[] });
         setStudentStats(ss as typeof studentStats);
+        setEngagement(eg as Record<string, number> | null);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const handleExport = async (type: 'overview' | 'competitions' | 'teams') => {
+  const handleExport = async (type: 'overview' | 'competitions' | 'teams' | 'full') => {
     setExporting(type);
     try {
       let blob: Blob;
@@ -83,6 +86,9 @@ export function StatsPage() {
       } else if (type === 'competitions') {
         blob = await statsAPI.exportCompetitions();
         filename = `赛事明细_${new Date().toISOString().slice(0, 10)}.csv`;
+      } else if (type === 'full') {
+        blob = await statsAPI.exportFull();
+        filename = `全量数据_${new Date().toISOString().slice(0, 10)}.csv`;
       } else {
         blob = await statsAPI.exportTeams();
         filename = `团队数据_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -120,6 +126,9 @@ export function StatsPage() {
           <button className="btn btn-ghost btn-sm" onClick={() => handleExport('teams')} disabled={exporting === 'teams'}>
             <Icon name="download" size={14}/> {exporting === 'teams' ? '导出中…' : '导出团队数据'}
           </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => handleExport('full')} disabled={exporting === 'full'}>
+            <Icon name="download" size={14}/> {exporting === 'full' ? '导出中…' : '全量导出'}
+          </button>
         </div>
       </div>
 
@@ -139,6 +148,32 @@ export function StatsPage() {
             <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{trends.length} 个月</span>
           </div>
           <TrendChart data={trends} />
+        </div>
+      )}
+
+      {/* Engagement Metrics */}
+      {engagement && (
+        <div className="card anim-in d2" style={{ overflow: 'hidden', marginBottom: 16 }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <SectionLabel label="平台参与度指标"/>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>实时</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1, background: 'var(--border)' }}>
+            {[
+              { label: '组队率', value: `${(engagement.team_formation_rate || 0).toFixed(1)}%`, desc: `${engagement.students_with_teams || 0}/${engagement.total_students || 0} 学生`, color: 'var(--teal)' },
+              { label: 'AI 评审率', value: `${(engagement.ai_review_rate || 0).toFixed(1)}%`, desc: `${engagement.reviewed_pre_plans || 0}/${engagement.total_pre_plans || 0} 预案`, color: 'var(--purple)' },
+              { label: '赛事完成率', value: `${(engagement.completion_rate || 0).toFixed(1)}%`, desc: `${engagement.published_competitions || 0} 已发布`, color: 'var(--amber)' },
+              { label: '平均团队规模', value: (engagement.avg_team_size || 0).toFixed(1), desc: `${engagement.total_teams || 0} 个团队`, color: 'var(--green)' },
+              { label: '平均预案评分', value: (engagement.avg_pre_plan_score || 0).toFixed(1), desc: 'AI 评审均分', color: 'var(--red)' },
+              { label: '进行中赛事', value: String(engagement.active_competitions || 0), desc: `共 ${engagement.total_competitions || 0} 个`, color: 'var(--teal)' },
+            ].map((item) => (
+              <div key={item.label} style={{ padding: '18px 16px', background: 'var(--surface)', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em' }}>{item.label}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700, color: item.color, lineHeight: 1 }}>{item.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>{item.desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
