@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { notificationsAPI, type Notification } from '@/services/api';
+import { notificationsAPI, profileAPI, type Notification } from '@/services/api';
+import { useAuthStore } from '@/stores/auth';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
@@ -39,12 +40,19 @@ function timeAgo(dateStr: string): string {
 }
 
 export function NotificationsPage() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createForm, setCreateForm] = useState({ user_id: 0, type: 'system', title: '', message: '' });
+  const [userSearch, setUserSearch] = useState('');
+  const [userResults, setUserResults] = useState<Array<{ id: number; name: string; username: string }>>([]);
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,6 +96,36 @@ export function NotificationsPage() {
     }
   };
 
+  // Admin: search users for notification creation
+  useEffect(() => {
+    if (!showCreateForm || userSearch.length < 2) { setUserResults([]); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await profileAPI.searchUsers(userSearch);
+        setUserResults(res.users || []);
+      } catch { /* ignore */ }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [userSearch, showCreateForm]);
+
+  // Admin: create notification
+  const handleCreate = async () => {
+    if (!createForm.user_id || !createForm.title) { toast.error('请选择用户并填写标题'); return; }
+    setCreating(true);
+    try {
+      await notificationsAPI.create(createForm);
+      toast.success('通知已发送');
+      setShowCreateForm(false);
+      setCreateForm({ user_id: 0, type: 'system', title: '', message: '' });
+      setUserSearch('');
+      load();
+    } catch {
+      toast.error('发送失败');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const totalPages = Math.ceil(total / 20);
 
   return (
@@ -102,12 +140,124 @@ export function NotificationsPage() {
             {unreadCount > 0 ? `${unreadCount} 条未读通知` : '所有通知已读'}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button onClick={handleMarkAllRead} style={{ fontSize: 13 }}>
-            <Icon name="check" /> 全部已读
-          </Button>
-        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {isAdmin && (
+            <Button onClick={() => setShowCreateForm(!showCreateForm)} style={{ fontSize: 13, background: showCreateForm ? 'var(--red)' : 'var(--accent)' }}>
+              <Icon name={showCreateForm ? 'x' : 'plus'} /> {showCreateForm ? '取消' : '发送通知'}
+            </Button>
+          )}
+          {unreadCount > 0 && (
+            <Button onClick={handleMarkAllRead} style={{ fontSize: 13 }}>
+              <Icon name="check" /> 全部已读
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Admin Create Notification Form */}
+      {isAdmin && showCreateForm && (
+        <div style={{
+          background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12,
+          padding: 20, marginBottom: 20,
+        }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-1)', margin: '0 0 16px' }}>
+            <Icon name="send" /> 发送系统通知
+          </h3>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {/* User Search */}
+            <div>
+              <label style={{ fontSize: 13, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>搜索用户</label>
+              <input
+                type="text"
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                placeholder="输入用户名或姓名搜索..."
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)',
+                  background: 'var(--surface-2)', color: 'var(--text-1)', fontSize: 14, outline: 'none',
+                }}
+              />
+              {userResults.length > 0 && (
+                <div style={{
+                  marginTop: 4, background: 'var(--surface-2)', borderRadius: 8,
+                  border: '1px solid var(--border)', maxHeight: 150, overflow: 'auto',
+                }}>
+                  {userResults.map(u => (
+                    <div
+                      key={u.id}
+                      onClick={() => {
+                        setCreateForm(f => ({ ...f, user_id: u.id }));
+                        setUserSearch(`${u.name} (${u.username})`);
+                        setUserResults([]);
+                      }}
+                      style={{
+                        padding: '8px 12px', cursor: 'pointer', fontSize: 13,
+                        color: 'var(--text-1)', borderBottom: '1px solid var(--border)',
+                        background: createForm.user_id === u.id ? 'var(--accent-bg)' : 'transparent',
+                      }}
+                    >
+                      {u.name} ({u.username})
+                    </div>
+                  ))}
+                </div>
+              )}
+              {createForm.user_id > 0 && (
+                <p style={{ fontSize: 12, color: 'var(--green)', margin: '4px 0 0' }}>✓ 已选择用户 ID: {createForm.user_id}</p>
+              )}
+            </div>
+            {/* Type */}
+            <div>
+              <label style={{ fontSize: 13, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>通知类型</label>
+              <select
+                value={createForm.type}
+                onChange={e => setCreateForm(f => ({ ...f, type: e.target.value }))}
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)',
+                  background: 'var(--surface-2)', color: 'var(--text-1)', fontSize: 14,
+                }}
+              >
+                <option value="system">系统通知</option>
+                <option value="competition">赛事通知</option>
+                <option value="team">团队通知</option>
+                <option value="award">奖项通知</option>
+                <option value="registration">报名通知</option>
+                <option value="pre_plan">预案通知</option>
+              </select>
+            </div>
+            {/* Title */}
+            <div>
+              <label style={{ fontSize: 13, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>标题 *</label>
+              <input
+                type="text"
+                value={createForm.title}
+                onChange={e => setCreateForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="通知标题"
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)',
+                  background: 'var(--surface-2)', color: 'var(--text-1)', fontSize: 14, outline: 'none',
+                }}
+              />
+            </div>
+            {/* Message */}
+            <div>
+              <label style={{ fontSize: 13, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>内容</label>
+              <textarea
+                value={createForm.message}
+                onChange={e => setCreateForm(f => ({ ...f, message: e.target.value }))}
+                placeholder="通知内容（可选）"
+                rows={3}
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)',
+                  background: 'var(--surface-2)', color: 'var(--text-1)', fontSize: 14, outline: 'none', resize: 'vertical',
+                }}
+              />
+            </div>
+            <Button onClick={handleCreate} disabled={creating} style={{ fontSize: 14, justifySelf: 'flex-end' }}>
+              {creating ? '发送中...' : '发送通知'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>

@@ -221,6 +221,10 @@ export function CompetitionsPage() {
   const [registerComp, setRegisterComp] = useState<Competition | null>(null);
   const canManage = role === 'teacher' || role === 'admin';
   const [registering, setRegistering] = useState<number | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [importJson, setImportJson] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ created_count: number; error_count: number; errors: Array<{ index: number; title: string; message: string }> } | null>(null);
 
   const handleDirectRegister = async (comp: Competition) => {
     setRegistering(comp.id);
@@ -242,6 +246,35 @@ export function CompetitionsPage() {
 
   const openCreate = () => { setEditing(null); setFormOpen(true); };
   const openEdit = (comp: Competition) => { setEditing(comp); setFormOpen(true); };
+
+  const handleBatchImport = async () => {
+    let parsed: Array<Record<string, unknown>>;
+    try {
+      parsed = JSON.parse(importJson);
+      if (!Array.isArray(parsed)) { toast.error('请输入 JSON 数组'); return; }
+    } catch {
+      toast.error('JSON 格式错误');
+      return;
+    }
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const res = await competitionsAPI.batchImport(parsed);
+      setImportResult(res);
+      if (res.created_count > 0) {
+        toast.success(`成功导入 ${res.created_count} 个赛事`);
+        // Refresh competition list
+        competitionsAPI.list().then(r => setCompetitions(r.competitions || [])).catch(console.error);
+      }
+      if (res.error_count > 0) {
+        toast.error(`${res.error_count} 个赛事导入失败`);
+      }
+    } catch {
+      toast.error('导入失败');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const openDetail = async (comp: Competition) => {
     setDetailId(comp.id); setDetail(comp);
@@ -286,8 +319,60 @@ export function CompetitionsPage() {
       <PageHeader
         title={role === 'student' ? '赛事大厅' : '赛事管理'}
         subtitle={`共 ${competitions.length} 个赛事，${filtered.length} 个符合筛选`}
-        actions={canManage ? <Button variant="primary" icon={<Icon name="plus" size={13}/>} onClick={openCreate}>创建赛事</Button> : undefined}
+        actions={canManage ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="primary" icon={<Icon name="plus" size={13}/>} onClick={openCreate}>创建赛事</Button>
+            <Button icon={<Icon name="download" size={13}/>} onClick={() => { setShowImport(!showImport); setImportResult(null); }}>批量导入</Button>
+          </div>
+        ) : undefined}
       />
+
+      {/* Batch Import Panel */}
+      {canManage && showImport && (
+        <div style={{
+          background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12,
+          padding: 20, marginBottom: 20,
+        }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-1)', margin: '0 0 12px' }}>
+            <Icon name="download" /> 批量导入赛事
+          </h3>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '0 0 12px' }}>
+            输入 JSON 数组，每项包含 title、type、max_team_size、min_team_size、start_date、end_date 字段。
+          </p>
+          <textarea
+            value={importJson}
+            onChange={e => setImportJson(e.target.value)}
+            placeholder={`[
+  {"title": "示例赛事", "type": "hackathon", "max_team_size": 5, "min_team_size": 1, "start_date": "2026-07-01T00:00:00+08:00", "end_date": "2026-08-01T00:00:00+08:00"}
+]`}
+            rows={6}
+            style={{
+              width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)',
+              background: 'var(--surface-2)', color: 'var(--text-1)', fontSize: 13, outline: 'none',
+              resize: 'vertical', fontFamily: 'monospace',
+            }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+            <Button onClick={handleBatchImport} disabled={importing} style={{ fontSize: 13 }}>
+              {importing ? '导入中...' : '开始导入'}
+            </Button>
+            {importResult && (
+              <span style={{ fontSize: 13, color: importResult.error_count > 0 ? 'var(--amber)' : 'var(--green)' }}>
+                成功 {importResult.created_count} 个，失败 {importResult.error_count} 个
+              </span>
+            )}
+          </div>
+          {importResult && importResult.errors.length > 0 && (
+            <div style={{ marginTop: 12, padding: 12, background: 'var(--surface-2)', borderRadius: 8, maxHeight: 150, overflow: 'auto' }}>
+              {importResult.errors.map((e, i) => (
+                <p key={i} style={{ fontSize: 12, color: 'var(--red)', margin: '0 0 4px' }}>
+                  ❌ #{e.index + 1} {e.title}: {e.message}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="anim-in" style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>

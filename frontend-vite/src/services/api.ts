@@ -163,6 +163,11 @@ export const competitionsAPI = {
     const response = await api.get(`/competitions/${id}/stats`);
     return response.data;
   },
+
+  batchImport: async (competitions: Array<Record<string, unknown>>): Promise<{ created_count: number; error_count: number; errors: Array<{ index: number; title: string; message: string }> }> => {
+    const response = await api.post('/competitions/import', competitions);
+    return response.data;
+  },
 };
 
 // Milestones API
@@ -750,6 +755,11 @@ export const notificationsAPI = {
 
   markAllRead: async (): Promise<void> => {
     await api.post('/notifications/read-all');
+  },
+
+  create: async (data: { user_id: number; type: string; title: string; message?: string }): Promise<{ notification: Notification }> => {
+    const response = await api.post<{ notification: Notification }>('/notifications', data);
+    return response.data;
   },
 };
 
