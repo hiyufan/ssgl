@@ -300,6 +300,7 @@ export function StudentDashboard() {
               { icon: 'users', label: '创建团队', desc: '组建你的竞赛团队', color: 'var(--teal)', path: '/teams' },
               { icon: 'sparkles', label: 'AI 工具箱', desc: '智能辅助工具', color: 'var(--purple)', path: '/aitools' },
               { icon: 'target', label: '模拟答辩', desc: 'AI 答辩教练陪练', color: 'var(--green)', path: '/coach' },
+              { icon: 'calendar', label: '赛事日历', desc: '查看赛事时间线', color: 'var(--orange)', path: '/calendar' },
             ].map((action) => (
               <button
                 key={action.label}

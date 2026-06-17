@@ -35,24 +35,27 @@ export function AdminDashboard() {
   const [engagement, setEngagement] = useState<Record<string, number> | null>(null);
   const [typeDist, setTypeDist] = useState<Array<{ type: string; count: number }>>([]);
   const [trends, setTrends] = useState<Array<{ month: string; competitions: number; teams: number; awards: number }>>([]);
+  const [progress, setProgress] = useState<Array<{ id: number; title: string; status: string; type: string; team_count: number; student_count: number; pre_plan_count: number; reviewed_count: number; approved_count: number; award_count: number; progress: number }>>([]);
   const [loading, setLoading] = useState(true);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, wfRes, engRes, typeRes, trendsRes] = await Promise.all([
+        const [statsRes, wfRes, engRes, typeRes, trendsRes, progressRes] = await Promise.all([
           statsAPI.overview(),
           workflowsAPI.list({ tab: 'pending' }),
           statsAPI.engagement().catch(() => null),
           statsAPI.typeDistribution().catch(() => ({ types: [] })),
           statsAPI.trends().catch(() => ({ trends: [] })),
+          statsAPI.progress().catch(() => ({ competitions: [] })),
         ]);
         setStats(statsRes);
         setPending(wfRes.workflows || []);
         setEngagement(engRes);
         setTypeDist(typeRes.types || []);
         setTrends(trendsRes.trends || []);
+        setProgress((progressRes.competitions || []).slice(0, 6));
       } catch (e) {
         console.error('Dashboard fetch error:', e);
       } finally {
@@ -313,6 +316,38 @@ export function AdminDashboard() {
         </div>
       )}
 
+      {/* ── Competition Lifecycle Progress ─────────────────── */}
+      {progress.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel label="赛事生命周期进度" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12, marginTop: 12 }}>
+            {progress.map((p) => {
+              const statusLabel = p.status === 'ongoing' ? '进行中' : p.status === 'published' ? '已发布' : p.status === 'completed' ? '已完成' : '草稿';
+              const statusColor = p.status === 'ongoing' ? 'var(--green)' : p.status === 'published' ? 'var(--amber)' : p.status === 'completed' ? 'var(--teal)' : 'var(--text-3)';
+              return (
+                <div key={p.id} className="card card-magnetic" style={{ padding: '16px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{TYPE_LABELS[p.type] || p.type}</div>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: statusColor, background: `${statusColor}18`, padding: '2px 8px', borderRadius: 6, flexShrink: 0, marginLeft: 8 }}>{statusLabel}</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ height: 6, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{ height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${statusColor}, ${statusColor}88)`, width: `${p.progress}%`, transition: 'width 0.6s ease' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-3)' }}>
+                    <span>{p.progress}% 完成</span>
+                    <span>{p.team_count} 团队 · {p.student_count} 学生 · {p.pre_plan_count} 预案 · {p.award_count} 奖项</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Quick Actions ──────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 24 }}>
         {[
@@ -320,6 +355,7 @@ export function AdminDashboard() {
           { label: '查看排行榜', icon: 'chart', path: '/leaderboard', color: 'var(--teal)' },
           { label: '审批中心', icon: 'check', path: '/approvals', color: 'var(--red)' },
           { label: '数据导出', icon: 'download', path: '/stats', color: 'var(--purple)' },
+          { label: '赛事日历', icon: 'calendar', path: '/calendar', color: 'var(--orange)' },
         ].map((action) => (
           <button key={action.label} className="card card-magnetic" onClick={() => navigate(action.path)}
             style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', transition: 'all 0.2s' }}
