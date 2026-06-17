@@ -15,6 +15,7 @@ import { PrePlansPage } from '@/pages/preplans';
 import { AwardsPage } from '@/pages/awards';
 import { EvaluationsPage } from '@/pages/evaluations';
 import { StatsPage } from '@/pages/stats';
+import { KanbanPage } from '@/pages/kanban';
 import { AIToolsPage } from '@/pages/aitools';
 import { CoachPage } from '@/pages/coach';
 import { KnowledgeBasePage } from '@/pages/knowledge-base';
@@ -57,6 +58,7 @@ function AppRoutes() {
         <Route path="/registrations" element={<RequireRole roles={['teacher', 'admin']}><RegistrationsPage /></RequireRole>} />
         <Route path="/awards" element={<RequireRole roles={['teacher', 'admin']}><AwardsPage /></RequireRole>} />
         <Route path="/stats" element={<RequireRole roles={['teacher', 'admin']}><StatsPage /></RequireRole>} />
+        <Route path="/kanban" element={<RequireRole roles={['teacher', 'admin']}><KanbanPage /></RequireRole>} />
         <Route path="/knowledge-base" element={<RequireRole roles={['teacher', 'admin']}><KnowledgeBasePage /></RequireRole>} />
 
         {/* student only */}

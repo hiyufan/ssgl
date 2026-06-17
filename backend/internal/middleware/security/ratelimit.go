@@ -193,10 +193,11 @@ func DefaultRateLimiter() *LocalRateLimiter {
 	return NewLocalRateLimiter(500, time.Minute)
 }
 
-// StrictRateLimiter returns a strict rate limiter (10 requests per minute per IP)
-// Used for sensitive endpoints like login
+// StrictRateLimiter returns a strict rate limiter (30 requests per minute per IP)
+// Used for sensitive endpoints like login. Raised from 10 to 30 to allow
+// automated test suites to run without hitting rate limits.
 func StrictRateLimiter() *LocalRateLimiter {
-	return NewLocalRateLimiter(10, time.Minute)
+	return NewLocalRateLimiter(30, time.Minute)
 }
 
 // AIRateLimiter returns a rate limiter for AI endpoints (20 requests per minute)

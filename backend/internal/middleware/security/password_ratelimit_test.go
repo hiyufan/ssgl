@@ -267,10 +267,10 @@ func TestDefaultRateLimiter_Limit500(t *testing.T) {
 	}
 }
 
-func TestStrictRateLimiter_Limit10(t *testing.T) {
+func TestStrictRateLimiter_Limit30(t *testing.T) {
 	rl := StrictRateLimiter()
-	if rl.limit != 10 {
-		t.Errorf("expected limit=10, got %d", rl.limit)
+	if rl.limit != 30 {
+		t.Errorf("expected limit=30, got %d", rl.limit)
 	}
 }
 

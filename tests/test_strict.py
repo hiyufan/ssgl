@@ -170,6 +170,15 @@ def test_auth():
         # 400 = already exists, 409 = conflict
         _log("PASS", "register", "学生已存在（预期行为）")
         _student_token = _login("test_student_001", "TestPass123!")
+        if not _student_token:
+            # Password may have been changed in a previous failed test run
+            alt_token = _login("test_student_001", "NewTestPass456!")
+            if alt_token:
+                _log("WARN", "register", "学生密码被前次测试修改，正在还原...")
+                _api_auth("PUT", "/api/v1/auth/password", token=alt_token, json={
+                    "old_password": "NewTestPass456!", "new_password": "TestPass123!"
+                })
+                _student_token = _login("test_student_001", "TestPass123!")
     else:
         _log("WARN", "register", f"注册返回 {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
 
@@ -438,6 +447,16 @@ def test_crud():
         _log("PASS", "stat-recent-activity-limit", f"最近动态(limit=5)成功, {data.get('total', '?')} 条")
     else:
         _log("WARN", "stat-recent-activity-limit", f"最近动态(limit) → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Kanban board endpoint ---
+    resp = _api_auth("GET", "/api/v1/stats/kanban")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        columns = data.get("columns", [])
+        total_cards = sum(c.get("count", 0) for c in columns)
+        _log("PASS", "stat-kanban", f"看板总览成功, {len(columns)} 列, {total_cards} 个赛事")
+    else:
+        _log("FAIL", "stat-kanban", f"看板总览失败 → {resp.status_code if _ok(resp) else 'None'}")
 
     # --- Competition trends endpoint ---
     resp = _api_auth("GET", "/api/v1/stats/trends")
@@ -1199,23 +1218,43 @@ def test_password_change():
     })
     if _ok(resp) and resp.status_code == 200:
         _log("PASS", "pwd-change-ok", "修改密码成功 ✓")
-        # Verify login with new password
+        # Verify login with new password (add extra delay for rate limit)
+        time.sleep(2)
         new_token = _login("test_student_001", "NewTestPass456!")
         if new_token:
             _log("PASS", "pwd-login-new", "新密码登录成功 ✓")
             # Restore original password for subsequent tests
             _student_token = new_token
+            time.sleep(1)
             resp = _api_auth("PUT", "/api/v1/auth/password", token=new_token, json={
                 "old_password": "NewTestPass456!",
                 "new_password": "TestPass123!"
             })
             if _ok(resp) and resp.status_code == 200:
                 _log("PASS", "pwd-restore", "密码已还原 ✓")
+                time.sleep(1)
                 _student_token = _login("test_student_001", "TestPass123!")
             else:
                 _log("WARN", "pwd-restore", "密码还原失败，后续测试可能受影响")
+                # Force restore: try again after longer wait
+                time.sleep(3)
+                retry_token = _login("test_student_001", "NewTestPass456!")
+                if retry_token:
+                    _api_auth("PUT", "/api/v1/auth/password", token=retry_token, json={
+                        "old_password": "NewTestPass456!",
+                        "new_password": "TestPass123!"
+                    })
         else:
             _log("FAIL", "pwd-login-new", "新密码登录失败")
+            # Critical: restore password even if login check failed
+            time.sleep(3)
+            restore_token = _login("test_student_001", "NewTestPass456!")
+            if restore_token:
+                _api_auth("PUT", "/api/v1/auth/password", token=restore_token, json={
+                    "old_password": "NewTestPass456!",
+                    "new_password": "TestPass123!"
+                })
+                _student_token = _login("test_student_001", "TestPass123!")
     else:
         _log("WARN", "pwd-change-ok", f"修改密码 → {resp.status_code if _ok(resp) else 'None'}",
              resp.text[:200] if _ok(resp) else "")
@@ -1294,6 +1333,7 @@ def test_ai_service():
         ("POST", "/ai/api/v1/tools/improvement", {"input": "竞赛管理系统缺少实时通知，给出改进建议"}, 120),
         ("POST", "/ai/api/v1/tools/tech-route", {"input": "竞赛管理平台技术路线", "extra": "Go, Vue3, PostgreSQL"}, 120),
         ("POST", "/ai/api/v1/tools/resource-match", {"input": "需要AI模型训练和云服务器资源", "extra": "GPU算力, 云服务器"}, 120),
+        ("POST", "/ai/api/v1/tools/pitch-deck", {"input": "蓝桥杯AI学习助手项目的路演大纲"}, 120),
     ]
 
     for method, path, body, timeout in llm_endpoints:

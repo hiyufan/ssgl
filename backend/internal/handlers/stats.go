@@ -857,3 +857,129 @@ func (h *StatsHandler) Engagement(c *gin.Context) {
 		ActiveCompetitions: activeCompetitions,
 	})
 }
+
+// ============================================================
+// Competition Kanban Board — innovation feature
+// ============================================================
+
+// KanbanColumn represents one column (status stage) on the kanban board.
+type KanbanColumn struct {
+	Status       string                  `json:"status"`
+	Label        string                  `json:"label"`
+	Count        int                     `json:"count"`
+	Competitions []KanbanCompetition     `json:"competitions"`
+}
+
+// KanbanCompetition is a lightweight competition card for the kanban board.
+type KanbanCompetition struct {
+	ID            uint    `json:"id"`
+	Title         string  `json:"title"`
+	Type          string  `json:"type"`
+	TeamCount     int     `json:"team_count"`
+	StudentCount  int     `json:"student_count"`
+	PreplanCount  int     `json:"preplan_count"`
+	AwardCount    int     `json:"award_count"`
+	Progress      float64 `json:"progress"`
+	StartDate     string  `json:"start_date"`
+	EndDate       string  `json:"end_date"`
+	DaysRemaining int     `json:"days_remaining"`
+}
+
+// KanbanBoard handles GET /stats/kanban — returns competitions grouped by status
+// for a kanban-style progress dashboard.
+func (h *StatsHandler) KanbanBoard(c *gin.Context) {
+	db := database.GetDB()
+
+	statusOrder := []struct {
+		status string
+		label  string
+	}{
+		{models.CompStatusDraft, "草稿"},
+		{models.CompStatusPublished, "已发布"},
+		{models.CompStatusOngoing, "进行中"},
+		{models.CompStatusCompleted, "已完成"},
+	}
+
+	columns := make([]KanbanColumn, 0, len(statusOrder))
+	now := time.Now()
+
+	for _, stage := range statusOrder {
+		var competitions []models.Competition
+		db.Where("status = ?", stage.status).Order("start_date ASC").Find(&competitions)
+
+		cards := make([]KanbanCompetition, 0, len(competitions))
+		for _, comp := range competitions {
+			// Team count
+			var teamCount int64
+			db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
+
+			// Student count
+			var studentCount int64
+			db.Raw("SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm JOIN teams t ON tm.team_id = t.id WHERE t.competition_id = ?", comp.ID).Scan(&studentCount)
+
+			// Preplan count
+			var preplanCount int64
+			db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&preplanCount)
+
+			// Award count
+			var awardCount int64
+			db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
+
+			// Progress calculation
+			progress := float64(0)
+			if stage.status == models.CompStatusCompleted {
+				progress = 100
+			} else if stage.status == models.CompStatusOngoing && !comp.StartDate.IsZero() && !comp.EndDate.IsZero() {
+				total := comp.EndDate.Sub(comp.StartDate).Hours()
+				elapsed := now.Sub(comp.StartDate).Hours()
+				if total > 0 {
+					progress = elapsed / total * 100
+					if progress > 100 {
+						progress = 100
+					}
+					if progress < 0 {
+						progress = 0
+					}
+				}
+			}
+
+			// Days remaining
+			daysRemaining := 0
+			if !comp.EndDate.IsZero() && comp.EndDate.After(now) {
+				daysRemaining = int(comp.EndDate.Sub(now).Hours() / 24)
+			}
+
+			startDate := ""
+			endDate := ""
+			if !comp.StartDate.IsZero() {
+				startDate = comp.StartDate.Format("2006-01-02")
+			}
+			if !comp.EndDate.IsZero() {
+				endDate = comp.EndDate.Format("2006-01-02")
+			}
+
+			cards = append(cards, KanbanCompetition{
+				ID:            comp.ID,
+				Title:         comp.Title,
+				Type:          comp.Type,
+				TeamCount:     int(teamCount),
+				StudentCount:  int(studentCount),
+				PreplanCount:  int(preplanCount),
+				AwardCount:    int(awardCount),
+				Progress:      progress,
+				StartDate:     startDate,
+				EndDate:       endDate,
+				DaysRemaining: daysRemaining,
+			})
+		}
+
+		columns = append(columns, KanbanColumn{
+			Status:       stage.status,
+			Label:        stage.label,
+			Count:        len(cards),
+			Competitions: cards,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"columns": columns})
+}

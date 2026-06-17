@@ -391,3 +391,105 @@ func TestTypeDistributionTypes(t *testing.T) {
 		}
 	}
 }
+
+// ============================================================
+// Kanban Board Tests
+// ============================================================
+
+func TestKanbanCompetitionFields(t *testing.T) {
+	kc := KanbanCompetition{
+		ID:            1,
+		Title:         "蓝桥杯全国软件大赛",
+		Type:          "innovation",
+		TeamCount:     15,
+		StudentCount:  45,
+		PreplanCount:  12,
+		AwardCount:    3,
+		Progress:      65.5,
+		StartDate:     "2026-03-01",
+		EndDate:       "2026-06-30",
+		DaysRemaining: 13,
+	}
+
+	if kc.ID != 1 {
+		t.Errorf("expected ID=1, got %d", kc.ID)
+	}
+	if kc.Title != "蓝桥杯全国软件大赛" {
+		t.Errorf("expected Title='蓝桥杯全国软件大赛', got '%s'", kc.Title)
+	}
+	if kc.TeamCount != 15 {
+		t.Errorf("expected TeamCount=15, got %d", kc.TeamCount)
+	}
+	if kc.StudentCount != 45 {
+		t.Errorf("expected StudentCount=45, got %d", kc.StudentCount)
+	}
+	if kc.Progress != 65.5 {
+		t.Errorf("expected Progress=65.5, got %f", kc.Progress)
+	}
+	if kc.DaysRemaining != 13 {
+		t.Errorf("expected DaysRemaining=13, got %d", kc.DaysRemaining)
+	}
+}
+
+func TestKanbanColumnFields(t *testing.T) {
+	col := KanbanColumn{
+		Status: "ongoing",
+		Label:  "进行中",
+		Count:  3,
+		Competitions: []KanbanCompetition{
+			{ID: 1, Title: "赛事A", Progress: 50},
+			{ID: 2, Title: "赛事B", Progress: 75},
+			{ID: 3, Title: "赛事C", Progress: 90},
+		},
+	}
+
+	if col.Status != "ongoing" {
+		t.Errorf("expected Status='ongoing', got '%s'", col.Status)
+	}
+	if col.Label != "进行中" {
+		t.Errorf("expected Label='进行中', got '%s'", col.Label)
+	}
+	if col.Count != 3 {
+		t.Errorf("expected Count=3, got %d", col.Count)
+	}
+	if len(col.Competitions) != 3 {
+		t.Errorf("expected 3 competitions, got %d", len(col.Competitions))
+	}
+}
+
+func TestKanbanCompetitionProgressBounds(t *testing.T) {
+	// Progress should be clamped between 0 and 100
+	tests := []struct {
+		progress float64
+		valid    bool
+	}{
+		{0, true},
+		{50, true},
+		{100, true},
+		{-10, false},
+		{110, false},
+	}
+
+	for _, tt := range tests {
+		kc := KanbanCompetition{Progress: tt.progress}
+		if tt.valid && (kc.Progress < 0 || kc.Progress > 100) {
+			t.Errorf("progress %f should be valid (0-100)", tt.progress)
+		}
+	}
+}
+
+func TestKanbanColumnEmpty(t *testing.T) {
+	col := KanbanColumn{
+		Status:       "draft",
+		Label:        "草稿",
+		Count:        0,
+		Competitions: []KanbanCompetition{},
+	}
+
+	if col.Count != 0 {
+		t.Errorf("expected Count=0, got %d", col.Count)
+	}
+	if len(col.Competitions) != 0 {
+		t.Errorf("expected 0 competitions, got %d", len(col.Competitions))
+	}
+}

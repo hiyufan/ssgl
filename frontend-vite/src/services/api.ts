@@ -485,6 +485,30 @@ export const statsAPI = {
     const response = await api.get('/stats/engagement');
     return response.data;
   },
+
+  kanban: async (): Promise<{
+    columns: {
+      status: string;
+      label: string;
+      count: number;
+      competitions: {
+        id: number;
+        title: string;
+        type: string;
+        team_count: number;
+        student_count: number;
+        preplan_count: number;
+        award_count: number;
+        progress: number;
+        start_date: string;
+        end_date: string;
+        days_remaining: number;
+      }[];
+    }[];
+  }> => {
+    const response = await api.get('/stats/kanban');
+    return response.data;
+  },
 };
 
 // System Diagnostics API
