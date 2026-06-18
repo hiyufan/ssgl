@@ -155,14 +155,16 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.POST("/pre-plans/:id/teacher-review", preplanHandler.TeacherReview)
 		protected.DELETE("/pre-plans/:id", preplanHandler.Delete)
 
-		// Awards.
+		// Awards (read — any authenticated user).
 		protected.GET("/awards", awardHandler.List)
 		protected.GET("/awards/:id", awardHandler.Get)
 
-		// Evaluations.
+		// Evaluations (students can CRUD their own).
 		protected.GET("/evaluations", evalHandler.List)
 		protected.GET("/evaluations/:id", evalHandler.Get)
 		protected.POST("/evaluations", evalHandler.Create)
+		protected.PUT("/evaluations/:id", evalHandler.Update)
+		protected.DELETE("/evaluations/:id", evalHandler.Delete)
 
 		// Competition registrations (student self-register).
 		protected.GET("/registrations", registrationHandler.List)
@@ -244,8 +246,14 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Batch import — teacher/admin only.
 		staff.POST("/competitions/import", importHandler.BatchImport)
 
-		// Award nomination — teacher/admin only.
+		// Award management — teacher/admin only.
 		staff.POST("/awards", awardHandler.Create)
+		staff.PUT("/awards/:id", awardHandler.Update)
+		staff.DELETE("/awards/:id", awardHandler.Delete)
+		staff.POST("/awards/:id/teacher-confirm", awardHandler.TeacherConfirm)
+
+		// Evaluation moderation — teacher/admin only.
+		staff.POST("/evaluations/:id/moderate", evalHandler.Moderate)
 
 		// Milestones — teacher/admin only.
 		staff.POST("/milestones", milestoneHandler.Create)

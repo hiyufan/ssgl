@@ -11,7 +11,10 @@ from app.services.rag_service import rag_service
 
 def _rag_context(query: str, top_k: int = 3) -> str:
     """Return a formatted RAG context block, or an empty string on no results."""
-    results = rag_service.search(query, top_k=top_k)
+    try:
+        results = rag_service.search(query, top_k=top_k)
+    except Exception:
+        return ""
     if not results:
         return ""
     lines = []

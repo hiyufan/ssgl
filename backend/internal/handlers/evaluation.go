@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ssgl/competition-platform/internal/database"
@@ -26,6 +27,15 @@ type CreateEvaluationRequest struct {
 	Communication int    `json:"communication" binding:"required,min=1,max=5"`
 	Availability  int    `json:"availability" binding:"required,min=1,max=5"`
 	Overall       int    `json:"overall" binding:"required,min=1,max=5"`
+	Feedback      string `json:"feedback"`
+}
+
+// UpdateEvaluationRequest is the payload for updating an evaluation.
+type UpdateEvaluationRequest struct {
+	Teaching      *int   `json:"teaching" binding:"omitempty,min=1,max=5"`
+	Communication *int   `json:"communication" binding:"omitempty,min=1,max=5"`
+	Availability  *int   `json:"availability" binding:"omitempty,min=1,max=5"`
+	Overall       *int   `json:"overall" binding:"omitempty,min=1,max=5"`
 	Feedback      string `json:"feedback"`
 }
 
@@ -139,6 +149,7 @@ func (h *EvaluationHandler) Create(c *gin.Context) {
 		return
 	}
 
+	now := time.Now()
 	evaluation := models.StudentEvaluation{
 		StudentID:     studentID,
 		TeacherID:     req.TeacherID,
@@ -149,6 +160,7 @@ func (h *EvaluationHandler) Create(c *gin.Context) {
 		Overall:       req.Overall,
 		Feedback:      req.Feedback,
 		Status:        models.EvalStatusSubmitted,
+		SubmittedAt:   &now,
 	}
 
 	if err := db.Create(&evaluation).Error; err != nil {
@@ -159,4 +171,152 @@ func (h *EvaluationHandler) Create(c *gin.Context) {
 	db.Preload("Student").Preload("Teacher").Preload("Competition").First(&evaluation, evaluation.ID)
 
 	c.JSON(http.StatusCreated, gin.H{"evaluation": evaluation})
+}
+
+// Update handles PUT /evaluations/:id — only the original student can update their own evaluation.
+func (h *EvaluationHandler) Update(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid evaluation id"})
+		return
+	}
+
+	var evaluation models.StudentEvaluation
+	if err := db.First(&evaluation, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "evaluation not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch evaluation"})
+		return
+	}
+
+	// Only the original student can update.
+	userIDVal, _ := c.Get("user_id")
+	if evaluation.StudentID != userIDVal.(uint) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you can only update your own evaluations"})
+		return
+	}
+
+	// Cannot update if already approved/rejected.
+	if evaluation.Status == models.EvalStatusApproved || evaluation.Status == models.EvalStatusRejected {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot update an evaluation that has been reviewed"})
+		return
+	}
+
+	var req UpdateEvaluationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Teaching != nil {
+		updates["teaching"] = *req.Teaching
+	}
+	if req.Communication != nil {
+		updates["communication"] = *req.Communication
+	}
+	if req.Availability != nil {
+		updates["availability"] = *req.Availability
+	}
+	if req.Overall != nil {
+		updates["overall"] = *req.Overall
+	}
+	if req.Feedback != "" {
+		updates["feedback"] = req.Feedback
+	}
+
+	if len(updates) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"})
+		return
+	}
+
+	if err := db.Model(&evaluation).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update evaluation"})
+		return
+	}
+
+	db.Preload("Student").Preload("Teacher").Preload("Competition").First(&evaluation, evaluation.ID)
+	c.JSON(http.StatusOK, gin.H{"evaluation": evaluation})
+}
+
+// Delete handles DELETE /evaluations/:id — soft delete by student or admin.
+func (h *EvaluationHandler) Delete(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid evaluation id"})
+		return
+	}
+
+	var evaluation models.StudentEvaluation
+	if err := db.First(&evaluation, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "evaluation not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch evaluation"})
+		return
+	}
+
+	// Only the student who wrote it or an admin can delete.
+	userIDVal, _ := c.Get("user_id")
+	roleVal, _ := c.Get("role")
+	if evaluation.StudentID != userIDVal.(uint) && roleVal.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you can only delete your own evaluations"})
+		return
+	}
+
+	if err := db.Delete(&evaluation).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete evaluation"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "evaluation deleted"})
+}
+
+// Moderate handles POST /evaluations/:id/moderate — teacher/admin can approve or reject.
+func (h *EvaluationHandler) Moderate(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid evaluation id"})
+		return
+	}
+
+	var evaluation models.StudentEvaluation
+	if err := db.First(&evaluation, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "evaluation not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch evaluation"})
+		return
+	}
+
+	var req struct {
+		Action string `json:"action" binding:"required,oneof=approve reject"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	newStatus := models.EvalStatusApproved
+	if req.Action == "reject" {
+		newStatus = models.EvalStatusRejected
+	}
+
+	if err := db.Model(&evaluation).Update("status", newStatus).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to moderate evaluation"})
+		return
+	}
+
+	db.Preload("Student").Preload("Teacher").Preload("Competition").First(&evaluation, evaluation.ID)
+	c.JSON(http.StatusOK, gin.H{"evaluation": evaluation, "action": req.Action})
 }

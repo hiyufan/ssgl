@@ -1181,6 +1181,97 @@ def test_crud():
     else:
         _log("WARN", "eval-create", "缺少赛事ID或学生token，跳过评价创建")
 
+    # --- Eval Update / Delete / Moderate (new endpoints) ---
+    if team_comp_id and _student_token:
+        # Get student's evaluations to find one to update
+        resp = _api_auth("GET", "/api/v1/evaluations", token=_student_token)
+        eval_id = None
+        if _ok(resp) and resp.status_code == 200:
+            evals = resp.json().get("evaluations", [])
+            if evals:
+                eval_id = evals[0].get("id")
+
+        if eval_id:
+            # eval-update: student updates their own evaluation
+            resp = _api_auth("PUT", f"/api/v1/evaluations/{eval_id}", json={"teaching": 5, "feedback": "更新后的评价"})
+            if _ok(resp) and resp.status_code == 200:
+                _log("PASS", "eval-update", f"更新评价 {eval_id} 成功")
+            else:
+                _log("WARN", "eval-update", f"更新评价 → {resp.status_code if _ok(resp) else 'None'}")
+
+            # eval-moderate: admin approves evaluation
+            resp = _api_auth("POST", f"/api/v1/evaluations/{eval_id}/moderate", json={"action": "approve"})
+            if _ok(resp) and resp.status_code == 200:
+                _log("PASS", "eval-moderate", f"审核评价 {eval_id} 成功")
+            else:
+                _log("WARN", "eval-moderate", f"审核评价 → {resp.status_code if _ok(resp) else 'None'}")
+
+            # eval-delete: admin deletes evaluation
+            resp = _api_auth("DELETE", f"/api/v1/evaluations/{eval_id}")
+            if _ok(resp) and resp.status_code == 200:
+                _log("PASS", "eval-delete", f"删除评价 {eval_id} 成功")
+            else:
+                _log("WARN", "eval-delete", f"删除评价 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Award Update / Teacher-Confirm / Delete (new endpoints) ---
+    if award_id:
+        # First create a fresh pending award to test update/delete
+        if team_comp_id and team_id:
+            fresh_award_data = {
+                "competition_id": team_comp_id,
+                "team_id": team_id,
+                "rank": 2,
+                "rank_name": "二等奖",
+                "prize_name": "测试奖项",
+                "prize_amount": 3000.00,
+            }
+            resp = _api_auth("POST", "/api/v1/awards", json=fresh_award_data)
+            fresh_award_id = None
+            if _ok(resp) and resp.status_code in (200, 201):
+                data = resp.json()
+                aw = data.get("award", data)
+                fresh_award_id = aw.get("id") or data.get("id")
+
+            if fresh_award_id:
+                # award-update: edit pending award
+                resp = _api_auth("PUT", f"/api/v1/awards/{fresh_award_id}", json={"rank_name": "特等奖", "prize_amount": 8000.00})
+                if _ok(resp) and resp.status_code == 200:
+                    _log("PASS", "award-update", f"更新奖项 {fresh_award_id} 成功")
+                else:
+                    _log("WARN", "award-update", f"更新奖项 → {resp.status_code if _ok(resp) else 'None'}")
+
+                # award-teacher-confirm: teacher confirms pending award
+                resp = _api_auth("POST", f"/api/v1/awards/{fresh_award_id}/teacher-confirm")
+                if _ok(resp) and resp.status_code == 200:
+                    _log("PASS", "award-teacher-confirm", f"教师确认奖项 {fresh_award_id} 成功")
+                else:
+                    _log("WARN", "award-teacher-confirm", f"教师确认 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Create another award to test delete
+        if team_comp_id and team_id:
+            del_award_data = {
+                "competition_id": team_comp_id,
+                "team_id": team_id,
+                "rank": 3,
+                "rank_name": "三等奖",
+                "prize_name": "待删除奖项",
+                "prize_amount": 1000.00,
+            }
+            resp = _api_auth("POST", "/api/v1/awards", json=del_award_data)
+            del_award_id = None
+            if _ok(resp) and resp.status_code in (200, 201):
+                data = resp.json()
+                aw = data.get("award", data)
+                del_award_id = aw.get("id") or data.get("id")
+
+            if del_award_id:
+                # award-delete: delete pending award
+                resp = _api_auth("DELETE", f"/api/v1/awards/{del_award_id}")
+                if _ok(resp) and resp.status_code == 200:
+                    _log("PASS", "award-delete", f"删除奖项 {del_award_id} 成功")
+                else:
+                    _log("WARN", "award-delete", f"删除奖项 → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- Team Analysis (new feature) ---
     # Test with existing team (id=1 should exist from seed data)
     resp = _api_auth("GET", "/api/v1/teams/1/analysis")
