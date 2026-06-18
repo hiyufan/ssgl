@@ -638,6 +638,48 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
             </div>
           )}
 
+          {/* Gantt-style timeline */}
+          {milestones.length > 1 && (() => {
+            const sorted = [...milestones].sort((a, b) => a.sort_order - b.sort_order);
+            const allDates = sorted.flatMap(m => [new Date(m.start_date || m.due_date).getTime(), new Date(m.due_date).getTime()]);
+            const minDate = Math.min(...allDates);
+            const maxDate = Math.max(...allDates);
+            const span = maxDate - minDate || 1;
+            const statusColor: Record<string, string> = { completed: 'var(--green)', in_progress: 'var(--amber)', skipped: 'var(--text-3)', pending: 'var(--border-2)' };
+            return (
+              <div style={{ marginBottom: 14, padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginBottom: 10, letterSpacing: '0.03em' }}>📊 时间线</div>
+                {/* Time axis */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-3)', marginBottom: 6, padding: '0 2px' }}>
+                  <span>{new Date(minDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}</span>
+                  <span>{new Date(maxDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}</span>
+                </div>
+                {sorted.map(ms => {
+                  const start = new Date(ms.start_date || ms.due_date).getTime();
+                  const end = new Date(ms.due_date).getTime();
+                  const left = ((start - minDate) / span) * 100;
+                  const width = Math.max(((end - start) / span) * 100, 8);
+                  const isDone = ms.status === 'completed';
+                  return (
+                    <div key={ms.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }} title={`${ms.title}: ${new Date(ms.start_date || ms.due_date).toLocaleDateString()} → ${new Date(ms.due_date).toLocaleDateString()}`}>
+                      <span style={{ width: 70, fontSize: 10, color: 'var(--text-3)', textAlign: 'right', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ms.title}</span>
+                      <div style={{ flex: 1, height: 18, borderRadius: 4, background: 'var(--surface)', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{
+                          position: 'absolute', left: `${left}%`, width: `${width}%`, height: '100%',
+                          borderRadius: 4, background: statusColor[ms.status] || 'var(--border-2)',
+                          opacity: isDone ? 0.6 : 1, minWidth: 12,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {isDone && <span style={{ fontSize: 9, color: '#fff' }}>✓</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* Add milestone form */}
           {addMs && (
             <div style={{ padding: 14, background: 'var(--surface-2)', borderRadius: 10, marginBottom: 12, border: '1px solid var(--border)' }}>

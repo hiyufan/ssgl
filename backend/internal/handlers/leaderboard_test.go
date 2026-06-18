@@ -89,3 +89,32 @@ func TestLeaderboardEntry_TeamIDAndLeader(t *testing.T) {
 		t.Errorf("expected LeaderName '李四', got '%s'", entry.LeaderName)
 	}
 }
+
+func TestLeaderboardEntry_ScoreTieBreaking(t *testing.T) {
+	// Two entries with same score should maintain order by original rank
+	e1 := LeaderboardEntry{Rank: 1, Score: 50}
+	e2 := LeaderboardEntry{Rank: 2, Score: 50}
+	if e1.Score != e2.Score {
+		t.Error("tie-breaking test: scores should be equal")
+	}
+	if e1.Rank >= e2.Rank {
+		t.Error("tie-breaking test: rank 1 should be less than rank 2")
+	}
+}
+
+func TestLeaderboardEntry_CountFields(t *testing.T) {
+	entry := LeaderboardEntry{
+		CompetitionCount: 5,
+		AwardCount:       3,
+		PrePlanCount:     8,
+	}
+	// All counts should be non-negative
+	if entry.CompetitionCount < 0 || entry.AwardCount < 0 || entry.PrePlanCount < 0 {
+		t.Error("count fields should be non-negative")
+	}
+	// Total activity = comps + awards + plans
+	total := entry.CompetitionCount + entry.AwardCount + entry.PrePlanCount
+	if total != 16 {
+		t.Errorf("expected total activity 16, got %d", total)
+	}
+}

@@ -24,6 +24,7 @@ import { RegistrationsPage } from '@/pages/registrations';
 import { CalendarPage } from '@/pages/calendar';
 import { LeaderboardPage } from '@/pages/leaderboard';
 import { ShowcasePage } from '@/pages/showcase';
+import { AchievementGalleryPage } from '@/pages/achievement-gallery';
 import { ProfilePage } from '@/pages/profile';
 import { DiagnosticsPage } from '@/pages/diagnostics';
 import { NotificationsPage } from '@/pages/notifications';
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route path="/coach" element={<CoachPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/showcase" element={<ShowcasePage />} />
+        <Route path="/achievement-gallery" element={<AchievementGalleryPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
 

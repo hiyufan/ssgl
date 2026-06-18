@@ -514,6 +514,17 @@ export const statsAPI = {
     const response = await api.get('/stats/export/full', { responseType: 'blob' });
     return response.data;
   },
+
+  healthScore: async (): Promise<{
+    overall_score: number;
+    level: string;
+    dimensions: Array<{ name: string; score: number; weight: number; details: string }>;
+    summary: string;
+    timestamp: string;
+  }> => {
+    const response = await api.get('/stats/health-score');
+    return response.data;
+  },
 };
 
 // System Diagnostics API

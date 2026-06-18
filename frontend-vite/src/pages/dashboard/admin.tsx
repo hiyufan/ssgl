@@ -6,7 +6,7 @@ import { statsAPI, workflowsAPI } from '@/services/api';
 import { StatusBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { SectionLabel } from '@/components/ui/page-helpers';
-import { BarChart, DonutChart, AreaChart } from '@/components/ui/charts';
+import { BarChart, DonutChart, AreaChart, ScoreGauge } from '@/components/ui/charts';
 import type { StatsOverview, ApprovalWorkflow } from '@/types';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -36,19 +36,21 @@ export function AdminDashboard() {
   const [typeDist, setTypeDist] = useState<Array<{ type: string; count: number }>>([]);
   const [trends, setTrends] = useState<Array<{ month: string; competitions: number; teams: number; awards: number }>>([]);
   const [progress, setProgress] = useState<Array<{ id: number; title: string; status: string; type: string; team_count: number; student_count: number; pre_plan_count: number; reviewed_count: number; approved_count: number; award_count: number; progress: number }>>([]);
+  const [healthScore, setHealthScore] = useState<{ overall_score: number; level: string; dimensions: Array<{ name: string; score: number; weight: number; details: string }>; summary: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, wfRes, engRes, typeRes, trendsRes, progressRes] = await Promise.all([
+        const [statsRes, wfRes, engRes, typeRes, trendsRes, progressRes, healthRes] = await Promise.all([
           statsAPI.overview(),
           workflowsAPI.list({ tab: 'pending' }),
           statsAPI.engagement().catch(() => null),
           statsAPI.typeDistribution().catch(() => ({ types: [] })),
           statsAPI.trends().catch(() => ({ trends: [] })),
           statsAPI.progress().catch(() => ({ competitions: [] })),
+          statsAPI.healthScore().catch(() => null),
         ]);
         setStats(statsRes);
         setPending(wfRes.workflows || []);
@@ -56,6 +58,7 @@ export function AdminDashboard() {
         setTypeDist(typeRes.types || []);
         setTrends(trendsRes.trends || []);
         setProgress((progressRes.competitions || []).slice(0, 6));
+        setHealthScore(healthRes);
       } catch (e) {
         console.error('Dashboard fetch error:', e);
       } finally {
@@ -312,6 +315,37 @@ export function AdminDashboard() {
                 <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>{item.desc}</div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Platform Health Score ─────────────────────────── */}
+      {healthScore && (
+        <div style={{ marginTop: 24 }}>
+          <SectionLabel label="平台健康评分" />
+          <div className="card" style={{ padding: '24px', marginTop: 12 }}>
+            <div style={{ display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flexShrink: 0 }}>
+                <ScoreGauge score={Math.round(healthScore.overall_score)} label={healthScore.level === 'excellent' ? '优秀' : healthScore.level === 'good' ? '良好' : healthScore.level === 'fair' ? '一般' : '需关注'} size={150} />
+              </div>
+              <div style={{ flex: 1, minWidth: 280 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12 }}>{healthScore.summary}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                  {healthScore.dimensions.map((dim) => (
+                    <div key={dim.name} style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{dim.name}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: dim.score >= 80 ? 'var(--green)' : dim.score >= 60 ? 'var(--amber)' : dim.score >= 40 ? 'var(--orange)' : 'var(--red)' }}>{dim.score.toFixed(0)}</span>
+                      </div>
+                      <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 2, background: dim.score >= 80 ? 'var(--green)' : dim.score >= 60 ? 'var(--amber)' : dim.score >= 40 ? 'var(--orange)' : 'var(--red)', width: `${dim.score}%`, transition: 'width 0.6s ease' }} />
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>{dim.details}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
