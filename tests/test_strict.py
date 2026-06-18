@@ -501,6 +501,17 @@ def test_crud():
     else:
         _log("FAIL", "stat-engagement", f"参与度统计失败 → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Platform Health Score ---
+    resp = _api_auth("GET", "/api/v1/stats/health-score")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        score = data.get("overall_score", 0)
+        level = data.get("level", "?")
+        dims = data.get("dimensions", [])
+        _log("PASS", "stat-health-score", f"平台健康评分成功, 分数={score:.1f}, 等级={level}, 维度={len(dims)}")
+    else:
+        _log("FAIL", "stat-health-score", f"平台健康评分失败 → {resp.status_code if _ok(resp) else 'None'}")
+
     # --- System diagnostics endpoint ---
     resp = _api_auth("GET", "/api/v1/system/diagnostics")
     if _ok(resp) and resp.status_code == 200:

@@ -86,6 +86,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	importHandler := handlers.NewImportHandler()
 	registrationHandler := handlers.NewRegistrationHandler()
 	teamAnalysisHandler := handlers.NewTeamAnalysisHandler()
+	healthScoreHandler := handlers.NewHealthScoreHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -180,6 +181,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/engagement", statsHandler.Engagement)
 		protected.GET("/stats/kanban", statsHandler.KanbanBoard)
 		protected.GET("/stats/countdown", statsHandler.Countdown)
+
+		// Platform health score.
+		protected.GET("/stats/health-score", healthScoreHandler.Score)
 
 		// Notifications (read for all users).
 		protected.GET("/notifications", notifHandler.List)
