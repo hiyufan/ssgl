@@ -18,6 +18,11 @@ export function KnowledgeBasePage() {
   const [ragLoading, setRagLoading] = useState(false);
   const [ragAnswer, setRagAnswer] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Text ingestion state
+  const [showTextIngest, setShowTextIngest] = useState(false);
+  const [textContent, setTextContent] = useState('');
+  const [textFilename, setTextFilename] = useState('');
+  const [ingesting, setIngesting] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
@@ -97,6 +102,22 @@ export function KnowledgeBasePage() {
 
   const filtered = docs.filter(doc => !search || doc.filename.toLowerCase().includes(search.toLowerCase()));
 
+  const handleTextIngest = async () => {
+    if (!textContent.trim()) return;
+    setIngesting(true);
+    try {
+      await ragAPI.ingest(textContent, textFilename ? { filename: textFilename } : undefined);
+      setShowTextIngest(false);
+      setTextContent('');
+      setTextFilename('');
+      fetchData();
+    } catch (err) {
+      console.error('Text ingest error:', err);
+    } finally {
+      setIngesting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
@@ -116,11 +137,44 @@ export function KnowledgeBasePage() {
         title="知识库管理"
         subtitle="RAG 检索知识库 · 为 AI 工具提供上下文"
         actions={
-          <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-            <Icon name="plus" size={13}/> {uploading ? '上传中…' : '上传文档'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline" onClick={() => setShowTextIngest(true)}>
+              <Icon name="edit" size={13}/> 文本录入
+            </button>
+            <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <Icon name="plus" size={13}/> {uploading ? '上传中…' : '上传文档'}
+            </button>
+          </div>
         }
       />
+
+      {/* Text Ingest Modal */}
+      {showTextIngest && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }} onClick={() => setShowTextIngest(false)}>
+          <div className="card" style={{ width: 560, maxHeight: '80vh', padding: 24, overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>📝 文本录入知识库</h3>
+            <input
+              placeholder="文档名称（选填，如：竞赛经验分享）"
+              value={textFilename}
+              onChange={e => setTextFilename(e.target.value)}
+              style={{ width: '100%', height: 40, padding: '0 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text)', outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}
+            />
+            <textarea
+              placeholder="粘贴或输入文本内容，系统将自动分块并嵌入向量数据库…"
+              value={textContent}
+              onChange={e => setTextContent(e.target.value)}
+              rows={10}
+              style={{ width: '100%', padding: 14, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text)', outline: 'none', resize: 'vertical', fontFamily: 'var(--font-mono)', lineHeight: 1.7, boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn btn-ghost" onClick={() => setShowTextIngest(false)}>取消</button>
+              <button className="btn btn-primary" onClick={handleTextIngest} disabled={ingesting || !textContent.trim()}>
+                {ingesting ? '录入中…' : '确认录入'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="anim-in" style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 12px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', flex: 1, maxWidth: 360 }}>

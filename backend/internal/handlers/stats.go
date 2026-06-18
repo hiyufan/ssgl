@@ -1072,6 +1072,106 @@ func (h *StatsHandler) Countdown(c *gin.Context) {
 	})
 }
 
+// ────────────────────────────────────────────────────────────
+// Competition Popularity Index
+// ────────────────────────────────────────────────────────────
+
+// PopularityItem represents a competition with a computed popularity score.
+type PopularityItem struct {
+	ID              uint    `json:"id"`
+	Title           string  `json:"title"`
+	Type            string  `json:"type"`
+	Status          string  `json:"status"`
+	TeamCount       int     `json:"team_count"`
+	StudentCount    int     `json:"student_count"`
+	RegistrationCnt int     `json:"registration_count"`
+	PrePlanCount    int     `json:"preplan_count"`
+	AwardCount      int     `json:"award_count"`
+	PopularityScore float64 `json:"popularity_score"`
+	Rank            int     `json:"rank"`
+}
+
+// Popularity handles GET /stats/popularity — returns competitions ranked by a
+// composite popularity score.  Score formula (weights tunable):
+//
+//	score = teams×3 + students×2 + registrations×1.5 + preplans×2 + awards×4
+//
+// Returns top-N competitions (default limit=10, max=50).
+func (h *StatsHandler) Popularity(c *gin.Context) {
+	db := database.GetDB()
+
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
+	}
+
+	var competitions []models.Competition
+	if err := db.Order("id ASC").Find(&competitions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
+		return
+	}
+
+	var items []PopularityItem
+	for _, comp := range competitions {
+		var teamCount int64
+		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
+
+		var studentCount int64
+		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).
+			Distinct("captain_id").Count(&studentCount)
+
+		var regCount int64
+		db.Model(&models.CompetitionRegistration{}).Where("competition_id = ?", comp.ID).Count(&regCount)
+
+		var preplanCount int64
+		db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&preplanCount)
+
+		var awardCount int64
+		db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
+
+		score := float64(teamCount)*3.0 + float64(studentCount)*2.0 +
+			float64(regCount)*1.5 + float64(preplanCount)*2.0 + float64(awardCount)*4.0
+
+		items = append(items, PopularityItem{
+			ID:              comp.ID,
+			Title:           comp.Title,
+			Type:            comp.Type,
+			Status:          comp.Status,
+			TeamCount:       int(teamCount),
+			StudentCount:    int(studentCount),
+			RegistrationCnt: int(regCount),
+			PrePlanCount:    int(preplanCount),
+			AwardCount:      int(awardCount),
+			PopularityScore: score,
+		})
+	}
+
+	// Sort by score descending (simple insertion sort, fine for small N).
+	for i := 1; i < len(items); i++ {
+		for j := i; j > 0 && items[j].PopularityScore > items[j-1].PopularityScore; j-- {
+			items[j], items[j-1] = items[j-1], items[j]
+		}
+	}
+
+	// Assign ranks and limit.
+	for i := range items {
+		items[i].Rank = i + 1
+	}
+	if len(items) > limit {
+		items = items[:limit]
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"competitions": items,
+		"total":        len(items),
+		"formula":      "teams×3 + students×2 + registrations×1.5 + preplans×2 + awards×4",
+	})
+}
+
 // phasePriority returns a sort priority for competition phases (lower = more urgent).
 func phasePriority(phase string) int {
 	switch phase {

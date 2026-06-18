@@ -52,6 +52,7 @@ export function StatsPage() {
   const [recentActivity, setRecentActivity] = useState<{ activities: { action: string; description: string; time: string; icon: string }[] }>({ activities: [] });
   const [studentStats, setStudentStats] = useState<{ total_students: number; students_with_teams: number; students_with_awards: number; avg_team_size: number; top_students: { id: number; name: string; team_count: number; award_count: number; pre_plan_count: number }[] } | null>(null);
   const [engagement, setEngagement] = useState<Record<string, number> | null>(null);
+  const [popularity, setPopularity] = useState<{ competitions: { id: number; title: string; type: string; team_count: number; student_count: number; registration_count: number; preplan_count: number; award_count: number; popularity_score: number; rank: number }[]; total: number; formula: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
 
@@ -60,8 +61,9 @@ export function StatsPage() {
       statsAPI.overview(), statsAPI.teachers(), statsAPI.competitions(), statsAPI.trends(),
       statsAPI.typeDistribution(), statsAPI.recentActivity(10), statsAPI.students(),
       statsAPI.engagement().catch(() => null),
+      statsAPI.popularity(10).catch(() => null),
     ])
-      .then(([o, t, c, tr, td, ra, ss, eg]) => {
+      .then(([o, t, c, tr, td, ra, ss, eg, pop]) => {
         setOverview(o);
         setTeachers(t.teachers || []);
         setCompetitions((c as Record<string, unknown>).competitions as CompetitionStat[] || []);
@@ -70,6 +72,7 @@ export function StatsPage() {
         setRecentActivity(ra as { activities: { action: string; description: string; time: string; icon: string }[] });
         setStudentStats(ss as typeof studentStats);
         setEngagement(eg as Record<string, number> | null);
+        setPopularity(pop as typeof popularity);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -173,6 +176,56 @@ export function StatsPage() {
                 <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>{item.desc}</div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Competition Popularity Index */}
+      {popularity && popularity.competitions && popularity.competitions.length > 0 && (
+        <div className="card anim-in d2" style={{ overflow: 'hidden', marginBottom: 16 }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <SectionLabel label="赛事热度指数"/>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Top {popularity.total}</span>
+            </div>
+            <span style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{popularity.formula}</span>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-3)', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em' }}>
+                  <th style={{ padding: '10px 16px', textAlign: 'left' }}>排名</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left' }}>赛事名称</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center' }}>团队</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center' }}>报名</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center' }}>预案</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center' }}>奖项</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right' }}>热度分</th>
+                </tr>
+              </thead>
+              <tbody>
+                {popularity.competitions.map((c) => (
+                  <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '10px 16px' }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 6,
+                        fontSize: 12, fontWeight: 700,
+                        background: c.rank <= 3 ? (c.rank === 1 ? 'rgba(245,158,11,0.15)' : c.rank === 2 ? 'rgba(192,192,192,0.12)' : 'rgba(205,127,50,0.12)') : 'var(--surface-2)',
+                        color: c.rank === 1 ? 'var(--amber)' : c.rank === 2 ? '#c0c0c0' : c.rank === 3 ? '#cd7f32' : 'var(--text-3)',
+                      }}>{c.rank}</span>
+                    </td>
+                    <td style={{ padding: '10px 16px', fontWeight: 500, color: 'var(--text)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--teal)' }}>{c.team_count}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--purple)' }}>{c.registration_count}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--green)' }}>{c.preplan_count}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--amber)' }}>{c.award_count}</td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{c.popularity_score}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

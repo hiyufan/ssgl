@@ -419,8 +419,10 @@ export function CompetitionsPage() {
           {filtered.map((comp, i) => {
             const regDays = daysLeft(comp.registration_deadline);
             const endDays = daysLeft(comp.end_date);
-            const accent = { hackathon: 'var(--amber)', innovation: 'var(--purple)', research: 'var(--teal)' }[comp.type] || 'var(--amber)';
-            const accentBg = { hackathon: 'var(--amber-bg)', innovation: 'var(--purple-bg)', research: 'var(--teal-bg)' }[comp.type] || 'var(--amber-bg)';
+            const typeColorMap: Record<string, string> = { hackathon: 'var(--amber)', innovation: 'var(--purple)', research: 'var(--teal)', ai_innovation: 'var(--purple)', business_plan: 'var(--amber)', data_science: 'var(--teal)' };
+            const typeBgMap: Record<string, string> = { hackathon: 'var(--amber-bg)', innovation: 'var(--purple-bg)', research: 'var(--teal-bg)', ai_innovation: 'var(--purple-bg)', business_plan: 'var(--amber-bg)', data_science: 'var(--teal-bg)' };
+            const accent = typeColorMap[comp.type] || 'var(--amber)';
+            const accentBg = typeBgMap[comp.type] || 'var(--amber-bg)';
 
             return (
               <div key={comp.id} className={`card anim-in d${Math.min(i + 1, 8)}`}

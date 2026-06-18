@@ -1,11 +1,17 @@
-"""Tools router — eight domain-specific AI generation endpoints."""
+"""Tools router — ten domain-specific AI generation endpoints with streaming support."""
+
+import json
+import logging
 
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 
 from app.models.schemas import ToolRequest
 from app.services.tool_service import tool_service, parse_competition_text
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["tools"])
 
@@ -86,6 +92,56 @@ async def competition_report(body: ToolRequest) -> dict:
     competition_info = body.input
     result = tool_service.competition_report(competition_info=competition_info)
     return {"result": result}
+
+
+@router.post("/study-plan")
+async def study_plan(body: ToolRequest) -> dict:
+    """Generate a personalised competition preparation plan (备赛计划)."""
+    competition_info = body.input
+    team_info = body.extra or ""
+    result = tool_service.study_plan(competition_info=competition_info, team_info=team_info)
+    return {"result": result}
+
+
+# ---------------------------------------------------------------------------
+# Streaming dispatch table
+# ---------------------------------------------------------------------------
+
+_STREAM_DISPATCH = {
+    "business-plan": lambda inp, ext: tool_service.business_plan_stream(inp),
+    "market-analysis": lambda inp, ext: tool_service.market_analysis_stream(inp, ext or ""),
+    "improvement": lambda inp, ext: tool_service.improvement_stream(inp),
+    "tech-route": lambda inp, ext: tool_service.tech_route_stream(inp, ext or ""),
+    "resource-match": lambda inp, ext: tool_service.resource_integration_stream(inp, ext or ""),
+    "pitch-deck": lambda inp, ext: tool_service.pitch_deck_stream(inp, ext or "10分钟"),
+    "swot-analysis": lambda inp, ext: tool_service.swot_analysis_stream(inp, ext or ""),
+    "advisor": lambda inp, ext: tool_service.competition_advisor_stream(inp, ext or ""),
+    "competition-report": lambda inp, ext: tool_service.competition_report_stream(inp),
+    "study-plan": lambda inp, ext: tool_service.study_plan_stream(inp, ext or ""),
+}
+
+
+@router.post("/stream/{tool_id}")
+async def stream_tool(tool_id: str, body: ToolRequest):
+    """SSE streaming endpoint for any AI tool — chunks are sent as they generate."""
+    gen_fn = _STREAM_DISPATCH.get(tool_id)
+    if not gen_fn:
+        return {"error": f"Unknown tool: {tool_id}. Available: {', '.join(_STREAM_DISPATCH)}"}
+
+    def generate():
+        try:
+            for chunk in gen_fn(body.input, body.extra):
+                yield f"data: {json.dumps({'chunk': chunk}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            logger.error(f"Tool stream error ({tool_id}): {e}")
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
 
 
 class ParseCompetitionRequest(BaseModel):

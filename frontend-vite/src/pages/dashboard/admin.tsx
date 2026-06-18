@@ -47,9 +47,9 @@ export function AdminDashboard() {
           statsAPI.overview(),
           workflowsAPI.list({ tab: 'pending' }),
           statsAPI.engagement().catch(() => null),
-          statsAPI.typeDistribution().catch(() => ({ types: [] })),
-          statsAPI.trends().catch(() => ({ trends: [] })),
-          statsAPI.progress().catch(() => ({ competitions: [] })),
+          statsAPI.typeDistribution().catch((): { types: Array<{ type: string; count: number }> } => ({ types: [] })),
+          statsAPI.trends().catch((): { trends: Array<{ month: string; competitions: number; teams: number; awards: number }> } => ({ trends: [] })),
+          statsAPI.progress().catch((): { competitions: Array<{ id: number; title: string; status: string; type: string; team_count: number; student_count: number; pre_plan_count: number; reviewed_count: number; approved_count: number; award_count: number; progress: number }> } => ({ competitions: [] })),
           statsAPI.healthScore().catch(() => null),
         ]);
         setStats(statsRes);

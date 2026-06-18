@@ -525,6 +525,29 @@ export const statsAPI = {
     const response = await api.get('/stats/health-score');
     return response.data;
   },
+
+  popularity: async (limit?: number): Promise<{
+    competitions: Array<{
+      id: number;
+      title: string;
+      type: string;
+      status: string;
+      team_count: number;
+      student_count: number;
+      registration_count: number;
+      preplan_count: number;
+      award_count: number;
+      popularity_score: number;
+      rank: number;
+    }>;
+    total: number;
+    formula: string;
+  }> => {
+    const params: Record<string, string> = {};
+    if (limit) params.limit = String(limit);
+    const response = await api.get('/stats/popularity', { params });
+    return response.data;
+  },
 };
 
 // System Diagnostics API
@@ -591,6 +614,63 @@ export const aiToolsAPI = {
   call: async (tool: string, input: string, extra?: string): Promise<{ result: string }> => {
     const response = await aiApi.post<{ result: string }>(`/tools/${tool}`, { input, extra });
     return response.data;
+  },
+
+  // Streaming tool call — SSE via fetch (returns full text via callback)
+  callStream: async (
+    tool: string,
+    input: string,
+    extra: string | undefined,
+    handlers: {
+      onChunk: (text: string) => void;
+      onDone: () => void;
+      onError: (msg: string) => void;
+    },
+  ): Promise<void> => {
+    const token = getToken();
+    try {
+      const res = await fetch(`${AI_BASE}/tools/stream/${tool}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ input, extra }),
+      });
+      if (!res.ok || !res.body) {
+        handlers.onError('AI 服务暂时不可用');
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+        for (const evt of events) {
+          if (!evt.startsWith('data:')) continue;
+          const data = evt.slice(5).replace(/^ /, '');
+          if (data === '[DONE]') { handlers.onDone(); return; }
+          if (data === '[ERROR]') { handlers.onError('生成失败'); return; }
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.chunk) handlers.onChunk(parsed.chunk);
+            if (parsed.error) { handlers.onError(parsed.error); return; }
+          } catch {
+            handlers.onChunk(data);
+          }
+        }
+      }
+      handlers.onDone();
+    } catch {
+      handlers.onError('AI 服务暂时不可用，请确保已启动（端口 8000）');
+    }
   },
 };
 

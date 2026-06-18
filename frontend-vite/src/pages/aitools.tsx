@@ -13,6 +13,7 @@ const TOOLS = [
   { id: 'advisor', name: '赛事顾问', desc: '实时回答赛事规则、评审标准与参赛策略问题', tags: ['问答', 'RAG + LLM'], color: 'teal' },
   { id: 'swot-analysis', name: 'SWOT 分析', desc: '对项目进行优势/劣势/机会/威胁全面分析，含交叉策略矩阵', tags: ['战略分析', 'RAG'], color: 'green' },
   { id: 'competition-report', name: '赛事分析报告', desc: '深度分析赛事评审标准、参赛建议、时间规划与往届优秀项目特征', tags: ['赛事分析', 'RAG'], color: 'teal' },
+  { id: 'study-plan', name: '备赛计划生成', desc: '根据赛事特点和团队情况，量身定制周密的备赛计划和学习路径', tags: ['备赛', '个性化'], color: 'green' },
 ];
 
 const colorMap: Record<string, { accent: string; bg: string; border: string }> = {
@@ -25,33 +26,53 @@ const colorMap: Record<string, { accent: string; bg: string; border: string }> =
 export function AIToolsPage() {
   const [active, setActive] = useState<string | null>(null);
   const [input, setInput] = useState('');
+  const [extra, setExtra] = useState('');
   const [output, setOutput] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
 
   const generate = async () => {
     if (!active || generating) return;
     setGenerating(true);
+    setStreaming(true);
     setOutput('');
-    try {
-      const res = await aiToolsAPI.call(active, input);
-      // Typewriter effect for output
-      const text = res.result || '';
-      let i = 0;
-      const interval = setInterval(() => {
-        i += 2;
-        setOutput(text.slice(0, i));
-        if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
-        if (i >= text.length) { clearInterval(interval); setGenerating(false); }
-      }, 12);
-    } catch {
-      setOutput('生成失败，请稍后重试');
-      setGenerating(false);
-    }
+
+    // Use SSE streaming for real-time output
+    await aiToolsAPI.callStream(active, input, extra || undefined, {
+      onChunk: (text: string) => {
+        setOutput(prev => prev + text);
+        if (outputRef.current) {
+          requestAnimationFrame(() => {
+            if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
+          });
+        }
+      },
+      onDone: () => {
+        setGenerating(false);
+        setStreaming(false);
+      },
+      onError: (msg: string) => {
+        setOutput(msg);
+        setGenerating(false);
+        setStreaming(false);
+      },
+    });
   };
 
   const activeTool = active ? TOOLS.find(t => t.id === active) : null;
   const activeColors = activeTool ? (colorMap[activeTool.color] || colorMap.teal) : colorMap.teal;
+  const showExtra = active === 'market-analysis' || active === 'tech-route' || active === 'resource-match'
+    || active === 'pitch-deck' || active === 'swot-analysis' || active === 'advisor' || active === 'study-plan';
+  const extraLabels: Record<string, string> = {
+    'market-analysis': '目标市场（选填）',
+    'tech-route': '团队技术栈（选填）',
+    'resource-match': '项目需求（选填）',
+    'pitch-deck': '答辩时长，如 10分钟（选填）',
+    'swot-analysis': '竞争对手信息（选填）',
+    'advisor': '剩余时间（选填）',
+    'study-plan': '团队情况描述（选填）',
+  };
 
   return (
     <div className="forge-page" style={{ paddingBottom: 0, height: 'calc(100vh - var(--topbar-h))', overflowY: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -62,8 +83,9 @@ export function AIToolsPage() {
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>AI 工具箱</h1>
           <span className="badge badge-teal">RAG + LLM</span>
+          {streaming && <span className="badge badge-green" style={{ animation: 'forge-spin 1.5s ease-in-out infinite' }}>⚡ 流式输出中</span>}
         </div>
-        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>9 个智能助手 · 基于往届项目知识库 · 实时生成</p>
+        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>{TOOLS.length} 个智能助手 · 基于往届项目知识库 · 实时流式生成</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, flex: 1, overflow: 'hidden' }}>
@@ -72,7 +94,7 @@ export function AIToolsPage() {
             const colors = colorMap[tool.color] || colorMap.teal;
             const isActive = active === tool.id;
             return (
-              <button key={tool.id} className={`anim-in d${i + 1}`} onClick={() => { setActive(tool.id); setOutput(''); setInput(''); }} style={{
+              <button key={tool.id} className={`anim-in d${i + 1}`} onClick={() => { setActive(tool.id); setOutput(''); setInput(''); setExtra(''); }} style={{
                 padding: 16, borderRadius: 12, border: `1px solid ${isActive ? colors.border : 'var(--border)'}`,
                 background: isActive ? colors.bg : 'var(--surface)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
                 boxShadow: isActive ? `0 0 0 1px ${colors.border}` : 'none',
@@ -119,13 +141,17 @@ export function AIToolsPage() {
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ padding: 16, borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-                  <textarea className="forge-input" rows={3} placeholder={`描述你的项目，${activeTool.name} 将为你生成专属内容…`} value={input} onChange={e => setInput(e.target.value)} style={{ resize: 'none', marginBottom: 10 }}/>
+                  <textarea className="forge-input" rows={3} placeholder={`描述你的项目，${activeTool.name} 将为你生成专属内容…`} value={input} onChange={e => setInput(e.target.value)} style={{ resize: 'none', marginBottom: showExtra ? 8 : 10 }}/>
+                  {showExtra && (
+                    <input className="forge-input" placeholder={extraLabels[active] || '附加信息（选填）'} value={extra} onChange={e => setExtra(e.target.value)} style={{ marginBottom: 10 }}/>
+                  )}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <button className="btn btn-primary" onClick={generate} disabled={generating}
                       style={{ background: generating ? 'var(--surface-3)' : activeColors.accent, color: generating ? 'var(--text-3)' : '#0F1523', borderColor: 'transparent' }}>
                       {generating ? <><Spinner size={14} color="var(--text-3)"/> 生成中…</> : <><Icon name="sparkles" size={14}/> 立即生成</>}
                     </button>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>{activeTool.tags.join(' · ')}</span>
+                    {streaming && <span style={{ fontSize: 11, color: activeColors.accent, fontFamily: 'var(--font-mono)' }}>⚡ SSE 流式响应</span>}
+                    {!streaming && <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>{activeTool.tags.join(' · ')}</span>}
                   </div>
                 </div>
                 <div ref={outputRef} style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
@@ -137,7 +163,7 @@ export function AIToolsPage() {
                   ) : (
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1.8, color: 'var(--text-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                       {output}
-                      {generating && <span style={{ display: 'inline-block', width: 8, height: 14, background: activeColors.accent, marginLeft: 2, verticalAlign: 'middle', borderRadius: 1, animation: 'forge-spin 1s step-end infinite' }}/>}
+                      {streaming && <span style={{ display: 'inline-block', width: 8, height: 14, background: activeColors.accent, marginLeft: 2, verticalAlign: 'middle', borderRadius: 1, animation: 'forge-spin 1s step-end infinite' }}/>}
                     </div>
                   )}
                 </div>

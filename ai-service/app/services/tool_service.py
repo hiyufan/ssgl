@@ -24,6 +24,160 @@ class ToolService:
     """Facade that exposes eight domain-specific AI tools."""
 
     # ------------------------------------------------------------------
+    # Generic streaming helper
+    # ------------------------------------------------------------------
+
+    def _stream_tool(self, system_prompt: str, user_message: str, temperature: float = 0.7):
+        """Yield text chunks for any tool using the LLM sync streaming interface."""
+        yield from llm_service.chat_messages_stream(
+            system_prompt=system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+            temperature=temperature,
+        )
+
+    # ------------------------------------------------------------------
+    # 10. Study Plan Generator — 备赛计划生成器
+    # ------------------------------------------------------------------
+
+    def study_plan(self, competition_info: str, team_info: str = "") -> str:
+        """Generate a personalised competition preparation plan."""
+        system_prompt = (
+            "你是一位资深竞赛教练，擅长为大学生团队制定科学的备赛计划。"
+            "根据赛事信息和团队情况，生成一份详细的备赛计划（Markdown格式），包含：\n"
+            "## 1. 赛事分析与目标设定\n"
+            "赛事特点、评审重点、合理目标设定\n\n"
+            "## 2. 阶段规划（按周）\n"
+            "准备期 → 突刺期 → 打磨期 → 答辩期，每周核心任务\n\n"
+            "## 3. 团队分工建议\n"
+            "根据团队情况给出具体分工方案\n\n"
+            "## 4. 关键交付物清单\n"
+            "每个阶段的交付物和质量标准\n\n"
+            "## 5. 常见风险与应对\n"
+            "提前预警可能遇到的问题和解决方案\n\n"
+            "## 6. 学习资源推荐\n"
+            "针对性的学习资料、工具、参考案例\n\n"
+            "计划要具体、可执行，结合赛事特点和团队能力量身定制。"
+        )
+
+        user_message = f"赛事信息：\n{competition_info}"
+        if team_info:
+            user_message += f"\n\n团队情况：\n{team_info}"
+        user_message += _rag_context(f"备赛计划 竞赛准备 {competition_info}")
+
+        return llm_service.chat(system_prompt=system_prompt, user_message=user_message)
+
+    # ------------------------------------------------------------------
+    # Streaming versions of all tools
+    # ------------------------------------------------------------------
+
+    def business_plan_stream(self, project_info: str):
+        system_prompt = (
+            "You are an expert business plan writer with extensive experience "
+            "in startup and innovation competitions. Based on the project "
+            "information provided, produce a comprehensive business plan in "
+            "well-structured markdown with the following sections:\n"
+            "1. Executive Summary\n2. Market Opportunity\n3. Product / Service Description\n"
+            "4. Business Model\n5. Competitive Advantage\n6. Team Overview\n7. Financial Projections\n\n"
+            "Be specific, data-driven where possible, and tailor the plan to "
+            "the strengths of the described project."
+        )
+        user_message = f"Project information:\n{project_info}"
+        user_message += _rag_context(project_info)
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def market_analysis_stream(self, industry: str, target_market: str = ""):
+        system_prompt = (
+            "You are a senior market analyst. Produce a detailed market "
+            "analysis report in well-structured markdown covering:\n"
+            "1. Market Size & Growth Rate\n2. Market Segments\n"
+            "3. Key Competitors and Their Positioning\n4. Target User Personas\n"
+            "5. Market Opportunities & Gaps\n6. Entry Strategy Recommendations\n\n"
+            "Use quantitative data where available and cite trends."
+        )
+        user_message = f"Industry: {industry}\nTarget Market: {target_market}"
+        user_message += _rag_context(f"{industry} {target_market} market analysis")
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def improvement_stream(self, project_description: str):
+        system_prompt = (
+            "You are a seasoned competition advisor who has guided many "
+            "winning teams. Analyse the project description and provide "
+            "actionable improvement suggestions in markdown. For each "
+            "suggestion, assign a priority level (High / Medium / Low) and "
+            "explain the expected impact. Group suggestions by priority."
+        )
+        user_message = f"Project description:\n{project_description}"
+        user_message += _rag_context(f"winning projects similar to {project_description}")
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def tech_route_stream(self, requirements: str, team_skills: str = ""):
+        system_prompt = (
+            "You are a senior software architect with broad experience across "
+            "modern technology stacks. Based on the project requirements and "
+            "the team's skill set, produce a technology roadmap in markdown."
+        )
+        user_message = f"Project Requirements:\n{requirements}\n\nTeam Skills:\n{team_skills}"
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def resource_integration_stream(self, team_info: str, project_needs: str = ""):
+        system_prompt = (
+            "You are a cross-discipline expert experienced in assembling and "
+            "optimising competition teams. Analyse the current team and "
+            "project needs, then produce a resource integration plan in markdown."
+        )
+        user_message = f"Team Information:\n{team_info}\n\nProject Needs:\n{project_needs}"
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def pitch_deck_stream(self, project_info: str, duration: str = "10分钟"):
+        system_prompt = (
+            "你是一位资深创业路演教练，曾指导过数百个获奖项目。根据项目信息和答辩时长，"
+            "生成一份结构化的路演PPT大纲（Markdown格式）。"
+        )
+        user_message = f"项目信息：\n{project_info}\n\n答辩时长：{duration}"
+        user_message += _rag_context(f"路演答辩 演示技巧 {project_info}")
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def swot_analysis_stream(self, project_info: str, competitors: str = ""):
+        system_prompt = (
+            "你是一位资深战略分析师，擅长为大学生创新创业竞赛项目做SWOT分析。"
+            "根据项目信息，生成一份详尽的SWOT分析报告（Markdown格式）。"
+        )
+        user_message = f"项目信息：\n{project_info}"
+        if competitors:
+            user_message += f"\n\n竞争对手信息：\n{competitors}"
+        user_message += _rag_context(f"SWOT分析 竞争分析 {project_info}")
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def competition_advisor_stream(self, project_status: str, time_remaining: str = ""):
+        system_prompt = (
+            "You are a competition strategist who has coached numerous "
+            "award-winning teams. Given the current project status and the "
+            "time remaining, produce a strategic advisory report in markdown."
+        )
+        user_message = f"Current Project Status:\n{project_status}\n\nTime Remaining: {time_remaining}"
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def competition_report_stream(self, competition_info: str):
+        system_prompt = (
+            "你是一位资深竞赛分析师，曾为数百个高校竞赛团队提供过咨询服务。"
+            "根据赛事信息，生成一份详尽的赛事分析报告（Markdown格式）。"
+        )
+        user_message = f"赛事信息：\n{competition_info}"
+        user_message += _rag_context(f"竞赛分析 参赛指南 {competition_info}")
+        yield from self._stream_tool(system_prompt, user_message)
+
+    def study_plan_stream(self, competition_info: str, team_info: str = ""):
+        system_prompt = (
+            "你是一位资深竞赛教练，擅长为大学生团队制定科学的备赛计划。"
+            "根据赛事信息和团队情况，生成一份详细的备赛计划（Markdown格式）。"
+        )
+        user_message = f"赛事信息：\n{competition_info}"
+        if team_info:
+            user_message += f"\n\n团队情况：\n{team_info}"
+        user_message += _rag_context(f"备赛计划 竞赛准备 {competition_info}")
+        yield from self._stream_tool(system_prompt, user_message)
+
+    # ------------------------------------------------------------------
     # 1. Business Plan
     # ------------------------------------------------------------------
 

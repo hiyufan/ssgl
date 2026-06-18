@@ -84,6 +84,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	globalSearchHandler := handlers.NewGlobalSearchHandler()
 	diagnosticsHandler := handlers.NewDiagnosticsHandler()
 	importHandler := handlers.NewImportHandler()
+	favoriteHandler := handlers.NewFavoriteHandler()
 	registrationHandler := handlers.NewRegistrationHandler()
 	teamAnalysisHandler := handlers.NewTeamAnalysisHandler()
 	healthScoreHandler := handlers.NewHealthScoreHandler()
@@ -181,6 +182,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/engagement", statsHandler.Engagement)
 		protected.GET("/stats/kanban", statsHandler.KanbanBoard)
 		protected.GET("/stats/countdown", statsHandler.Countdown)
+		protected.GET("/stats/popularity", statsHandler.Popularity)
 
 		// Platform health score.
 		protected.GET("/stats/health-score", healthScoreHandler.Score)
@@ -200,6 +202,11 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Calendar.
 		protected.GET("/calendar", calendarHandler.List)
 		protected.GET("/calendar/export", calendarHandler.ExportICS)
+
+		// Favorites (bookmarks).
+		protected.GET("/favorites", favoriteHandler.List)
+		protected.POST("/favorites/:comp_id", favoriteHandler.Toggle)
+		protected.GET("/favorites/:comp_id/check", favoriteHandler.Check)
 
 		// Leaderboard.
 		protected.GET("/leaderboard", statsHandler.Leaderboard)

@@ -146,8 +146,8 @@ def setup_security(app):
     # Security headers
     app.add_middleware(SecurityHeadersMiddleware)
 
-    # Rate limiting (60 requests per minute per IP)
-    app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+    # Rate limiting (120 requests per minute per IP)
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
 
     # Authentication (JWT and/or shared API key). Added last so it runs first,
     # rejecting unauthenticated requests before any work is done.

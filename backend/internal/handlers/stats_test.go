@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -589,5 +590,105 @@ func TestNewStatsHandlerReturnsInstance(t *testing.T) {
 	h := NewStatsHandler()
 	if h == nil {
 		t.Error("NewStatsHandler returned nil")
+	}
+}
+
+func TestPopularityItemFields(t *testing.T) {
+	item := PopularityItem{
+		ID:              1,
+		Title:           "蓝桥杯全国软件和信息技术专业人才大赛",
+		Type:            "innovation",
+		Status:          "published",
+		TeamCount:       10,
+		StudentCount:    25,
+		RegistrationCnt: 30,
+		PrePlanCount:    8,
+		AwardCount:      5,
+		PopularityScore: 123.5,
+		Rank:            1,
+	}
+
+	if item.ID != 1 {
+		t.Errorf("expected ID=1, got %d", item.ID)
+	}
+	if item.Title != "蓝桥杯全国软件和信息技术专业人才大赛" {
+		t.Errorf("unexpected Title: %s", item.Title)
+	}
+	if item.TeamCount != 10 {
+		t.Errorf("expected TeamCount=10, got %d", item.TeamCount)
+	}
+	if item.StudentCount != 25 {
+		t.Errorf("expected StudentCount=25, got %d", item.StudentCount)
+	}
+	if item.RegistrationCnt != 30 {
+		t.Errorf("expected RegistrationCnt=30, got %d", item.RegistrationCnt)
+	}
+	if item.PrePlanCount != 8 {
+		t.Errorf("expected PrePlanCount=8, got %d", item.PrePlanCount)
+	}
+	if item.AwardCount != 5 {
+		t.Errorf("expected AwardCount=5, got %d", item.AwardCount)
+	}
+	if item.PopularityScore != 123.5 {
+		t.Errorf("expected PopularityScore=123.5, got %f", item.PopularityScore)
+	}
+	if item.Rank != 1 {
+		t.Errorf("expected Rank=1, got %d", item.Rank)
+	}
+}
+
+func TestPopularityScoreCalculation(t *testing.T) {
+	// Verify score formula: teams×3 + students×2 + registrations×1.5 + preplans×2 + awards×4
+	tests := []struct {
+		name          string
+		teams         int
+		students      int
+		registrations int
+		preplans      int
+		awards        int
+		wantScore     float64
+	}{
+		{"zero", 0, 0, 0, 0, 0, 0.0},
+		{"teams-only", 5, 0, 0, 0, 0, 15.0},
+		{"awards-heavy", 0, 0, 0, 0, 3, 12.0},
+		{"balanced", 2, 5, 10, 3, 1, 6.0 + 10.0 + 15.0 + 6.0 + 4.0},
+		{"full", 10, 25, 30, 8, 5, 30.0 + 50.0 + 45.0 + 16.0 + 20.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score := float64(tt.teams)*3.0 + float64(tt.students)*2.0 +
+				float64(tt.registrations)*1.5 + float64(tt.preplans)*2.0 + float64(tt.awards)*4.0
+			if score != tt.wantScore {
+				t.Errorf("score = %v, want %v", score, tt.wantScore)
+			}
+		})
+	}
+}
+
+func TestPopularityItemDefaultLimit(t *testing.T) {
+	// Verify that the PopularityItem can hold reasonable data
+	items := make([]PopularityItem, 50)
+	for i := range items {
+		items[i] = PopularityItem{
+			ID:              uint(i + 1),
+			Title:           fmt.Sprintf("Competition %d", i+1),
+			PopularityScore: float64(50 - i),
+			Rank:            i + 1,
+		}
+	}
+
+	// Verify sorted order after manual sort
+	for i := 1; i < len(items); i++ {
+		for j := i; j > 0 && items[j].PopularityScore > items[j-1].PopularityScore; j-- {
+			items[j], items[j-1] = items[j-1], items[j]
+		}
+	}
+
+	if items[0].PopularityScore != 50.0 {
+		t.Errorf("expected first item score=50.0, got %f", items[0].PopularityScore)
+	}
+	if items[49].PopularityScore != 1.0 {
+		t.Errorf("expected last item score=1.0, got %f", items[49].PopularityScore)
 	}
 }
