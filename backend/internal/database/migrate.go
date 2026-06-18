@@ -32,6 +32,7 @@ func Migrate() {
 		&models.Milestone{},
 		&models.CompetitionRegistration{},
 		&models.CompetitionFavorite{},
+		&models.CompetitionSubscription{},
 	); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}

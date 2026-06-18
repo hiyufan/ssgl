@@ -89,6 +89,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	teamAnalysisHandler := handlers.NewTeamAnalysisHandler()
 	healthScoreHandler := handlers.NewHealthScoreHandler()
 	comparisonHandler := handlers.NewComparisonHandler()
+	subscriptionHandler := handlers.NewSubscriptionHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -216,6 +217,14 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Competition comparison.
 		protected.GET("/competitions/compare", comparisonHandler.Compare)
+
+		// Competition subscriptions (deadline reminders).
+		protected.GET("/subscriptions", subscriptionHandler.List)
+		protected.GET("/subscriptions/reminders", subscriptionHandler.Reminders)
+		protected.POST("/subscriptions/:comp_id", subscriptionHandler.Subscribe)
+		protected.DELETE("/subscriptions/:comp_id", subscriptionHandler.Unsubscribe)
+		protected.GET("/subscriptions/:comp_id/check", subscriptionHandler.Check)
+		protected.PUT("/subscriptions/:comp_id", subscriptionHandler.UpdateSettings)
 
 		// Showcase — settled awards for public display.
 		protected.GET("/showcase", showcaseHandler.List)

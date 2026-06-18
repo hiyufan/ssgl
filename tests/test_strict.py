@@ -492,6 +492,96 @@ def test_crud():
         # Cleanup
         _api_auth("DELETE", f"/api/v1/competitions/{fav_comp_id}")
 
+    # --- Competition Subscriptions (Deadline Reminders) ---
+    print("\n  📬 赛事订阅测试")
+    # Create a test competition for subscription tests
+    sub_comp_resp = _api_auth("POST", "/api/v1/competitions", json={
+        "title": "订阅测试赛事",
+        "description": "用于测试赛事订阅功能",
+        "type": "hackathon",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-07-01T00:00:00Z",
+        "end_date": "2026-07-02T00:00:00Z",
+        "registration_deadline": "2026-06-25T00:00:00Z",
+    })
+    sub_comp_id = None
+    if _ok(sub_comp_resp) and sub_comp_resp.status_code in (200, 201):
+        sub_comp_id = sub_comp_resp.json().get("competition", {}).get("id") or sub_comp_resp.json().get("id")
+
+    if sub_comp_id:
+        # Subscribe
+        resp = _api_auth("POST", f"/api/v1/subscriptions/{sub_comp_id}", json={"remind_days_before": 5})
+        if _ok(resp) and resp.status_code in (200, 201):
+            _log("PASS", "sub-subscribe", f"订阅赛事成功")
+        else:
+            _log("FAIL", "sub-subscribe", f"订阅失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Check subscription
+        resp = _api_auth("GET", f"/api/v1/subscriptions/{sub_comp_id}/check")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            if data.get("subscribed"):
+                _log("PASS", "sub-check", "订阅状态查询成功, subscribed=True")
+            else:
+                _log("WARN", "sub-check", f"订阅状态: {data}")
+        else:
+            _log("FAIL", "sub-check", f"订阅状态查询失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Duplicate subscribe → 409
+        resp = _api_auth("POST", f"/api/v1/subscriptions/{sub_comp_id}", json={})
+        if _ok(resp) and resp.status_code == 409:
+            _log("PASS", "sub-duplicate", "重复订阅被拒绝 (409) ✓")
+        else:
+            _log("WARN", "sub-duplicate", f"重复订阅 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # List subscriptions
+        resp = _api_auth("GET", "/api/v1/subscriptions")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            total = data.get("total", 0)
+            _log("PASS", "sub-list", f"订阅列表成功, {total} 条")
+        else:
+            _log("FAIL", "sub-list", f"订阅列表失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Update settings
+        resp = _api_auth("PUT", f"/api/v1/subscriptions/{sub_comp_id}", json={"remind_days_before": 7})
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "sub-update", "更新订阅设置成功")
+        else:
+            _log("FAIL", "sub-update", f"更新设置失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Reminders
+        resp = _api_auth("GET", "/api/v1/subscriptions/reminders")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            _log("PASS", "sub-reminders", f"订阅提醒成功, {data.get('total', 0)} 条提醒")
+        else:
+            _log("FAIL", "sub-reminders", f"订阅提醒失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Unsubscribe
+        resp = _api_auth("DELETE", f"/api/v1/subscriptions/{sub_comp_id}")
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "sub-unsubscribe", "取消订阅成功")
+        else:
+            _log("FAIL", "sub-unsubscribe", f"取消订阅失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Verify unsubscribed
+        resp = _api_auth("GET", f"/api/v1/subscriptions/{sub_comp_id}/check")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            if not data.get("subscribed"):
+                _log("PASS", "sub-unsub-verify", "取消后确认未订阅 ✓")
+            else:
+                _log("WARN", "sub-unsub-verify", f"取消后仍显示已订阅: {data}")
+        else:
+            _log("WARN", "sub-unsub-verify", f"状态查询失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Cleanup
+        _api_auth("DELETE", f"/api/v1/competitions/{sub_comp_id}")
+    else:
+        _log("WARN", "sub-setup", "无法创建测试赛事，跳过订阅测试")
+
     # --- Stats ---
     for ep in ["/api/v1/stats/overview", "/api/v1/stats/competitions", "/api/v1/stats/teachers"]:
         name = ep.split("/")[-1]

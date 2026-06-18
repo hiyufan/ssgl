@@ -272,3 +272,46 @@ func TestUser_ProfileFields(t *testing.T) {
 		t.Errorf("expected avatar URL, got '%s'", user.Avatar)
 	}
 }
+
+func TestCompetitionSubscription_Fields(t *testing.T) {
+	now := time.Now()
+	sub := CompetitionSubscription{
+		ID:               1,
+		UserID:           10,
+		CompetitionID:    100,
+		RemindDaysBefore: 5,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	if sub.UserID != 10 {
+		t.Errorf("expected user_id 10, got %d", sub.UserID)
+	}
+	if sub.CompetitionID != 100 {
+		t.Errorf("expected competition_id 100, got %d", sub.CompetitionID)
+	}
+	if sub.RemindDaysBefore != 5 {
+		t.Errorf("expected remind_days_before 5, got %d", sub.RemindDaysBefore)
+	}
+}
+
+func TestCompetitionSubscription_DefaultRemindDays(t *testing.T) {
+	sub := CompetitionSubscription{
+		UserID:        1,
+		CompetitionID: 1,
+	}
+	// The struct default is 0 (GORM default:3 only applies at DB level).
+	// Handler code enforces default of 3 when creating.
+	if sub.RemindDaysBefore != 0 {
+		t.Errorf("expected zero default in struct, got %d", sub.RemindDaysBefore)
+	}
+}
+
+func TestCompetitionSubscription_LastRemindedAt_Nil(t *testing.T) {
+	sub := CompetitionSubscription{
+		UserID:        1,
+		CompetitionID: 1,
+	}
+	if sub.LastRemindedAt != nil {
+		t.Error("expected LastRemindedAt to be nil by default")
+	}
+}
