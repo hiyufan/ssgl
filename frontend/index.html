@@ -70,6 +70,37 @@
     const evaluationsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/evaluations?${q}`);return r.json()},create:async(d)=>{const r=await apiFetch(`${API_BASE}/evaluations`,{method:'POST',body:JSON.stringify(d)});return r.json()}};
     const statsAPI={overview:async()=>{const r=await apiFetch(`${API_BASE}/stats/overview`);return r.json()},teachers:async()=>{const r=await apiFetch(`${API_BASE}/stats/teachers`);return r.json()}};
 
+    // ═══ AI Tools Streaming API ════════════════════════════
+    const aiToolsStreamAPI={
+      stream:(toolId,params)=>{
+        const token=getToken();const controller=new AbortController();
+        let onChunk=()=>{};let onDone=()=>{};let onError=()=>{};
+        const start=async()=>{
+          try{
+            const res=await fetch(`${AI_BASE}/tools/stream/${toolId}`,{
+              method:'POST',headers:{'Content-Type':'application/json',...(token?{'Authorization':`Bearer ${token}`}:{})},
+              body:JSON.stringify({input:params.input||params.prompt||'',extra:params.extra||''}),signal:controller.signal
+            });
+            if(!res.ok){onError(new Error(`Stream failed: ${res.status}`));return}
+            const reader=res.body.getReader();const decoder=new TextDecoder();let buffer='';
+            while(true){
+              const{done,value}=await reader.read();if(done)break;
+              buffer+=decoder.decode(value,{stream:true});const lines=buffer.split('\n');buffer=lines.pop()||'';
+              for(const line of lines){
+                if(line.startsWith('data: ')){
+                  const data=line.slice(6).trim();if(data==='[DONE]'){onDone();return}
+                  try{const parsed=JSON.parse(data);if(parsed.error){onError(new Error(parsed.error));return}if(parsed.chunk)onChunk(parsed.chunk)}catch{}
+                }
+              }
+            }onDone()
+          }catch(e){if(e.name!=='AbortError')onError(e)}
+        };
+        return{onChunk:cb=>{onChunk=cb;return{onChunk,onDone,onError,start,abort:()=>controller.abort()}},
+               onDone:cb=>{onDone=cb;return{onChunk,onDone,onError,start,abort:()=>controller.abort()}},
+               onError:cb=>{onError=cb;return{onChunk,onDone,onError,start,abort:()=>controller.abort()}},start,abort:()=>controller.abort()}
+      }
+    };
+
     // ═══ Contexts ══════════════════════════════════════════
     const AuthContext=createContext(null);
     const AppContext=createContext({});
@@ -325,7 +356,7 @@
           <div style={{marginBottom:24}}><AuroraHero user={user} myTeam={myTeam} myComp={myComp} myPlan={myPlan} daysLeft={daysLeft} steps={steps}/></div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:24}}>
             <ActionCard icon="file" label="预计划" badge={myPlan?.ai_review_score?`AI ${myPlan.ai_review_score}`:myPlan?(planStatus==='approved'?'✓':'...'):'New'} badgeColor={planStatus==='approved'?'#34d399':'#a78bfa'} sub={myPlan?'查看详情':'创建预计划'} accent="#8b5cf6" onClick={()=>navigate('preplans')}/>
-            <ActionCard icon="sparkle" label="AI 工具箱" badge="6 Tools" badgeColor="#6366f1" sub="智能助手 · 一键生成" accent="#6366f1" onClick={()=>navigate('aitools')}/>
+            <ActionCard icon="sparkle" label="AI 工具箱" badge="10 Tools" badgeColor="#6366f1" sub="智能助手 · 实时流式生成" accent="#6366f1" onClick={()=>navigate('aitools')}/>
             <ActionCard icon="star" label="评价老师" badge="待完成" badgeColor="#f59e0b" sub="评价指导老师" accent="#f59e0b" onClick={()=>navigate('evaluations')}/>
           </div>
           {myPlan?.ai_review_notes&&<div style={{marginBottom:24,borderRadius:20,background:'linear-gradient(135deg,rgba(99,102,241,.1),rgba(168,85,247,.08))',border:'1px solid rgba(99,102,241,.15)',padding:28,display:'flex',alignItems:'flex-start',gap:20}}>
@@ -522,6 +553,111 @@
     };
 
     // ═══ Generic Page ══════════════════════════════════════
+    // ═══ AI Tools Page ══════════════════════════════════════
+    const AI_TOOLS=[
+      {id:'biz',icon:'zap',color:'#3370FF',bg:'#EEF3FF',title:'商业计划书助手',desc:'基于项目信息和往届优秀案例，AI 辅助生成结构化商业计划书框架。',placeholder:'请描述你的项目：项目名称、核心功能、目标市场、团队背景...',streamId:'business-plan'},
+      {id:'market',icon:'trend',color:'#00B42A',bg:'#E8FFED',title:'市场分析报告',desc:'基于行业和目标市场，AI 实时生成市场分析报告。',placeholder:'请输入：行业类型、目标市场范围、目标用户群体...',streamId:'market-analysis'},
+      {id:'improve',icon:'activity',color:'#FF7D00',bg:'#FFF7E8',title:'项目改进建议',desc:'AI 对比分析当前项目与优秀案例的差距，生成改进建议。',placeholder:'请描述当前项目的核心功能、技术方案、进展状态...',streamId:'improvement'},
+      {id:'tech',icon:'cpu',color:'#7C3AED',bg:'#F5F0FF',title:'技术路线建议',desc:'AI 推荐技术栈选型和系统架构方案。',placeholder:'请描述：项目功能需求、性能指标、团队技术背景...',streamId:'tech-route'},
+      {id:'resource',icon:'users',color:'#0891B2',bg:'#E0F7FA',title:'跨学科资源整合',desc:'AI 分析技能缺口，推荐跨学科协作资源。',placeholder:'请描述：团队成员技能、专业背景、项目需求...',streamId:'resource-match'},
+      {id:'advisor',icon:'sparkle',color:'#E11D48',bg:'#FFF1F2',title:'AI 赛事顾问',desc:'综合分析项目状态，给出可执行的行动建议。',placeholder:'请描述：当前项目进度、遇到的挑战...',streamId:'advisor'},
+      {id:'pitchdeck',icon:'send',color:'#0891B2',bg:'#E0F7FA',title:'路演 PPT 生成',desc:'AI 生成结构化的路演 PPT 大纲和内容框架。',placeholder:'请描述项目的核心亮点、技术方案、商业模式...',streamId:'pitch-deck'},
+      {id:'swot',icon:'activity',color:'#7C3AED',bg:'#F5F0FF',title:'SWOT 分析',desc:'AI 基于项目信息生成 SWOT 分析。',placeholder:'请描述你的项目、团队、市场环境、竞争对手...',streamId:'swot-analysis'},
+      {id:'report',icon:'barchart',color:'#FF7D00',bg:'#FFF7E8',title:'赛事分析报告',desc:'AI 分析赛事参赛情况、获奖趋势、团队表现。',placeholder:'请输入赛事名称或描述需要分析的赛事...',streamId:'competition-report'},
+      {id:'studyplan',icon:'cal',color:'#00B42A',bg:'#E8FFED',title:'备赛计划生成',desc:'AI 生成科学的备赛计划，包含阶段规划和分工建议。',placeholder:'请描述：目标赛事、团队情况、可用时间...',streamId:'study-plan'},
+    ];
+
+    const AIToolInterface=({tool,onBack})=>{
+      const[input,setInput]=useState('');const[output,setOutput]=useState('');
+      const[loading,setLoading]=useState(false);const[done,setDone]=useState(false);
+      const[charCount,setCharCount]=useState(0);const streamRef=useRef(null);
+
+      const startStream=()=>{
+        if(!input.trim())return;setLoading(true);setDone(false);setOutput('');setCharCount(0);
+        const s=aiToolsStreamAPI.stream(tool.streamId,{input})
+          .onChunk(chunk=>{setOutput(p=>{const n=p+chunk;setCharCount(n.length);return n})})
+          .onDone(()=>{setLoading(false);setDone(true)})
+          .onError(()=>{setLoading(false);setDone(true);setOutput(prev=>prev||'⚠️ 生成失败，请稍后重试。')});
+        streamRef.current=s;s.start();
+      };
+      useEffect(()=>()=>{if(streamRef.current)streamRef.current.abort()},[]);
+
+      const renderMd=(txt)=>{
+        const lines=txt.split('\n');
+        return lines.map((line,i)=>{
+          if(line.startsWith('# '))return <div key={i} style={{fontSize:16,fontWeight:800,color:'#1F2329',marginBottom:8,marginTop:i>0?16:0}}>{line.slice(2)}</div>;
+          if(line.startsWith('## '))return <div key={i} style={{fontSize:14,fontWeight:700,color:'#1F2329',marginBottom:6,marginTop:14}}>{line.slice(3)}</div>;
+          if(line.startsWith('### '))return <div key={i} style={{fontSize:13,fontWeight:600,color:'#3370FF',marginBottom:4,marginTop:10}}>{line.slice(4)}</div>;
+          if(line.startsWith('- ')||line.startsWith('* '))return <div key={i} style={{display:'flex',gap:8,fontSize:13,color:'#1F2329',marginBottom:3,paddingLeft:4}}><span style={{color:'#3370FF',flexShrink:0}}>•</span>{line.slice(2)}</div>;
+          if(line.match(/^\d+\./))return <div key={i} style={{fontSize:13,color:'#1F2329',marginBottom:4,paddingLeft:4}}>{line}</div>;
+          if(line.trim()==='')return <div key={i} style={{height:6}}></div>;
+          const bold=line.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+          return <div key={i} style={{fontSize:13,color:'#1F2329',lineHeight:1.8,marginBottom:2}} dangerouslySetInnerHTML={{__html:bold}}/>;
+        });
+      };
+
+      return <PageWrap>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,height:'calc(100vh - 120px)'}}>
+          <Card style={{padding:20,display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:tool.bg,display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n={tool.icon} s={18} c={tool.color}/></div>
+              <div><div style={{fontSize:14,fontWeight:700,color:'#1F2329'}}>{tool.title}</div><div style={{fontSize:11,color:'#8F959E'}}>{tool.desc.slice(0,40)}...</div></div>
+            </div>
+            <div style={{flex:1}}>
+              <label style={{fontSize:12,fontWeight:600,color:'#1F2329',display:'block',marginBottom:8}}>输入你的需求</label>
+              <textarea value={input} onChange={e=>setInput(e.target.value)} style={{width:'100%',height:'calc(100% - 30px)',border:'1px solid #E5E6E8',borderRadius:8,padding:'12px 14px',fontSize:13,fontFamily:'inherit',resize:'none',outline:'none',lineHeight:1.7,color:'#1F2329',boxSizing:'border-box'}} placeholder={tool.placeholder}/>
+            </div>
+            <Btn full icon={loading?<Spinner size={14} color="#fff"/>:<Ic n="sparkle" s={14} c="#fff"/>} onClick={startStream} disabled={loading||!input.trim()}>{loading?'AI 生成中...':'开始生成'}</Btn>
+          </Card>
+          <Card style={{padding:20,display:'flex',flexDirection:'column'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexShrink:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{width:7,height:7,borderRadius:'50%',background:loading?'#FF7D00':done?'#00B42A':'#E5E6E8',animation:loading?'pulse 1s infinite':undefined}}></div>
+                <span style={{fontSize:13,fontWeight:600,color:'#1F2329'}}>{loading?(charCount>0?`AI 生成中... (${charCount}字)`:'AI 生成中...'):done?`生成完成 (${charCount}字)`:'等待输入'}</span>
+              </div>
+              {done&&<Btn size="sm" variant="secondary" onClick={()=>onBack()}>返回</Btn>}
+            </div>
+            <div style={{flex:1,overflow:'auto',background:'#FAFBFC',borderRadius:8,padding:16,border:'1px solid #F0F1F3',lineHeight:1.8}}>
+              {output?renderMd(output):(<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',gap:10,color:'#8F959E'}}><Ic n="sparkle" s={32} c="#C9CDD4"/><div style={{fontSize:13}}>AI 生成结果将显示在这里</div><div style={{fontSize:11}}>在左侧输入需求，点击「开始生成」</div></div>)}
+              {loading&&<span style={{display:'inline-block',width:8,height:16,background:'#3370FF',animation:'blink .8s infinite',borderRadius:1,marginLeft:2,verticalAlign:'text-bottom'}}></span>}
+            </div>
+          </Card>
+        </div>
+      </PageWrap>;
+    };
+
+    const AIToolsPage=()=>{
+      const[active,setActive]=useState(null);const{navigate}=useContext(AppContext);
+      if(active)return <div>
+        <div style={{padding:'12px 24px',background:'#fff',borderBottom:'1px solid #E5E6E8',display:'flex',alignItems:'center',gap:8}}>
+          <button onClick={()=>setActive(null)} style={{display:'flex',alignItems:'center',gap:4,background:'none',border:'none',cursor:'pointer',color:'#646A73',fontSize:13}}><Ic n="chevl" s={15} c="#646A73"/>返回工具箱</button>
+        </div>
+        <AIToolInterface tool={active} onBack={()=>setActive(null)}/>
+      </div>;
+      return <PageWrap>
+        <div style={{marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
+            <div style={{width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#7C3AED,#3370FF)',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="sparkle" s={18} c="#fff"/></div>
+            <div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>AI 工具箱</div><div style={{fontSize:12,color:'#8F959E'}}>10 个 AI 辅助工具，基于 RAG 技术和往届项目库，支持实时流式生成</div></div>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',background:'linear-gradient(90deg,#EEF3FF,#F5F0FF)',border:'1px solid #E0D7FF',borderRadius:10,marginBottom:20}}>
+          <Ic n="layers" s={18} c="#7C3AED"/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:'#1F2329',marginBottom:2}}>知识库已接入往届获奖项目</div><div style={{fontSize:12,color:'#646A73'}}>AI 分析结果基于 RAG 检索，更有参考价值</div></div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14}}>
+          {AI_TOOLS.map(tool=>(<Card key={tool.id} hover onClick={()=>setActive(tool)} style={{padding:20,cursor:'pointer'}}>
+            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:12}}>
+              <div style={{width:44,height:44,borderRadius:12,background:tool.bg,display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n={tool.icon} s={22} c={tool.color}/></div>
+              <Ic n="chevr" s={14} c="#C9CDD4"/>
+            </div>
+            <div style={{fontSize:14,fontWeight:600,color:'#1F2329',marginBottom:6}}>{tool.title}</div>
+            <div style={{fontSize:12,color:'#646A73',lineHeight:1.6}}>{tool.desc}</div>
+            <div style={{marginTop:14,display:'flex',justifyContent:'flex-end'}}><span style={{fontSize:12,fontWeight:500,color:tool.color}}>立即使用 →</span></div>
+          </Card>))}
+        </div>
+      </PageWrap>;
+    };
+
     const GenericPage=({title})=><PageWrap><Card style={{padding:40,textAlign:'center'}}><div style={{fontSize:18,fontWeight:600,color:'#1F2329',marginBottom:8}}>{title}</div><div style={{fontSize:13,color:'#8F959E'}}>此页面正在开发中</div></Card></PageWrap>;
 
     // ═══ App ═══════════════════════════════════════════════
@@ -532,7 +668,7 @@
       const navigate=(p,data)=>{setPage(p);setPageData(data||null)};
       const ctx={role,setRole,page,navigate,pageData};
       const pageTitle=PAGE_LABELS[page]||'首页';
-      const renderPage=()=>{switch(page){case 'dashboard':return <Dashboard navigate={navigate}/>;case 'competitions':return <GenericPage title="赛事管理"/>;case 'teams':return <GenericPage title="团队管理"/>;case 'approvals':return <GenericPage title="审批中心"/>;case 'preplans':return <GenericPage title="预计划管理"/>;case 'aitools':return <GenericPage title="AI 工具箱"/>;case 'stats':return <GenericPage title="统计分析"/>;case 'awards':return <GenericPage title="获奖管理"/>;case 'evaluations':return <GenericPage title="学生评价"/>;case 'calendar':return <CalendarPage navigate={navigate}/>;case 'knowledgebase':return <KnowledgeBase navigate={navigate}/>;case 'showcase':return <ShowcasePage navigate={navigate}/>;default:return <Dashboard navigate={navigate}/>}};
+      const renderPage=()=>{switch(page){case 'dashboard':return <Dashboard navigate={navigate}/>;case 'competitions':return <GenericPage title="赛事管理"/>;case 'teams':return <GenericPage title="团队管理"/>;case 'approvals':return <GenericPage title="审批中心"/>;case 'preplans':return <GenericPage title="预计划管理"/>;case 'aitools':return <AIToolsPage/>;case 'stats':return <GenericPage title="统计分析"/>;case 'awards':return <GenericPage title="获奖管理"/>;case 'evaluations':return <GenericPage title="学生评价"/>;case 'calendar':return <CalendarPage navigate={navigate}/>;case 'knowledgebase':return <KnowledgeBase navigate={navigate}/>;case 'showcase':return <ShowcasePage navigate={navigate}/>;default:return <Dashboard navigate={navigate}/>}};
       return <AuthProvider><ToastProvider><AppContext.Provider value={ctx}><Layout pageTitle={pageTitle}>{renderPage()}</Layout></AppContext.Provider></ToastProvider></AuthProvider>
     };
 
