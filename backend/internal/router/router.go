@@ -90,6 +90,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	healthScoreHandler := handlers.NewHealthScoreHandler()
 	comparisonHandler := handlers.NewComparisonHandler()
 	subscriptionHandler := handlers.NewSubscriptionHandler()
+	scheduleHandler := handlers.NewScheduleHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -220,6 +221,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Competition subscriptions (deadline reminders).
 		protected.GET("/subscriptions", subscriptionHandler.List)
+
+		// Smart schedule — conflict detection + optimization.
+		protected.GET("/schedule/smart", scheduleHandler.SmartSchedule)
 		protected.GET("/subscriptions/reminders", subscriptionHandler.Reminders)
 		protected.POST("/subscriptions/:comp_id", subscriptionHandler.Subscribe)
 		protected.DELETE("/subscriptions/:comp_id", subscriptionHandler.Unsubscribe)

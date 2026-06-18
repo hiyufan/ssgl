@@ -168,17 +168,23 @@ def test_auth():
         _student_token = _login("test_student_001", "TestPass123!")
     elif _ok(resp) and resp.status_code in (400, 409):
         # 400 = already exists, 409 = conflict
-        _log("PASS", "register", "学生已存在（预期行为）")
         _student_token = _login("test_student_001", "TestPass123!")
         if not _student_token:
             # Password may have been changed in a previous failed test run
-            alt_token = _login("test_student_001", "NewTestPass456!")
-            if alt_token:
-                _log("WARN", "register", "学生密码被前次测试修改，正在还原...")
-                _api_auth("PUT", "/api/v1/auth/password", token=alt_token, json={
-                    "old_password": "NewTestPass456!", "new_password": "TestPass123!"
-                })
-                _student_token = _login("test_student_001", "TestPass123!")
+            for alt_pw in ["NewTestPass456!", "NewSecurePass789!"]:
+                alt_token = _login("test_student_001", alt_pw)
+                if alt_token:
+                    _api_auth("PUT", "/api/v1/auth/password", token=alt_token, json={
+                        "old_password": alt_pw, "new_password": "TestPass123!"
+                    })
+                    time.sleep(1)
+                    _student_token = _login("test_student_001", "TestPass123!")
+                    if _student_token:
+                        break
+        if _student_token:
+            _log("PASS", "register", "学生已存在（预期行为）")
+        else:
+            _log("FAIL", "register", "学生登录失败（所有密码均无效）")
     else:
         _log("WARN", "register", f"注册返回 {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
 
@@ -581,6 +587,33 @@ def test_crud():
         _api_auth("DELETE", f"/api/v1/competitions/{sub_comp_id}")
     else:
         _log("WARN", "sub-setup", "无法创建测试赛事，跳过订阅测试")
+
+    # --- Smart Schedule ---
+    resp = _api_auth("GET", "/api/v1/schedule/smart")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        events = data.get("events", [])
+        conflicts = data.get("conflicts", [])
+        workload = data.get("workload", [])
+        optimization = data.get("optimization", {})
+        _log("PASS", "schedule-smart", f"智能排期成功, 赛事={len(events)}, 冲突={len(conflicts)}, "
+             f"负载={len(workload)}段, 风险={optimization.get('risk_level', '?')}")
+    else:
+        _log("FAIL", "schedule-smart", f"智能排期失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Smart schedule structure validation
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        opt = data.get("optimization", {})
+        if opt.get("priority_order") is not None and opt.get("suggestion"):
+            _log("PASS", "schedule-opt", f"排期优化建议正常, 优先级={len(opt.get('priority_order', []))}项")
+        else:
+            _log("WARN", "schedule-opt", "排期优化数据不完整")
+
+        if data.get("summary"):
+            _log("PASS", "schedule-summary", f"排期摘要: {data['summary'][:60]}")
+        else:
+            _log("WARN", "schedule-summary", "排期摘要缺失")
 
     # --- Stats ---
     for ep in ["/api/v1/stats/overview", "/api/v1/stats/competitions", "/api/v1/stats/teachers"]:
