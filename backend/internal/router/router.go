@@ -88,6 +88,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	registrationHandler := handlers.NewRegistrationHandler()
 	teamAnalysisHandler := handlers.NewTeamAnalysisHandler()
 	healthScoreHandler := handlers.NewHealthScoreHandler()
+	comparisonHandler := handlers.NewComparisonHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -210,6 +211,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Leaderboard.
 		protected.GET("/leaderboard", statsHandler.Leaderboard)
+
+		// Competition comparison.
+		protected.GET("/competitions/compare", comparisonHandler.Compare)
 
 		// Showcase — settled awards for public display.
 		protected.GET("/showcase", showcaseHandler.List)

@@ -371,6 +371,66 @@ def test_crud():
     else:
         _log("FAIL", "comp-recommend", f"赛事推荐失败 → {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Competition Comparison ---
+    # First create two temp competitions to compare
+    comp_a_data = {
+        "title": f"对比测试A-{int(time.time())}",
+        "description": "用于对比测试",
+        "type": "hackathon",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-07-01T00:00:00+08:00",
+        "end_date": "2026-08-01T00:00:00+08:00",
+    }
+    comp_b_data = {
+        "title": f"对比测试B-{int(time.time())}",
+        "description": "用于对比测试",
+        "type": "innovation",
+        "max_team_size": 3,
+        "min_team_size": 1,
+        "start_date": "2026-09-01T00:00:00+08:00",
+        "end_date": "2026-10-01T00:00:00+08:00",
+    }
+    comp_a_id = comp_b_id = None
+    resp = _api_auth("POST", "/api/v1/competitions", json=comp_a_data)
+    if _ok(resp) and resp.status_code in (200, 201):
+        d = resp.json()
+        c = d.get("competition", d)
+        comp_a_id = c.get("id") or d.get("id")
+    resp = _api_auth("POST", "/api/v1/competitions", json=comp_b_data)
+    if _ok(resp) and resp.status_code in (200, 201):
+        d = resp.json()
+        c = d.get("competition", d)
+        comp_b_id = c.get("id") or d.get("id")
+
+    if comp_a_id and comp_b_id:
+        resp = _api_auth("GET", f"/api/v1/competitions/compare?ids={comp_a_id},{comp_b_id}")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            comps = data.get("competitions", [])
+            summary = data.get("summary", {})
+            _log("PASS", "comp-compare", f"赛事对比成功, {len(comps)} 个赛事, 最热门={summary.get('most_popular', '?')}")
+        else:
+            _log("FAIL", "comp-compare", f"赛事对比失败 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+        # Compare with missing ids
+        resp = _api_auth("GET", "/api/v1/competitions/compare")
+        if _ok(resp) and resp.status_code == 400:
+            _log("PASS", "comp-compare-no-ids", "缺少 ids 参数 → 400 ✓")
+        else:
+            _log("WARN", "comp-compare-no-ids", f"缺少 ids → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Compare with single id (should fail - need at least 2)
+        resp = _api_auth("GET", f"/api/v1/competitions/compare?ids={comp_a_id}")
+        if _ok(resp) and resp.status_code == 400:
+            _log("PASS", "comp-compare-single", "单个赛事对比 → 400 ✓")
+        else:
+            _log("WARN", "comp-compare-single", f"单个赛事 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Cleanup
+        _api_auth("DELETE", f"/api/v1/competitions/{comp_a_id}")
+        _api_auth("DELETE", f"/api/v1/competitions/{comp_b_id}")
+
     # --- Favorites (Bookmarks) ---
     # Create a temp competition to favorite
     fav_comp_data = {
@@ -1458,6 +1518,7 @@ def test_ai_service():
         ("POST", "/ai/api/v1/tools/pitch-deck", {"input": "蓝桥杯AI学习助手项目的路演大纲"}, 120),
         ("POST", "/ai/api/v1/tools/swot-analysis", {"input": "基于AI的智能学习助手项目，面向高校学生"}, 120),
         ("POST", "/ai/api/v1/tools/competition-report", {"input": "蓝桥杯全国软件和信息技术专业人才大赛"}, 120),
+        ("POST", "/ai/api/v1/tools/study-plan", {"input": "蓝桥杯Java程序设计", "extra": "3人团队，有Java和算法基础"}, 120),
     ]
 
     # In fast mode, use 5s timeout — we just verify the endpoint exists and starts processing
