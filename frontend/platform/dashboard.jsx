@@ -340,7 +340,7 @@ const DashStudent = ({ navigate }) => {
       {/* ── Quick action tiles ─────────────────── */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14 }}>
         <ActionTile icon="file" label="预计划管理" badge={myPlan?.ai_review_score ? `AI ${myPlan.ai_review_score}分` : myPlan ? (planStatus === 'approved' ? '已通过' : planStatus === 'submitted' ? '审核中' : '草稿') : '未创建'} badgeColor="#7C3AED" sub={myPlan ? '查看预计划详情' : '创建你的预计划'} accent="#7C3AED" bg="#F5F0FF" topGradient onClick={() => navigate('preplans')}/>
-        <ActionTile icon="sparkle" label="AI 工具箱" sub="6 个智能助手 · 一键生成" accent="#3370FF" bg="#EEF3FF" topGradient onClick={() => navigate('aitools')}/>
+        <ActionTile icon="sparkle" label="AI 工具箱" sub="9 个智能助手 · 一键生成" accent="#3370FF" bg="#EEF3FF" topGradient onClick={() => navigate('aitools')}/>
         <ActionTile icon="star" label="评价老师" badge="待完成" badgeColor="#FF7D00" sub={myTeam?.leader?.name ? `${myTeam.leader.name}` : '评价你的指导老师'} accent="#FAAD14" bg="#FFFBE6" onClick={() => navigate('evaluations')}/>
       </div>
 

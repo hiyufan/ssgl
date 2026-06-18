@@ -103,17 +103,20 @@ const App = () => {
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard':    return <Dashboard/>;
-      case 'competitions': return <Competitions/>;
-      case 'teams':        return <Teams/>;
-      case 'approvals':    return <Approvals/>;
-      case 'preplans':     return <PrePlans/>;
-      case 'aitools':      return <AITools/>;
-      case 'stats':        return <Stats/>;
-      case 'awards':       return <Awards/>;
-      case 'evaluations':  return <Evaluations/>;
-      case 'users':        return <UsersPage/>;
-      default:             return <Dashboard/>;
+      case 'dashboard':     return <Dashboard/>;
+      case 'competitions':  return <Competitions/>;
+      case 'teams':         return <Teams/>;
+      case 'approvals':     return <Approvals/>;
+      case 'preplans':      return <PrePlans/>;
+      case 'aitools':       return <AITools/>;
+      case 'stats':         return <Stats/>;
+      case 'awards':        return <Awards/>;
+      case 'evaluations':   return <Evaluations/>;
+      case 'users':         return <UsersPage/>;
+      case 'calendar':      return <CalendarPage/>;
+      case 'knowledgebase': return <KnowledgeBase/>;
+      case 'showcase':      return <ShowcasePage/>;
+      default:              return <Dashboard/>;
     }
   };
 

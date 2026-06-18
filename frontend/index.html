@@ -97,6 +97,7 @@
         search:<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
         chevr:<polyline points="9 18 15 12 9 6"/>,
         chevd:<polyline points="6 9 12 15 18 9"/>,
+        chevl:<polyline points="15 18 9 12 15 6"/>,
         x:<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
         plus:<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
         check:<polyline points="20 6 9 17 4 12"/>,
@@ -105,6 +106,9 @@
         medal:<><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></>,
         layers:<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>,
         pin:<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></>,
+        cal:<><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
+        upload:<><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>,
+        download:<><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
       };
       return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={{display:'block',flexShrink:0}}>{P[n]||null}</svg>
     };
@@ -153,11 +157,11 @@
 
     // ═══ Role Config ═══════════════════════════════════════
     const ROLE_CFG={
-      admin:{label:'管理员',tagBg:'#F0F5FF',tagColor:'#1F2329',nav:[{id:'dashboard',icon:'home',label:'首页'},{section:'赛事管理'},{id:'competitions',icon:'trophy',label:'赛事管理'},{id:'teams',icon:'users',label:'团队管理'},{section:'审批'},{id:'approvals',icon:'checksq',label:'审批中心'},{id:'awards',icon:'gift',label:'获奖管理'},{section:'分析'},{id:'evaluations',icon:'star',label:'学生评价'},{id:'stats',icon:'barchart',label:'统计分析'},{section:'AI'},{id:'aitools',icon:'sparkle',label:'AI 工具箱'}]},
-      teacher:{label:'指导教师',tagBg:'#EEF3FF',tagColor:'#3370FF',nav:[{id:'dashboard',icon:'home',label:'首页'},{section:'赛事'},{id:'competitions',icon:'trophy',label:'赛事列表'},{id:'teams',icon:'users',label:'指导团队'},{section:'审批'},{id:'approvals',icon:'checksq',label:'待办审批'},{id:'awards',icon:'gift',label:'获奖确认'},{section:'分析'},{id:'evaluations',icon:'star',label:'评价中心'},{id:'stats',icon:'barchart',label:'统计分析'},{section:'AI'},{id:'aitools',icon:'sparkle',label:'AI 工具箱'}]},
-      student:{label:'参赛学生',tagBg:'#F5F0FF',tagColor:'#7C3AED',nav:[{id:'dashboard',icon:'home',label:'首页'},{section:'赛事'},{id:'competitions',icon:'trophy',label:'赛事大厅'},{id:'teams',icon:'users',label:'我的团队'},{section:'项目'},{id:'preplans',icon:'file',label:'预计划管理'},{section:'AI'},{id:'aitools',icon:'sparkle',label:'AI 工具箱'},{section:'评价'},{id:'evaluations',icon:'star',label:'提交评价'}]},
+      admin:{label:'管理员',tagBg:'#F0F5FF',tagColor:'#1F2329',nav:[{id:'dashboard',icon:'home',label:'首页'},{section:'赛事管理'},{id:'competitions',icon:'trophy',label:'赛事管理'},{id:'teams',icon:'users',label:'团队管理'},{id:'calendar',icon:'cal',label:'赛事日历'},{section:'审批'},{id:'approvals',icon:'checksq',label:'审批中心'},{id:'awards',icon:'gift',label:'获奖管理'},{id:'showcase',icon:'star',label:'成果展示'},{section:'分析'},{id:'evaluations',icon:'star',label:'学生评价'},{id:'stats',icon:'barchart',label:'统计分析'},{section:'AI'},{id:'aitools',icon:'sparkle',label:'AI 工具箱'},{id:'knowledgebase',icon:'layers',label:'知识库'}]},
+      teacher:{label:'指导教师',tagBg:'#EEF3FF',tagColor:'#3370FF',nav:[{id:'dashboard',icon:'home',label:'首页'},{section:'赛事'},{id:'competitions',icon:'trophy',label:'赛事列表'},{id:'teams',icon:'users',label:'指导团队'},{id:'calendar',icon:'cal',label:'赛事日历'},{section:'审批'},{id:'approvals',icon:'checksq',label:'待办审批'},{id:'awards',icon:'gift',label:'获奖确认'},{id:'showcase',icon:'star',label:'成果展示'},{section:'分析'},{id:'evaluations',icon:'star',label:'评价中心'},{id:'stats',icon:'barchart',label:'统计分析'},{section:'AI'},{id:'aitools',icon:'sparkle',label:'AI 工具箱'},{id:'knowledgebase',icon:'layers',label:'知识库'}]},
+      student:{label:'参赛学生',tagBg:'#F5F0FF',tagColor:'#7C3AED',nav:[{id:'dashboard',icon:'home',label:'首页'},{section:'赛事'},{id:'competitions',icon:'trophy',label:'赛事大厅'},{id:'teams',icon:'users',label:'我的团队'},{id:'calendar',icon:'cal',label:'赛事日历'},{section:'项目'},{id:'preplans',icon:'file',label:'预计划管理'},{section:'AI'},{id:'aitools',icon:'sparkle',label:'AI 工具箱'},{id:'knowledgebase',icon:'layers',label:'知识库'},{section:'评价与展示'},{id:'evaluations',icon:'star',label:'提交评价'},{id:'showcase',icon:'trophy',label:'成果展示'}]},
     };
-    const PAGE_LABELS={dashboard:'首页',competitions:'赛事管理',teams:'团队管理',approvals:'审批中心',preplans:'预计划管理',awards:'获奖管理',evaluations:'学生评价',stats:'统计分析',aitools:'AI 工具箱'};
+    const PAGE_LABELS={dashboard:'首页',competitions:'赛事管理',teams:'团队管理',approvals:'审批中心',preplans:'预计划管理',awards:'获奖管理',evaluations:'学生评价',stats:'统计分析',aitools:'AI 工具箱',calendar:'赛事日历',knowledgebase:'知识库',showcase:'成果展示'};
 
     // ═══ Layout ════════════════════════════════════════════
     const NavItem=({item,active,onClick,isDark})=>{
@@ -396,6 +400,127 @@
       return <DashStudent navigate={navigate}/>
     };
 
+    // ═══ Calendar Page ═════════════════════════════════════
+    const CalendarPage=({navigate})=>{
+      const [events,setEvents]=useState([]);const [loading,setLoading]=useState(true);
+      const [currentMonth,setCurrentMonth]=useState(()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`});
+      const [selectedDay,setSelectedDay]=useState(null);
+      useEffect(()=>{const f=async()=>{setLoading(true);try{const r=await apiFetch(`${API_BASE}/calendar?month=${currentMonth}`);const d=await r.json();setEvents(d.events||[])}catch(e){console.error(e)}finally{setLoading(false)}};f()},[currentMonth]);
+      const exportICS=async()=>{try{const t=getToken();const r=await fetch(`${API_BASE}/calendar/export`,{headers:{'Authorization':`Bearer ${t}`}});const ics=await r.text();const b=new Blob([ics],{type:'text/calendar'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='ssgl-competitions.ics';a.click();URL.revokeObjectURL(u)}catch(e){console.error(e)}};
+      const[y,mo]=currentMonth.split('-').map(Number);
+      const firstDay=new Date(y,mo-1,1);const lastDay=new Date(y,mo,0);
+      const startWeekday=firstDay.getDay();const daysInMonth=lastDay.getDate();
+      const prevMonth=()=>{const d=new Date(y,mo-2,1);setCurrentMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)};
+      const nextMonth=()=>{const d=new Date(y,mo,1);setCurrentMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)};
+      const eventsByDay={};events.forEach(ev=>{const day=new Date(ev.date).getDate();if(!eventsByDay[day])eventsByDay[day]=[];eventsByDay[day].push(ev)});
+      const weekdays=['日','一','二','三','四','五','六'];
+      const phaseColors={registration:'#3370FF',start:'#00B42A',end:'#FF7D00',deadline:'#F53F3F',milestone:'#7C3AED'};
+      const phaseLabels={registration:'报名截止',start:'开赛',end:'结束',deadline:'截止',milestone:'里程碑'};
+      const today=new Date();const isToday=d=>d===today.getDate()&&mo===today.getMonth()+1&&y===today.getFullYear();
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}><div style={{width:36,height:36,borderRadius:10,background:'#EEF3FF',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="cal" s={18} c="#3370FF"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>赛事日历</div><div style={{fontSize:12,color:'#8F959E'}}>查看所有赛事时间节点，支持导出 iCal</div></div></div>
+          <Btn variant="secondary" icon={<Ic n="download" s={14} c="#646A73"/>} onClick={exportICS}>导出 iCal</Btn>
+        </div>
+        <Card style={{padding:0,overflow:'hidden'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #E5E6E8'}}>
+            <button onClick={prevMonth} style={{background:'none',border:'none',cursor:'pointer',padding:6,borderRadius:6}}><Ic n="chevl" s={18} c="#646A73"/></button>
+            <div style={{fontSize:16,fontWeight:700,color:'#1F2329'}}>{y}年{mo}月</div>
+            <button onClick={nextMonth} style={{background:'none',border:'none',cursor:'pointer',padding:6,borderRadius:6}}><Ic n="chevr" s={18} c="#646A73"/></button>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',borderBottom:'1px solid #F0F1F3'}}>{weekdays.map(w=><div key={w} style={{padding:'10px 0',textAlign:'center',fontSize:12,fontWeight:600,color:'#8F959E'}}>{w}</div>)}</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
+            {Array.from({length:startWeekday}).map((_,i)=><div key={`e-${i}`} style={{minHeight:80,borderRight:'1px solid #F7F8FA',borderBottom:'1px solid #F7F8FA'}}></div>)}
+            {Array.from({length:daysInMonth}).map((_,i)=>{const day=i+1;const dayEvents=eventsByDay[day]||[];const td=isToday(day);const sel=selectedDay===day;
+              return <div key={day} onClick={()=>setSelectedDay(sel?null:day)} style={{minHeight:80,padding:'6px 8px',borderRight:(day+startWeekday)%7!==0?'1px solid #F7F8FA':'none',borderBottom:'1px solid #F7F8FA',background:sel?'#F0F5FF':td?'#FAFBFF':'#fff',cursor:'pointer'}}>
+                <div style={{fontSize:13,fontWeight:td?700:500,color:td?'#3370FF':'#1F2329',width:26,height:26,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:td?'#EEF3FF':'transparent',marginBottom:4}}>{day}</div>
+                {dayEvents.slice(0,2).map((ev,j)=><div key={j} style={{fontSize:10,padding:'2px 5px',borderRadius:4,background:(phaseColors[ev.phase]||'#3370FF')+'15',color:phaseColors[ev.phase]||'#3370FF',fontWeight:500,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.title?.slice(0,8)||phaseLabels[ev.phase]||ev.phase}</div>)}
+                {dayEvents.length>2&&<div style={{fontSize:10,color:'#8F959E',paddingLeft:5}}>+{dayEvents.length-2} 更多</div>}
+              </div>})}
+          </div>
+        </Card>
+        {selectedDay&&eventsByDay[selectedDay]&&<Card style={{padding:20,marginTop:16}}>
+          <SHead title={`${y}年${mo}月${selectedDay}日 · ${eventsByDay[selectedDay].length} 个事件`}/>
+          {eventsByDay[selectedDay].map((ev,i)=><div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'#FAFBFC',borderRadius:8,marginBottom:8}}>
+            <div style={{width:8,height:8,borderRadius:'50%',background:phaseColors[ev.phase]||'#3370FF'}}></div>
+            <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:'#1F2329'}}>{ev.title}</div><div style={{fontSize:12,color:'#8F959E'}}>{phaseLabels[ev.phase]||ev.phase}</div></div>
+          </div>)}
+        </Card>}
+      </PageWrap>;
+    };
+
+    // ═══ Knowledge Base Page ════════════════════════════════
+    const KnowledgeBase=({navigate})=>{
+      const [docs,setDocs]=useState([]);const [stats,setStats]=useState(null);const [loading,setLoading]=useState(true);
+      const [tab,setTab]=useState('docs');const [searchQuery,setSearchQuery]=useState('');const [searchResults,setSearchResults]=useState([]);
+      const [searching,setSearching]=useState(false);const [ingestText,setIngestText]=useState('');const [ingestTitle,setIngestTitle]=useState('');const [ingesting,setIngesting]=useState(false);
+      useEffect(()=>{const f=async()=>{try{const[d,s]=await Promise.all([apiFetch(`${AI_BASE}/rag/documents`).then(r=>r.json()).catch(()=>({documents:[]})),apiFetch(`${AI_BASE}/rag/stats`).then(r=>r.json()).catch(()=>null)]);setDocs(d.documents||[]);setStats(s)}catch(e){console.error(e)}finally{setLoading(false)}};f()},[]);
+      const handleSearch=async()=>{if(!searchQuery.trim())return;setSearching(true);try{const r=await apiFetch(`${AI_BASE}/rag/search`,{method:'POST',body:JSON.stringify({query:searchQuery,top_k:5})});const d=await r.json();setSearchResults(d.results||d.hits||[])}catch(e){setSearchResults([])}finally{setSearching(false)}};
+      const handleIngest=async()=>{if(!ingestText.trim())return;setIngesting(true);try{await apiFetch(`${AI_BASE}/rag/ingest`,{method:'POST',body:JSON.stringify({text:ingestText,title:ingestTitle||'Untitled'})});const d=await apiFetch(`${AI_BASE}/rag/documents`).then(r=>r.json());setDocs(d.documents||[]);setIngestText('');setIngestTitle('');setTab('docs')}catch(e){console.error(e)}finally{setIngesting(false)}};
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}><div style={{width:36,height:36,borderRadius:10,background:'#F5F0FF',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="layers" s={18} c="#7C3AED"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>知识库管理</div><div style={{fontSize:12,color:'#8F959E'}}>上传文档/文本 → 分块嵌入 → 搜索问答</div></div></div>
+        {stats&&<div style={{display:'flex',gap:16,marginBottom:20}}>{[{l:'文档总数',v:stats.total_documents||docs.length,c:'#3370FF'},{l:'文本分块',v:stats.total_chunks||0,c:'#7C3AED'},{l:'向量维度',v:stats.embedding_dimension||1536,c:'#00B42A'}].map(s=><Card key={s.l} style={{flex:1,padding:'14px 18px',display:'flex',alignItems:'center',gap:14}}><div style={{width:8,height:32,borderRadius:4,background:s.c}}></div><div><div style={{fontSize:22,fontWeight:800,color:'#1F2329'}}>{s.v}</div><div style={{fontSize:12,color:'#8F959E'}}>{s.l}</div></div></Card>)}</div>}
+        <div style={{display:'flex',gap:2,background:'#fff',border:'1px solid #E5E6E8',borderRadius:8,padding:3,marginBottom:16,width:'fit-content'}}>
+          {[['docs','文档列表','file'],['search','搜索问答','search'],['ingest','导入数据','plus']].map(([k,l,icon])=><div key={k} onClick={()=>setTab(k)} style={{padding:'6px 16px',borderRadius:6,fontSize:13,cursor:'pointer',fontWeight:tab===k?600:400,background:tab===k?'#7C3AED':'transparent',color:tab===k?'#fff':'#646A73',display:'flex',alignItems:'center',gap:6}}><Ic n={icon} s={13} c={tab===k?'#fff':'#8F959E'}/>{l}</div>)}
+        </div>
+        {tab==='docs'&&<Card style={{padding:docs.length?0:20}}>
+          {docs.length===0?<Empty text="暂无文档" sub="点击「导入数据」添加知识库文档"/>:<div>{docs.map(d=><div key={d.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:'1px solid #F7F8FA'}}>
+            <div style={{width:32,height:32,borderRadius:8,background:'#F5F0FF',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="file" s={14} c="#7C3AED"/></div>
+            <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:'#1F2329'}}>{d.title||'Untitled'}</div><div style={{fontSize:11,color:'#8F959E'}}>{d.source||'text'}</div></div>
+            <span style={{fontSize:12,color:'#8F959E'}}>{d.chunks||'-'} 分块</span>
+          </div>)}</div>}
+        </Card>}
+        {tab==='search'&&<div>
+          <Card style={{padding:20,marginBottom:16}}><div style={{display:'flex',gap:10}}>
+            <div style={{flex:1,display:'flex',alignItems:'center',gap:8,background:'#F7F8FA',border:'1px solid #E5E6E8',borderRadius:8,padding:'10px 14px'}}><Ic n="search" s={15} c="#8F959E"/><input value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSearch()} placeholder="输入问题，基于知识库搜索..." style={{border:'none',background:'none',fontSize:14,width:'100%',outline:'none'}}/></div>
+            <Btn onClick={handleSearch} disabled={searching||!searchQuery.trim()}>{searching?'搜索中...':'搜索'}</Btn>
+          </div></Card>
+          {searchResults.length>0&&searchResults.map((r,i)=><Card key={i} style={{padding:16,marginBottom:8}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}><div style={{background:'#7C3AED',color:'#fff',borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700}}>#{i+1}</div><div style={{fontSize:13,fontWeight:600,color:'#1F2329'}}>{r.title||r.document_title||'文档片段'}</div>{r.score!==undefined&&<span style={{fontSize:11,color:'#7C3AED',background:'#F5F0FF',padding:'2px 8px',borderRadius:99,fontWeight:600}}>相似度 {(r.score*100).toFixed(1)}%</span>}</div>
+            <div style={{fontSize:13,color:'#646A73',lineHeight:1.8,background:'#FAFBFC',padding:12,borderRadius:6}}>{r.content||r.text||r.chunk||''}</div>
+          </Card>)}
+          {searchResults.length===0&&searchQuery&&!searching&&<Empty text="未找到相关文档"/>}
+        </div>}
+        {tab==='ingest'&&<Card style={{padding:20}}>
+          <SHead title="文本导入" sub="直接输入文本内容导入知识库"/>
+          <div style={{display:'flex',flexDirection:'column',gap:12,marginTop:12}}>
+            <input value={ingestTitle} onChange={e=>setIngestTitle(e.target.value)} placeholder="文档标题..." style={{width:'100%',border:'1px solid #E5E6E8',borderRadius:8,padding:'10px 14px',fontSize:13,outline:'none'}}/>
+            <textarea value={ingestText} onChange={e=>setIngestText(e.target.value)} placeholder="粘贴要导入的文本内容..." style={{width:'100%',height:200,border:'1px solid #E5E6E8',borderRadius:8,padding:'12px 14px',fontSize:13,resize:'vertical',outline:'none',lineHeight:1.7}}/>
+            <Btn full onClick={handleIngest} disabled={ingesting||!ingestText.trim()}>{ingesting?'导入中...':'开始导入'}</Btn>
+          </div>
+        </Card>}
+      </PageWrap>;
+    };
+
+    // ═══ Showcase Page ══════════════════════════════════════
+    const ShowcasePage=({navigate})=>{
+      const [showcase,setShowcase]=useState([]);const [leaderboard,setLeaderboard]=useState([]);const [loading,setLoading]=useState(true);const [tab,setTab]=useState('showcase');
+      useEffect(()=>{const f=async()=>{try{const[s,l]=await Promise.all([apiFetch(`${API_BASE}/showcase`).then(r=>r.json()).catch(()=>({awards:[]})),apiFetch(`${API_BASE}/leaderboard`).then(r=>r.json()).catch(()=>({teams:[]}))]);setShowcase(s.awards||[]);setLeaderboard(l.teams||[])}catch(e){console.error(e)}finally{setLoading(false)}};f()},[]);
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      const rankEmojis=['🥇','🥈','🥉'];
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}><div style={{width:36,height:36,borderRadius:10,background:'#FFFBE6',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="trophy" s={18} c="#FAAD14"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>成果展示</div><div style={{fontSize:12,color:'#8F959E'}}>获奖团队风采 · 团队排行榜</div></div></div>
+        <div style={{display:'flex',gap:2,background:'#fff',border:'1px solid #E5E6E8',borderRadius:8,padding:3,marginBottom:20,width:'fit-content'}}>
+          {[['showcase','成果展示','trophy'],['leaderboard','团队排行','barchart']].map(([k,l,icon])=><div key={k} onClick={()=>setTab(k)} style={{padding:'6px 16px',borderRadius:6,fontSize:13,cursor:'pointer',fontWeight:tab===k?600:400,background:tab===k?'#FAAD14':'transparent',color:tab===k?'#fff':'#646A73',display:'flex',alignItems:'center',gap:6}}><Ic n={icon} s={13} c={tab===k?'#fff':'#8F959E'}/>{l}</div>)}
+        </div>
+        {tab==='showcase'&&(showcase.length===0?<Empty text="暂无获奖成果"/>:<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))',gap:14}}>
+          {showcase.map((a,i)=><Card key={a.id||i} style={{padding:0,overflow:'hidden'}}><div style={{height:4,background:i<3?['#FFD700','#C0C0C0','#CD7F32'][i]:'#E5E6E8'}}></div><div style={{padding:20}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}><span style={{fontSize:24}}>{rankEmojis[a.rank-1]||'🏆'}</span><Badge label={a.rank_name||`第${a.rank}名`} status={a.rank<=3?'approved':'active'}/></div>
+            <div style={{fontSize:15,fontWeight:700,color:'#1F2329',marginBottom:6}}>{a.team_name||a.teamName}</div>
+            <div style={{fontSize:12,color:'#8F959E',marginBottom:10}}>{a.competition_title||a.compName}</div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{fontSize:13,color:'#646A73'}}>👤 {a.leader_name||a.leader}</span>{a.prize_amount&&<span style={{fontSize:14,fontWeight:700,color:'#FAAD14'}}>¥{a.prize_amount?.toLocaleString()}</span>}</div>
+          </div></Card>)}
+        </div>)}
+        {tab==='leaderboard'&&(leaderboard.length===0?<Empty text="暂无排行数据"/>:<Card style={{padding:0,overflow:'hidden'}}>{leaderboard.map((t,i)=><div key={t.id||i} style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:'1px solid #F7F8FA'}}>
+          <div style={{width:32,textAlign:'center'}}>{i<3?<span style={{fontSize:20}}>{rankEmojis[i]}</span>:<span style={{fontSize:13,fontWeight:600,color:'#8F959E'}}>#{i+1}</span>}</div>
+          <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:'#1F2329'}}>{t.name}</div><div style={{fontSize:11,color:'#8F959E'}}>{t.competition_title||''}</div></div>
+          {t.score&&<div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:60,height:6,background:'#F0F1F3',borderRadius:3,overflow:'hidden'}}><div style={{width:`${Math.min(t.score,100)}%`,height:'100%',background:'#3370FF',borderRadius:3}}></div></div><span style={{fontSize:13,fontWeight:600}}>{t.score}</span></div>}
+        </div>)}</Card>)}
+      </PageWrap>;
+    };
+
     // ═══ Generic Page ══════════════════════════════════════
     const GenericPage=({title})=><PageWrap><Card style={{padding:40,textAlign:'center'}}><div style={{fontSize:18,fontWeight:600,color:'#1F2329',marginBottom:8}}>{title}</div><div style={{fontSize:13,color:'#8F959E'}}>此页面正在开发中</div></Card></PageWrap>;
 
@@ -407,7 +532,7 @@
       const navigate=(p,data)=>{setPage(p);setPageData(data||null)};
       const ctx={role,setRole,page,navigate,pageData};
       const pageTitle=PAGE_LABELS[page]||'首页';
-      const renderPage=()=>{switch(page){case 'dashboard':return <Dashboard navigate={navigate}/>;case 'competitions':return <GenericPage title="赛事管理"/>;case 'teams':return <GenericPage title="团队管理"/>;case 'approvals':return <GenericPage title="审批中心"/>;case 'preplans':return <GenericPage title="预计划管理"/>;case 'aitools':return <GenericPage title="AI 工具箱"/>;case 'stats':return <GenericPage title="统计分析"/>;case 'awards':return <GenericPage title="获奖管理"/>;case 'evaluations':return <GenericPage title="学生评价"/>;default:return <Dashboard navigate={navigate}/>}};
+      const renderPage=()=>{switch(page){case 'dashboard':return <Dashboard navigate={navigate}/>;case 'competitions':return <GenericPage title="赛事管理"/>;case 'teams':return <GenericPage title="团队管理"/>;case 'approvals':return <GenericPage title="审批中心"/>;case 'preplans':return <GenericPage title="预计划管理"/>;case 'aitools':return <GenericPage title="AI 工具箱"/>;case 'stats':return <GenericPage title="统计分析"/>;case 'awards':return <GenericPage title="获奖管理"/>;case 'evaluations':return <GenericPage title="学生评价"/>;case 'calendar':return <CalendarPage navigate={navigate}/>;case 'knowledgebase':return <KnowledgeBase navigate={navigate}/>;case 'showcase':return <ShowcasePage navigate={navigate}/>;default:return <Dashboard navigate={navigate}/>}};
       return <AuthProvider><ToastProvider><AppContext.Provider value={ctx}><Layout pageTitle={pageTitle}>{renderPage()}</Layout></AppContext.Provider></ToastProvider></AuthProvider>
     };
 

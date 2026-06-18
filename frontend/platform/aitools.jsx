@@ -190,16 +190,131 @@ RAG:  pgvector (PostgreSQL扩展，无需独立维护向量库)
 
 ## 一句话总结
 > 你们现在需要的不是更好的代码，而是更好的故事。技术已经够用了，现在是讲故事的时间。 💪` },
+
+  { id:'pitchdeck', icon:'send',     color:'#0891B2', bg:'#E0F7FA',
+    title:'路演 PPT 生成',     desc:'基于项目信息，AI 生成结构化的路演 PPT 大纲和内容框架，助力答辩展示。',
+    placeholder:'请描述项目的核心亮点、技术方案、商业模式、团队优势...',
+    sample:'请为我的「AI驱动智慧校园服务平台」生成路演PPT框架，核心亮点是RAG知识库技术，目标是华为ICT大赛答辩。',
+    response:`# 路演 PPT 框架 · AI驱动智慧校园服务平台
+
+## Slide 1: 封面
+- 项目名称：AI驱动智慧校园服务平台
+- 团队：量子跃迁
+- 赛事：华为ICT创新大赛 2026
+
+## Slide 2: 痛点与机遇
+- 高校信息孤岛问题严重，70%学生需要跨3个以上系统获取信息
+- 智慧校园市场2026年预计超1000亿元
+- 大模型技术成熟，AI应用落地成本大幅下降
+
+## Slide 3: 解决方案
+- 基于RAG技术的校园知识库，精准问答准确率92%+
+- 5大核心场景：智能问答、课程推荐、场地预订、失物招领、校园通知
+- 支持多系统对接，打通教务、图书馆、后勤数据
+
+## Slide 4: 技术架构
+- 前端：React + TypeScript
+- 后端：Go (Gin) + Python (FastAPI)
+- AI：RAG + pgvector + 大模型API
+- 部署：Docker Compose，单机可支撑5000 DAU
+
+## Slide 5: 核心优势
+- ✅ 校园专属知识库，准确率显著高于通用助手
+- ✅ 多系统对接能力，数据打通形成护城河
+- ✅ 本地化部署，满足数据安全合规要求
+
+## Slide 6: 商业模式
+- SaaS订阅 + 增值服务双轨模式
+- 基础版免费，高校版¥8万/年
+- 预计签约3所高校即可回本
+
+## Slide 7: 团队介绍
+- 张明（队长）：全栈开发 + AI模型
+- 李云：数据分析 + 可视化
+- 赵晓：NLP + 知识图谱
+- 陈宇：后端架构 + 数据库
+
+## Slide 8: 未来规划
+- Q3：完成3所高校POC验证
+- Q4：产品化发布，拓展10所合作院校
+- 2027：覆盖100所高校，实现盈利` },
+
+  { id:'swot',       icon:'activity', color:'#7C3AED', bg:'#F5F0FF',
+    title:'SWOT 分析',         desc:'AI 基于项目信息生成 SWOT 分析（优势、劣势、机会、威胁），辅助项目决策。',
+    placeholder:'请描述你的项目、团队、市场环境、竞争对手...',
+    sample:'请对我的「AI驱动智慧校园服务平台」做SWOT分析，团队3人CS专业，目标是高校市场，竞争对手是华为智慧校园和科大讯飞。',
+    response:`# SWOT 分析 · AI驱动智慧校园服务平台
+
+## 💪 Strengths（优势）
+- 技术团队核心能力强，3人均为CS专业，AI/全栈技能覆盖完整
+- RAG技术方案成熟，校园知识库准确率92%+
+- 已有可运行原型，核心功能跑通
+- 本地化部署方案，满足高校数据安全要求
+
+## ⚠️ Weaknesses（劣势）
+- 团队缺乏商业运营经验，商业模式需验证
+- 无实际客户案例，缺少落地数据支撑
+- 8周时间紧张，Demo和商业计划尚需打磨
+- 团队规模小，抗风险能力有限
+
+## 🚀 Opportunities（机会）
+- 智慧校园市场年增速18%，2026年超1000亿元
+- 大模型技术成熟，AI应用落地成本大幅下降
+- 高校数字化转型政策支持，政府采购预算充足
+- 竞品AI能力弱，差异化切入点明确
+
+## 🔴 Threats（威胁）
+- 华为、科大讯飞等大厂资源雄厚，可能快速跟进
+- 高校采购决策链长，销售周期可能超预期
+- 数据安全法规趋严，合规成本可能上升
+- AI技术迭代快，技术护城河可能被快速复制
+
+## 战略建议
+1. **SO策略**：利用技术优势快速占领市场，重点突破2-3所标杆高校
+2. **WO策略**：寻找商业合伙人或顾问，补齐运营短板
+3. **ST策略**：深耕垂直场景，建立数据壁垒，避免与大厂正面竞争
+4. **WT策略**：控制成本，保持精益，确保现金流安全` },
+
+  { id:'report',     icon:'barchart', color:'#FF7D00', bg:'#FFF7E8',
+    title:'赛事分析报告',     desc:'AI 分析指定赛事的参赛情况、获奖趋势、团队表现，生成综合分析报告。',
+    placeholder:'请输入赛事名称或描述需要分析的赛事...',
+    sample:'请分析2026年华为ICT创新大赛的参赛趋势、获奖分布和团队表现。',
+    response:`# 赛事分析报告 · 2026华为ICT创新大赛
+
+## 赛事概况
+- 参赛团队：12支
+- 参赛学生：48人
+- 赛事状态：进行中
+- 报名截止：2026-06-30
+
+## 团队分析
+| 团队 | 成员数 | 方向 | 预计划评分 |
+|------|--------|------|-----------|
+| 量子跃迁 | 4人 | AI+云计算 | 78分 |
+| 创新引擎 | 4人 | AR/VR | 62分 |
+
+## 获奖趋势分析
+- 往届一等奖项目特点：技术深度+商业落地+完整Demo
+- 评委关注重点：创新性(30%)、可行性(25%)、市场潜力(20%)、团队能力(15%)、展示效果(10%)
+- 建议关注：华为云技术栈使用可获额外加分
+
+## AI 建议
+1. 技术方案需突出华为云服务使用
+2. 商业计划应包含具体客户案例或POC数据
+3. 准备5分钟精炼Demo，突出核心价值` },
 ];
 
 // ── Tool API mapping ─────────────────────────────────────
 const toolApiMap = {
-  biz:      (input) => aiToolsAPI.businessPlan({ prompt: input }),
-  market:   (input) => aiToolsAPI.marketAnalysis({ prompt: input }),
-  improve:  (input) => aiToolsAPI.improvement({ prompt: input }),
-  tech:     (input) => aiToolsAPI.techRoute({ prompt: input }),
-  resource: (input) => aiToolsAPI.resourceMatch({ prompt: input }),
-  advisor:  (input) => aiToolsAPI.advisor({ prompt: input }),
+  biz:       (input) => aiToolsAPI.businessPlan({ prompt: input }),
+  market:    (input) => aiToolsAPI.marketAnalysis({ prompt: input }),
+  improve:   (input) => aiToolsAPI.improvement({ prompt: input }),
+  tech:      (input) => aiToolsAPI.techRoute({ prompt: input }),
+  resource:  (input) => aiToolsAPI.resourceMatch({ prompt: input }),
+  advisor:   (input) => aiToolsAPI.advisor({ prompt: input }),
+  pitchdeck: (input) => aiToolsAPI.pitchDeck({ prompt: input }),
+  swot:      (input) => aiToolsAPI.swotAnalysis({ prompt: input }),
+  report:    (input) => aiToolsAPI.competitionReport({ prompt: input }),
 };
 
 // ── Tool interface (with real API) ────────────────────────
@@ -336,7 +451,7 @@ const AITools = () => {
           </div>
           <div>
             <div style={{ fontSize:18, fontWeight:700, color:'#1F2329' }}>AI 工具箱</div>
-            <div style={{ fontSize:12, color:'#8F959E' }}>6 个 AI 辅助工具，基于 RAG 技术和往届项目库，助力你赢得比赛</div>
+            <div style={{ fontSize:12, color:'#8F959E' }}>9 个 AI 辅助工具，基于 RAG 技术和往届项目库，助力你赢得比赛</div>
           </div>
         </div>
       </div>

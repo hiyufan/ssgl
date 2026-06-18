@@ -359,6 +359,24 @@ const aiToolsAPI = {
     if (!res.ok) throw new Error(`AI advisor failed: ${res.status}`);
     return res.json();
   },
+
+  pitchDeck: async (params) => {
+    const res = await apiFetch(`${AI_BASE}/tools/pitch-deck`, jsonRequest('POST', params));
+    if (!res.ok) throw new Error(`Pitch deck failed: ${res.status}`);
+    return res.json();
+  },
+
+  swotAnalysis: async (params) => {
+    const res = await apiFetch(`${AI_BASE}/tools/swot-analysis`, jsonRequest('POST', params));
+    if (!res.ok) throw new Error(`SWOT analysis failed: ${res.status}`);
+    return res.json();
+  },
+
+  competitionReport: async (params) => {
+    const res = await apiFetch(`${AI_BASE}/tools/competition-report`, jsonRequest('POST', params));
+    if (!res.ok) throw new Error(`Competition report failed: ${res.status}`);
+    return res.json();
+  },
 };
 
 // ── RAG API ───────────────────────────────────────────────
@@ -379,6 +397,200 @@ const ragAPI = {
   search: async (params) => {
     const res = await apiFetch(`${AI_BASE}/rag/search`, jsonRequest('POST', params));
     if (!res.ok) throw new Error(`RAG search failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+// ── Calendar API ─────────────────────────────────────────
+
+const calendarAPI = {
+  list: async (params) => {
+    const res = await apiFetch(buildUrl(API_BASE, '/calendar', params));
+    if (!res.ok) throw new Error(`List calendar failed: ${res.status}`);
+    return res.json();
+  },
+
+  exportICS: async () => {
+    const token = getToken();
+    const res = await fetch(`${API_BASE}/calendar/export`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Export ICS failed: ${res.status}`);
+    return res.text();
+  },
+};
+
+// ── Showcase API ─────────────────────────────────────────
+
+const showcaseAPI = {
+  list: async (params) => {
+    const res = await apiFetch(buildUrl(API_BASE, '/showcase', params));
+    if (!res.ok) throw new Error(`List showcase failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+// ── Leaderboard API ──────────────────────────────────────
+
+const leaderboardAPI = {
+  list: async (params) => {
+    const res = await apiFetch(buildUrl(API_BASE, '/leaderboard', params));
+    if (!res.ok) throw new Error(`List leaderboard failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+// ── Notifications API ────────────────────────────────────
+
+const notificationsAPI = {
+  list: async (params) => {
+    const res = await apiFetch(buildUrl(API_BASE, '/notifications', params));
+    if (!res.ok) throw new Error(`List notifications failed: ${res.status}`);
+    return res.json();
+  },
+
+  unreadCount: async () => {
+    const res = await apiFetch(`${API_BASE}/notifications/unread-count`);
+    if (!res.ok) throw new Error(`Unread count failed: ${res.status}`);
+    return res.json();
+  },
+
+  markRead: async (id) => {
+    const res = await apiFetch(`${API_BASE}/notifications/${id}/read`, { method: 'POST' });
+    if (!res.ok) throw new Error(`Mark read failed: ${res.status}`);
+    return res.json();
+  },
+
+  markAllRead: async () => {
+    const res = await apiFetch(`${API_BASE}/notifications/read-all`, { method: 'POST' });
+    if (!res.ok) throw new Error(`Mark all read failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+// ── Favorites API ────────────────────────────────────────
+
+const favoritesAPI = {
+  list: async () => {
+    const res = await apiFetch(`${API_BASE}/favorites`);
+    if (!res.ok) throw new Error(`List favorites failed: ${res.status}`);
+    return res.json();
+  },
+
+  toggle: async (compId) => {
+    const res = await apiFetch(`${API_BASE}/favorites/${compId}`, { method: 'POST' });
+    if (!res.ok) throw new Error(`Toggle favorite failed: ${res.status}`);
+    return res.json();
+  },
+
+  check: async (compId) => {
+    const res = await apiFetch(`${API_BASE}/favorites/${compId}/check`);
+    if (!res.ok) throw new Error(`Check favorite failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+// ── Registrations API ────────────────────────────────────
+
+const registrationsAPI = {
+  list: async (params) => {
+    const res = await apiFetch(buildUrl(API_BASE, '/registrations', params));
+    if (!res.ok) throw new Error(`List registrations failed: ${res.status}`);
+    return res.json();
+  },
+
+  register: async (compId) => {
+    const res = await apiFetch(`${API_BASE}/competitions/${compId}/register`, { method: 'POST' });
+    if (!res.ok) throw new Error(`Register failed: ${res.status}`);
+    return res.json();
+  },
+
+  deregister: async (compId) => {
+    const res = await apiFetch(`${API_BASE}/competitions/${compId}/register`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`Deregister failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+// ── Milestones API ───────────────────────────────────────
+
+const milestonesAPI = {
+  list: async (compId) => {
+    const res = await apiFetch(`${API_BASE}/competitions/${compId}/milestones`);
+    if (!res.ok) throw new Error(`List milestones failed: ${res.status}`);
+    return res.json();
+  },
+
+  create: async (data) => {
+    const res = await apiFetch(`${API_BASE}/milestones`, jsonRequest('POST', data));
+    if (!res.ok) throw new Error(`Create milestone failed: ${res.status}`);
+    return res.json();
+  },
+
+  update: async (id, data) => {
+    const res = await apiFetch(`${API_BASE}/milestones/${id}`, jsonRequest('PUT', data));
+    if (!res.ok) throw new Error(`Update milestone failed: ${res.status}`);
+    return res.json();
+  },
+
+  delete: async (id) => {
+    const res = await apiFetch(`${API_BASE}/milestones/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`Delete milestone failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+// ── Coach API ────────────────────────────────────────────
+
+const coachAPI = {
+  start: async (params) => {
+    const res = await apiFetch(`${AI_BASE}/coach/start`, jsonRequest('POST', params));
+    if (!res.ok) throw new Error(`Coach start failed: ${res.status}`);
+    return res.json();
+  },
+};
+
+// ── RAG Document Management API ──────────────────────────
+
+const ragDocsAPI = {
+  list: async () => {
+    const res = await apiFetch(`${AI_BASE}/rag/documents`);
+    if (!res.ok) throw new Error(`List RAG docs failed: ${res.status}`);
+    return res.json();
+  },
+
+  ingest: async (params) => {
+    const res = await apiFetch(`${AI_BASE}/rag/ingest`, jsonRequest('POST', params));
+    if (!res.ok) throw new Error(`RAG ingest failed: ${res.status}`);
+    return res.json();
+  },
+
+  upload: async (formData) => {
+    const token = getToken();
+    const res = await fetch(`${AI_BASE}/rag/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(`RAG upload failed: ${res.status}`);
+    return res.json();
+  },
+
+  search: async (params) => {
+    const res = await apiFetch(`${AI_BASE}/rag/search`, jsonRequest('POST', params));
+    if (!res.ok) throw new Error(`RAG search failed: ${res.status}`);
+    return res.json();
+  },
+
+  stats: async () => {
+    const res = await apiFetch(`${AI_BASE}/rag/stats`);
+    if (!res.ok) throw new Error(`RAG stats failed: ${res.status}`);
+    return res.json();
+  },
+
+  delete: async (docId) => {
+    const res = await apiFetch(`${AI_BASE}/rag/documents/${docId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`RAG delete failed: ${res.status}`);
     return res.json();
   },
 };
@@ -404,4 +616,13 @@ Object.assign(window, {
   statsAPI,
   aiToolsAPI,
   ragAPI,
+  calendarAPI,
+  showcaseAPI,
+  leaderboardAPI,
+  notificationsAPI,
+  favoritesAPI,
+  registrationsAPI,
+  milestonesAPI,
+  coachAPI,
+  ragDocsAPI,
 });
