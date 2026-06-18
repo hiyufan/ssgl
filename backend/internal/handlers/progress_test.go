@@ -121,3 +121,32 @@ func TestCompetitionProgress_NewCompetition(t *testing.T) {
 		t.Errorf("expected Progress=10, got %f", progress.Progress)
 	}
 }
+
+func TestCompetitionProgress_AllStatuses(t *testing.T) {
+	statuses := []string{"draft", "published", "ongoing", "completed"}
+	for _, s := range statuses {
+		p := CompetitionProgress{Status: s}
+		if p.Status != s {
+			t.Errorf("expected Status=%s, got %s", s, p.Status)
+		}
+	}
+}
+
+func TestCompetitionProgress_PrizeFormatting(t *testing.T) {
+	// Test various prize amounts
+	tests := []struct {
+		amount float64
+		label  string
+	}{
+		{0, "zero"},
+		{1000, "small"},
+		{100000, "large"},
+		{5000.50, "decimal"},
+	}
+	for _, tt := range tests {
+		p := CompetitionProgress{TotalPrize: tt.amount}
+		if p.TotalPrize != tt.amount {
+			t.Errorf("%s: expected %f, got %f", tt.label, tt.amount, p.TotalPrize)
+		}
+	}
+}

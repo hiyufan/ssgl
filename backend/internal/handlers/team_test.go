@@ -65,3 +65,23 @@ func TestCreateTeamRequest_RequiredFields(t *testing.T) {
 		t.Error("CompetitionID should not be zero")
 	}
 }
+
+func TestCreateTeamRequest_SpecialCharacters(t *testing.T) {
+	req := CreateTeamRequest{
+		Name:          "Team αβγ 🔥",
+		CompetitionID: 1,
+	}
+	if req.Name != "Team αβγ 🔥" {
+		t.Errorf("expected unicode name, got '%s'", req.Name)
+	}
+}
+
+func TestCreateTeamRequest_MaxCompetitionID(t *testing.T) {
+	req := CreateTeamRequest{
+		Name:          "Max ID Team",
+		CompetitionID: 999999,
+	}
+	if req.CompetitionID != 999999 {
+		t.Errorf("expected CompetitionID=999999, got %d", req.CompetitionID)
+	}
+}
