@@ -81,6 +81,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	matchHandler := handlers.NewMatchHandler()
 	profileHandler := handlers.NewProfileHandler()
 	milestoneHandler := handlers.NewMilestoneHandler()
+	achievementHandler := handlers.NewAchievementPointsHandler()
 	globalSearchHandler := handlers.NewGlobalSearchHandler()
 	diagnosticsHandler := handlers.NewDiagnosticsHandler()
 	importHandler := handlers.NewImportHandler()
@@ -261,6 +262,12 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Student growth profile.
 		protected.GET("/students/:id/growth", growthHandler.GetGrowthProfile)
+
+		// Achievement points.
+		protected.GET("/points", achievementHandler.ListPoints)
+		protected.GET("/points/me", achievementHandler.GetMyPoints)
+		protected.GET("/points/leaderboard", achievementHandler.Leaderboard)
+		protected.GET("/points/history/:user_id", achievementHandler.PointHistory)
 	}
 
 	// Competition management — teacher/admin only (inherits auth + audit from protected).
@@ -297,6 +304,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Batch registration operations — teacher/admin only.
 		staff.POST("/registrations/batch-approve", registrationHandler.BatchApprove)
 		staff.POST("/registrations/batch-reject", registrationHandler.BatchReject)
+
+		// Award achievement points — teacher/admin only.
+		staff.POST("/points/award", achievementHandler.AwardPoints)
 	}
 
 	// Admin-only routes.

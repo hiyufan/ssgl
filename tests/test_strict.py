@@ -2601,6 +2601,120 @@ def test_insights():
 
 
 # ============================================================
+# Achievement Points Tests
+# ============================================================
+def test_achievement_points():
+    """Test student achievement points system."""
+    print("\n🏆 学生积分体系测试")
+
+    # Test: List my points
+    resp = _api_auth("GET", "/api/v1/points")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_points = "points" in data and isinstance(data["points"], list)
+        has_total = "total" in data
+        has_count = "count" in data
+        if has_points and has_total and has_count:
+            _log("PASS", "points-list", f"积分列表成功, total={data['total']}, count={data['count']}")
+        else:
+            _log("FAIL", "points-list", f"积分列表缺少字段")
+    else:
+        _log("FAIL", "points-list", f"积分列表失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: Get my points summary
+    resp = _api_auth("GET", "/api/v1/points/me")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_total = "total_points" in data
+        has_rank = "rank" in data
+        has_breakdown = "breakdown" in data
+        if has_total and has_rank and has_breakdown:
+            _log("PASS", "points-me", f"积分总览成功, total={data['total_points']}, rank={data['rank']}, breakdown={len(data['breakdown'])}类")
+        else:
+            _log("FAIL", "points-me", f"积分总览缺少字段")
+    else:
+        _log("FAIL", "points-me", f"积分总览失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: Leaderboard
+    resp = _api_auth("GET", "/api/v1/points/leaderboard")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_lb = "leaderboard" in data and isinstance(data["leaderboard"], list)
+        has_count = "count" in data
+        if has_lb and has_count:
+            _log("PASS", "points-leaderboard", f"积分排行榜成功, {data['count']} 名学生")
+        else:
+            _log("FAIL", "points-leaderboard", f"积分排行榜缺少字段")
+    else:
+        _log("FAIL", "points-leaderboard", f"积分排行榜失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: Leaderboard with limit
+    resp = _api_auth("GET", "/api/v1/points/leaderboard?limit=5")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        if len(data.get("leaderboard", [])) <= 5:
+            _log("PASS", "points-leaderboard-limit", f"排行榜 limit=5 成功, {data['count']} 名")
+        else:
+            _log("FAIL", "points-leaderboard-limit", f"limit 未生效")
+    else:
+        _log("FAIL", "points-leaderboard-limit", f"排行榜 limit 失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: Award points (admin/teacher only)
+    resp = _api_auth("POST", "/api/v1/points/award", json={
+        "user_id": 1,
+        "points": 25,
+        "reason": "competition_register",
+        "source_id": 1,
+        "source": "competition"
+    })
+    if _ok(resp) and resp.status_code == 201:
+        data = resp.json()
+        _log("PASS", "points-award", f"积分奖励成功, id={data.get('id')}, points={data.get('points')}")
+    else:
+        _log("FAIL", "points-award", f"积分奖励失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: Award points with invalid data
+    resp = _api_auth("POST", "/api/v1/points/award", json={
+        "user_id": 999999,
+        "points": 10,
+        "reason": "test"
+    })
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "points-award-notfound", f"不存在的用户 → 404 ✓")
+    elif _ok(resp):
+        _log("PASS", "points-award-notfound", f"不存在的用户 → {resp.status_code} ✓")
+    else:
+        _log("FAIL", "points-award-notfound", f"expected 404, got None")
+
+    # Test: Point history for a user
+    resp = _api_auth("GET", "/api/v1/points/history/1")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_points = "points" in data
+        has_total = "total" in data
+        if has_points and has_total:
+            _log("PASS", "points-history", f"积分历史成功, total={data['total']}, count={data.get('count', len(data['points']))}")
+        else:
+            _log("FAIL", "points-history", f"积分历史缺少字段")
+    else:
+        _log("FAIL", "points-history", f"积分历史失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: Point history with invalid ID
+    resp = _api_auth("GET", "/api/v1/points/history/abc")
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "points-history-bad-id", f"无效 ID → 400 ✓")
+    else:
+        _log("FAIL", "points-history-bad-id", f"expected 400, got {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: No-auth returns 401
+    resp = _api("GET", "/api/v1/points")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "points-no-auth", f"无 token → 401 ✓")
+    else:
+        _log("FAIL", "points-no-auth", f"expected 401, got {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
 # Run all tests
 # ============================================================
 def run_all():
@@ -2626,7 +2740,7 @@ def run_all():
     test_security()
     test_performance()
     test_code_quality()
-    test_insights()
+    test_achievement_points()
     test_database()
 
     elapsed = time.time() - start_time

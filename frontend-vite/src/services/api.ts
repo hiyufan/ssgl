@@ -986,3 +986,57 @@ export const profileAPI = {
     return response.data;
   },
 };
+
+// Achievement Points API
+export interface AchievementPoint {
+  id: number;
+  user_id: number;
+  points: number;
+  reason: string;
+  source: string;
+  source_id: number;
+  created_at: string;
+}
+
+export interface PointsSummary {
+  total_points: number;
+  rank: number;
+  breakdown: Array<{ reason: string; total: number; count: number }>;
+}
+
+export interface PointsLeaderboardEntry {
+  user_id: number;
+  name: string;
+  username: string;
+  total_points: number;
+  rank: number;
+}
+
+export const pointsAPI = {
+  list: async (): Promise<{ points: AchievementPoint[]; total: number; count: number }> => {
+    const response = await api.get('/points');
+    return response.data;
+  },
+
+  me: async (): Promise<PointsSummary> => {
+    const response = await api.get<PointsSummary>('/points/me');
+    return response.data;
+  },
+
+  leaderboard: async (limit?: number): Promise<{ leaderboard: PointsLeaderboardEntry[]; count: number }> => {
+    const params: Record<string, string> = {};
+    if (limit) params.limit = String(limit);
+    const response = await api.get('/points/leaderboard', { params });
+    return response.data;
+  },
+
+  history: async (userId: number): Promise<{ points: AchievementPoint[]; total: number }> => {
+    const response = await api.get(`/points/history/${userId}`);
+    return response.data;
+  },
+
+  award: async (data: { user_id: number; points: number; reason: string; source?: string; source_id?: number }): Promise<AchievementPoint> => {
+    const response = await api.post('/points/award', data);
+    return response.data;
+  },
+};
