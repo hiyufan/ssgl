@@ -2545,6 +2545,61 @@ def test_database():
              f"students={stats.get('total_students', '?')}")
 
 
+def test_insights():
+    """Test AI-powered platform insights endpoint."""
+    print("\n💡 AI 数据洞察测试")
+
+    resp = _api_auth("GET", "/api/v1/stats/insights", timeout=15)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_summary = "summary" in data and len(data["summary"]) > 10
+        has_health = "overall_health" in data
+        has_insights = "insights" in data and isinstance(data["insights"], list)
+        has_trends = "trend_analysis" in data
+        has_risks = "risk_matrix" in data
+        has_recs = "recommendations" in data
+        has_bursts = "activity_bursts" in data
+        has_ts = "generated_at" in data
+
+        all_ok = has_summary and has_health and has_insights and has_trends and has_risks and has_recs and has_bursts and has_ts
+        if all_ok:
+            _log("PASS", "insights-full",
+                 f"数据洞察成功, health={data['overall_health']}, "
+                 f"insights={len(data['insights'])}, risks={len(data['risk_matrix'])}, "
+                 f"recs={len(data['recommendations'])}, bursts={len(data['activity_bursts'])}")
+        else:
+            missing = []
+            if not has_summary: missing.append("summary")
+            if not has_health: missing.append("health")
+            if not has_insights: missing.append("insights")
+            if not has_trends: missing.append("trends")
+            if not has_risks: missing.append("risks")
+            if not has_recs: missing.append("recommendations")
+            _log("FAIL", "insights-full", f"数据洞察缺少字段: {', '.join(missing)}")
+    else:
+        _log("FAIL", "insights-full", f"数据洞察失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Verify trend_analysis structure
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        ta = data.get("trend_analysis", {})
+        required_fields = ["competitions_growth", "teams_growth", "awards_growth", "active_competitions", "completion_rate", "ai_audit_rate"]
+        missing = [f for f in required_fields if f not in ta]
+        if not missing:
+            _log("PASS", "insights-trends",
+                 f"趋势分析完整: comp={ta['competitions_growth']}%, team={ta['teams_growth']}%, "
+                 f"completion={ta['completion_rate']}%, ai={ta['ai_audit_rate']}%")
+        else:
+            _log("FAIL", "insights-trends", f"趋势分析缺少字段: {', '.join(missing)}")
+
+    # Verify no-auth returns 401
+    resp = _api("GET", "/api/v1/stats/insights")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "insights-no-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "insights-no-auth", f"expected 401, got {resp.status_code if _ok(resp) else 'None'}")
+
+
 # ============================================================
 # Run all tests
 # ============================================================
@@ -2557,6 +2612,7 @@ def run_all():
     test_services()
     test_auth()
     test_crud()
+    test_insights()
     test_registration_flow()
     test_batch_registration()
     test_competition_report()
@@ -2570,6 +2626,7 @@ def run_all():
     test_security()
     test_performance()
     test_code_quality()
+    test_insights()
     test_database()
 
     elapsed = time.time() - start_time

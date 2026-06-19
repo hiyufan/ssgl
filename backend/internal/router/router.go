@@ -94,6 +94,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	reportHandler := handlers.NewReportHandler()
 	growthHandler := handlers.NewGrowthHandler()
 	timelineHandler := handlers.NewTimelineHandler()
+	insightsHandler := handlers.NewInsightsHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -194,6 +195,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Platform health score.
 		protected.GET("/stats/health-score", healthScoreHandler.Score)
+
+		// AI-powered platform insights.
+		protected.GET("/stats/insights", insightsHandler.Insights)
 
 		// Notifications (read for all users).
 		protected.GET("/notifications", notifHandler.List)

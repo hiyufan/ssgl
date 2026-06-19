@@ -558,6 +558,20 @@ export const statsAPI = {
     const response = await api.get('/stats/popularity', { params });
     return response.data;
   },
+
+  insights: async (): Promise<{
+    summary: string;
+    overall_health: string;
+    insights: Array<{ category: string; title: string; description: string; severity: string; metric?: number; action?: string }>;
+    trend_analysis: { competitions_growth: number; teams_growth: number; awards_growth: number; active_competitions: number; completion_rate: number; ai_audit_rate: number };
+    risk_matrix: Array<{ factor: string; impact: string; likelihood: string; score: number; mitigation: string }>;
+    recommendations: Array<{ category: string; title: string; description: string; severity: string; action?: string }>;
+    activity_bursts: Array<{ period: string; count: number; competitions: string[] }>;
+    generated_at: string;
+  }> => {
+    const response = await api.get('/stats/insights');
+    return response.data;
+  },
 };
 
 // System Diagnostics API

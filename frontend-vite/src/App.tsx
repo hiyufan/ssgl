@@ -28,6 +28,7 @@ import { AchievementGalleryPage } from '@/pages/achievement-gallery';
 import { ProfilePage } from '@/pages/profile';
 import { DiagnosticsPage } from '@/pages/diagnostics';
 import { NotificationsPage } from '@/pages/notifications';
+import { InsightsPage } from '@/pages/insights';
 
 /** Restricts a route to one or more roles; otherwise redirects to the dashboard. */
 function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
@@ -57,6 +58,7 @@ function AppRoutes() {
 
         {/* teacher + admin */}
         <Route path="/approvals" element={<RequireRole roles={['teacher', 'admin']}><ApprovalsPage /></RequireRole>} />
+        <Route path="/insights" element={<RequireRole roles={['teacher', 'admin']}><InsightsPage /></RequireRole>} />
         <Route path="/registrations" element={<RequireRole roles={['teacher', 'admin']}><RegistrationsPage /></RequireRole>} />
         <Route path="/awards" element={<RequireRole roles={['teacher', 'admin']}><AwardsPage /></RequireRole>} />
         <Route path="/stats" element={<RequireRole roles={['teacher', 'admin']}><StatsPage /></RequireRole>} />
