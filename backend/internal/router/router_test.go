@@ -104,6 +104,7 @@ func TestSetup_HasAPIRoutes(t *testing.T) {
 		"DELETE /api/v1/pre-plans/:id",
 		"GET /api/v1/competitions/:id/stats",
 		"GET /api/v1/timeline",
+		"GET /api/v1/students/:id/growth",
 	}
 
 	for _, route := range requiredRoutes {

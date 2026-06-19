@@ -62,13 +62,14 @@
       logout:()=>clearTokens(),
       isAuthenticated:()=>!!getToken()
     };
-    const competitionsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/competitions?${q}`);return r.json()},get:async(id)=>{const r=await apiFetch(`${API_BASE}/competitions/${id}`);return r.json()}};
-    const teamsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/teams?${q}`);return r.json()}};
+    const competitionsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/competitions?${q}`);return r.json()},get:async(id)=>{const r=await apiFetch(`${API_BASE}/competitions/${id}`);return r.json()},create:async(d)=>{const r=await apiFetch(`${API_BASE}/competitions`,{method:'POST',body:JSON.stringify(d)});return r.json()},update:async(id,d)=>{const r=await apiFetch(`${API_BASE}/competitions/${id}`,{method:'PUT',body:JSON.stringify(d)});return r.json()},delete:async(id)=>{const r=await apiFetch(`${API_BASE}/competitions/${id}`,{method:'DELETE'});return r.json()},publish:async(id)=>{const r=await apiFetch(`${API_BASE}/competitions/${id}/publish`,{method:'POST'});return r.json()}};
+    const teamsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/teams?${q}`);return r.json()},create:async(d)=>{const r=await apiFetch(`${API_BASE}/teams`,{method:'POST',body:JSON.stringify(d)});return r.json()},join:async(id)=>{const r=await apiFetch(`${API_BASE}/teams/${id}/join`,{method:'POST'});return r.json()},leave:async(id)=>{const r=await apiFetch(`${API_BASE}/teams/${id}/leave`,{method:'DELETE'});return r.json()}};
     const workflowsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/workflows?${q}`);return r.json()},approve:async(id,comment='')=>{const r=await apiFetch(`${API_BASE}/workflows/${id}/approve`,{method:'POST',body:JSON.stringify({comment})});return r.json()},reject:async(id,comment='')=>{const r=await apiFetch(`${API_BASE}/workflows/${id}/reject`,{method:'POST',body:JSON.stringify({comment})});return r.json()}};
-    const prePlansAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/pre-plans?${q}`);return r.json()},create:async(d)=>{const r=await apiFetch(`${API_BASE}/pre-plans`,{method:'POST',body:JSON.stringify(d)});return r.json()}};
-    const awardsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/awards?${q}`);return r.json()}};
-    const evaluationsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/evaluations?${q}`);return r.json()},create:async(d)=>{const r=await apiFetch(`${API_BASE}/evaluations`,{method:'POST',body:JSON.stringify(d)});return r.json()}};
-    const statsAPI={overview:async()=>{const r=await apiFetch(`${API_BASE}/stats/overview`);return r.json()},teachers:async()=>{const r=await apiFetch(`${API_BASE}/stats/teachers`);return r.json()}};
+    const prePlansAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/pre-plans?${q}`);return r.json()},create:async(d)=>{const r=await apiFetch(`${API_BASE}/pre-plans`,{method:'POST',body:JSON.stringify(d)});return r.json()},get:async(id)=>{const r=await apiFetch(`${API_BASE}/pre-plans/${id}`);return r.json()},update:async(id,d)=>{const r=await apiFetch(`${API_BASE}/pre-plans/${id}`,{method:'PUT',body:JSON.stringify(d)});return r.json()},delete:async(id)=>{const r=await apiFetch(`${API_BASE}/pre-plans/${id}`,{method:'DELETE'});return r.json()},aiReview:async(id)=>{const r=await apiFetch(`${API_BASE}/pre-plans/${id}/review`,{method:'POST'});return r.json()},teacherReview:async(id,d)=>{const r=await apiFetch(`${API_BASE}/pre-plans/${id}/teacher-review`,{method:'POST',body:JSON.stringify(d)});return r.json()}};
+    const awardsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/awards?${q}`);return r.json()},create:async(d)=>{const r=await apiFetch(`${API_BASE}/awards`,{method:'POST',body:JSON.stringify(d)});return r.json()},confirm:async(id)=>{const r=await apiFetch(`${API_BASE}/awards/${id}/teacher-confirm`,{method:'POST'});return r.json()},settle:async(id)=>{const r=await apiFetch(`${API_BASE}/awards/${id}/settle`,{method:'POST'});return r.json()}};
+    const evaluationsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/evaluations?${q}`);return r.json()},create:async(d)=>{const r=await apiFetch(`${API_BASE}/evaluations`,{method:'POST',body:JSON.stringify(d)});return r.json()},moderate:async(id,d)=>{const r=await apiFetch(`${API_BASE}/evaluations/${id}/moderate`,{method:'POST',body:JSON.stringify(d)});return r.json()}};
+    const registrationsAPI={list:async(p={})=>{const q=new URLSearchParams(p).toString();const r=await apiFetch(`${API_BASE}/registrations?${q}`);return r.json()},approve:async(id)=>{const r=await apiFetch(`${API_BASE}/registrations/${id}/approve`,{method:'POST'});return r.json()},reject:async(id,reason='')=>{const r=await apiFetch(`${API_BASE}/registrations/${id}/reject`,{method:'POST',body:JSON.stringify({reason})});return r.json()},batchApprove:async(ids)=>{const r=await apiFetch(`${API_BASE}/registrations/batch-approve`,{method:'POST',body:JSON.stringify({ids})});return r.json()},batchReject:async(ids,reason='')=>{const r=await apiFetch(`${API_BASE}/registrations/batch-reject`,{method:'POST',body:JSON.stringify({ids,reason})});return r.json()}};
+    const statsAPI={overview:async()=>{const r=await apiFetch(`${API_BASE}/stats/overview`);return r.json()},teachers:async()=>{const r=await apiFetch(`${API_BASE}/stats/teachers`);return r.json()},students:async()=>{const r=await apiFetch(`${API_BASE}/stats/students`);return r.json()},competitions:async()=>{const r=await apiFetch(`${API_BASE}/stats/competitions`);return r.json()},progress:async()=>{const r=await apiFetch(`${API_BASE}/stats/progress`);return r.json()},typeDistribution:async()=>{const r=await apiFetch(`${API_BASE}/stats/type-distribution`);return r.json()},recentActivity:async()=>{const r=await apiFetch(`${API_BASE}/stats/recent-activity`);return r.json()},trends:async()=>{const r=await apiFetch(`${API_BASE}/stats/trends`);return r.json()},engagement:async()=>{const r=await apiFetch(`${API_BASE}/stats/engagement`);return r.json()},leaderboard:async()=>{const r=await apiFetch(`${API_BASE}/leaderboard`);return r.json()},popularity:async()=>{const r=await apiFetch(`${API_BASE}/stats/popularity`);return r.json()},healthScore:async()=>{const r=await apiFetch(`${API_BASE}/stats/health-score`);return r.json()}};
 
     // ═══ AI Tools Streaming API ════════════════════════════
     const aiToolsStreamAPI={
@@ -140,6 +141,14 @@
         cal:<><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
         upload:<><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>,
         download:<><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
+        edit:<><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></>,
+        trash:<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></>,
+        eye:<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+        filter:<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>,
+        zap:<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>,
+        activity:<><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></>,
+        trend:<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>,
+        send:<><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
       };
       return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={{display:'block',flexShrink:0}}>{P[n]||null}</svg>
     };
@@ -170,6 +179,13 @@
     const Empty=({text='暂无数据',sub})=><div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10,padding:'52px 24px',color:'#8F959E'}}><div style={{fontSize:13,fontWeight:500,color:'#646A73'}}>{text}</div>{sub&&<div style={{fontSize:12,color:'#8F959E'}}>{sub}</div>}</div>;
     const SHead=({title,action,sub})=><div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:16}}><div><div style={{fontSize:14,fontWeight:600,color:'#1F2329'}}>{title}</div>{sub&&<div style={{fontSize:12,color:'#8F959E',marginTop:2}}>{sub}</div>}</div>{action&&<div>{action}</div>}</div>;
     const PageWrap=({children,style:s={}})=><div style={{padding:24,minHeight:'100%',...s}}>{children}</div>;
+    const Modal=({open,title,onClose,children,width=480})=>{if(!open)return null;return <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(0,0,0,.45)',display:'flex',alignItems:'center',justifyContent:'center',animation:'fadeUp .15s'}}><div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:12,width,maxHeight:'80vh',overflow:'auto',boxShadow:'0 20px 60px rgba(0,0,0,.2)',animation:'scaleIn .2s'}}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #E5E6E8'}}><span style={{fontSize:15,fontWeight:600,color:'#1F2329'}}>{title}</span><button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',padding:4}}><Ic n="x" s={18} c="#8F959E"/></button></div><div style={{padding:20}}>{children}</div></div></div>};
+    const FormField=({label,children,required})=><div style={{marginBottom:14}}><label style={{display:'block',fontSize:13,fontWeight:500,color:'#1F2329',marginBottom:6}}>{label}{required&&<span style={{color:'#F53F3F'}}>*</span>}</label>{children}</div>;
+    const TextInput=({value,onChange,placeholder,type='text',...p})=><input type={type} value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{width:'100%',padding:'8px 12px',border:'1px solid #E5E6E8',borderRadius:6,fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box'}} {...p}/>;
+    const SelectInput=({value,onChange,options,placeholder})=><select value={value||''} onChange={e=>onChange(e.target.value)} style={{width:'100%',padding:'8px 12px',border:'1px solid #E5E6E8',borderRadius:6,fontSize:13,outline:'none',fontFamily:'inherit',background:'#fff',boxSizing:'border-box'}}>{placeholder&&<option value="">{placeholder}</option>}{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>;
+    const TextArea=({value,onChange,placeholder,rows=4})=><textarea value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{width:'100%',padding:'8px 12px',border:'1px solid #E5E6E8',borderRadius:6,fontSize:13,outline:'none',fontFamily:'inherit',resize:'vertical',lineHeight:1.6,boxSizing:'border-box'}}/>;
+    const StatusBadge=({status})=>{const m={draft:['草稿','draft'],published:['报名中','published'],ongoing:['进行中','ongoing'],completed:['已完成','completed'],pending:['待处理','pending'],approved:['已通过','approved'],rejected:['已拒绝','rejected'],submitted:['已提交','submitted'],under_review:['审核中','under_review'],teacher_confirm:['待确认','teacher_confirm'],settled:['已结算','settled']};const[label,s]=m[status]||[status,'draft'];return <Badge label={label} status={s}/>};
+    const SearchBar=({value,onChange,placeholder='搜索...'})=><div style={{display:'flex',alignItems:'center',gap:8,background:'#F7F8FA',border:'1px solid #E5E6E8',borderRadius:8,padding:'7px 12px',flex:1,maxWidth:320}}><Ic n="search" s={14} c="#8F959E"/><input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{border:'none',background:'none',fontSize:13,outline:'none',flex:1}}/></div>;
 
     // ═══ Toast ═════════════════════════════════════════════
     const ToastContext=createContext({add:()=>{}});
@@ -658,6 +674,283 @@
       </PageWrap>;
     };
 
+    // ═══ Competitions Page ══════════════════════════════════
+    const CompetitionsPage=({navigate})=>{
+      const{role}=useContext(AppContext);const{add}=useContext(ToastContext);
+      const[comps,setComps]=useState([]);const[loading,setLoading]=useState(true);const[search,setSearch]=useState('');
+      const[modal,setModal]=useState(false);const[editItem,setEditItem]=useState(null);
+      const[form,setForm]=useState({title:'',description:'',type:'individual',level:'school',status:'draft',location:'',max_participants:0,start_date:'',end_date:'',registration_deadline:'',prize:''});
+      const load=async()=>{try{const d=await competitionsAPI.list();setComps(d.competitions||[])}catch{}finally{setLoading(false)}};
+      useEffect(()=>{load()},[]);
+      const isStaff=role==='admin'||role==='teacher';
+      const filtered=comps.filter(c=>!search||c.title?.toLowerCase().includes(search.toLowerCase()));
+      const openCreate=()=>{setEditItem(null);setForm({title:'',description:'',type:'individual',level:'school',status:'draft',location:'',max_participants:0,start_date:'',end_date:'',registration_deadline:'',prize:''});setModal(true)};
+      const openEdit=c=>{setEditItem(c);setForm({title:c.title||'',description:c.description||'',type:c.type||'individual',level:c.level||'school',status:c.status||'draft',location:c.location||'',max_participants:c.max_participants||0,start_date:c.start_date?.split('T')[0]||'',end_date:c.end_date?.split('T')[0]||'',registration_deadline:c.registration_deadline?.split('T')[0]||'',prize:c.prize||''});setModal(true)};
+      const save=async()=>{try{if(editItem){await competitionsAPI.update(editItem.id,form);add('赛事更新成功')}else{await competitionsAPI.create(form);add('赛事创建成功')}setModal(false);load()}catch(e){add(e.message||'操作失败','error')}};
+      const publish=async(id)=>{try{await competitionsAPI.publish(id);add('赛事已发布');load()}catch(e){add('发布失败','error')}};
+      const remove=async(id)=>{if(!confirm('确认删除此赛事？'))return;try{await competitionsAPI.delete(id);add('赛事已删除');load()}catch(e){add('删除失败','error')}};
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}><div style={{width:36,height:36,borderRadius:10,background:'#EEF3FF',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="trophy" s={18} c="#3370FF"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>赛事管理</div><div style={{fontSize:12,color:'#8F959E'}}>共 {filtered.length} 个赛事</div></div></div>
+          <div style={{display:'flex',gap:10}}><SearchBar value={search} onChange={setSearch} placeholder="搜索赛事..."/>{isStaff&&<Btn icon={<Ic n="plus" s={14} c="#fff"/>} onClick={openCreate}>创建赛事</Btn>}</div>
+        </div>
+        {filtered.length===0?<Empty text="暂无赛事" sub={isStaff?'点击右上角创建第一个赛事':'等待教师发布赛事'}/>:<div style={{display:'grid',gap:12}}>
+          {filtered.map(c=><Card key={c.id} style={{padding:0}}>
+            <div style={{display:'flex',alignItems:'center',padding:'16px 20px',gap:16}}>
+              <div style={{width:48,height:48,borderRadius:12,background:c.status==='ongoing'?'#EEF3FF':c.status==='published'?'#E8FFED':'#F7F8FA',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ic n="trophy" s={22} c={c.status==='ongoing'?'#3370FF':c.status==='published'?'#00B42A':'#8F959E'}/></div>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:15,fontWeight:600,color:'#1F2329',marginBottom:4}}>{c.title}</div><div style={{fontSize:12,color:'#8F959E',display:'flex',gap:12,flexWrap:'wrap'}}><span>📍 {c.location||'待定'}</span><span>📅 {c.start_date?.split('T')[0]||'待定'}</span><span>👥 {c.max_participants||'不限'}人</span>{c.prize&&<span>🏆 {c.prize}</span>}</div></div>
+              <StatusBadge status={c.status}/>
+              {isStaff&&<div style={{display:'flex',gap:6}}>
+                {c.status==='draft'&&<Btn size="sm" variant="ghost" onClick={()=>publish(c.id)}>发布</Btn>}
+                <button onClick={()=>openEdit(c)} style={{background:'none',border:'none',cursor:'pointer',padding:6}}><Ic n="edit" s={16} c="#8F959E"/></button>
+                <button onClick={()=>remove(c.id)} style={{background:'none',border:'none',cursor:'pointer',padding:6}}><Ic n="trash" s={16} c="#F53F3F"/></button>
+              </div>}
+            </div>
+          </Card>)}
+        </div>}
+        <Modal open={modal} title={editItem?'编辑赛事':'创建赛事'} onClose={()=>setModal(false)} width={560}>
+          <FormField label="赛事名称" required><TextInput value={form.title} onChange={v=>setForm({...form,title:v})} placeholder="输入赛事名称"/></FormField>
+          <FormField label="赛事描述"><TextArea value={form.description} onChange={v=>setForm({...form,description:v})} placeholder="赛事描述"/></FormField>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <FormField label="赛事类型"><SelectInput value={form.type} onChange={v=>setForm({...form,type:v})} options={[{value:'individual',label:'个人赛'},{value:'team',label:'团队赛'}]}/></FormField>
+            <FormField label="赛事级别"><SelectInput value={form.level} onChange={v=>setForm({...form,level:v})} options={[{value:'school',label:'校级'},{value:'provincial',label:'省级'},{value:'national',label:'国家级'},{value:'international',label:'国际级'}]}/></FormField>
+          </div>
+          <FormField label="赛事地点"><TextInput value={form.location} onChange={v=>setForm({...form,location:v})} placeholder="赛事地点"/></FormField>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+            <FormField label="开始日期" required><TextInput type="date" value={form.start_date} onChange={v=>setForm({...form,start_date:v})}/></FormField>
+            <FormField label="结束日期" required><TextInput type="date" value={form.end_date} onChange={v=>setForm({...form,end_date:v})}/></FormField>
+            <FormField label="报名截止"><TextInput type="date" value={form.registration_deadline} onChange={v=>setForm({...form,registration_deadline:v})}/></FormField>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <FormField label="最大人数"><TextInput type="number" value={form.max_participants} onChange={v=>setForm({...form,max_participants:parseInt(v)||0})}/></FormField>
+            <FormField label="奖项"><TextInput value={form.prize} onChange={v=>setForm({...form,prize:v})} placeholder="如：一等奖奖金5000元"/></FormField>
+          </div>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:8}}><Btn variant="secondary" onClick={()=>setModal(false)}>取消</Btn><Btn onClick={save}>{editItem?'保存':'创建'}</Btn></div>
+        </Modal>
+      </PageWrap>
+    };
+
+    // ═══ Teams Page ═════════════════════════════════════════
+    const TeamsPage=({navigate})=>{
+      const{add}=useContext(ToastContext);
+      const[teams,setTeams]=useState([]);const[loading,setLoading]=useState(true);const[search,setSearch]=useState('');
+      const[modal,setModal]=useState(false);const[form,setForm]=useState({name:'',description:'',competition_id:''});
+      const[comps,setComps]=useState([]);
+      const load=async()=>{try{const[t,c]=await Promise.all([teamsAPI.list(),competitionsAPI.list({status:'published'})]);setTeams(t.teams||[]);setComps(c.competitions||[])}catch{}finally{setLoading(false)}};
+      useEffect(()=>{load()},[]);
+      const filtered=teams.filter(t=>!search||t.name?.toLowerCase().includes(search.toLowerCase()));
+      const create=async()=>{try{await teamsAPI.create(form);add('团队创建成功');setModal(false);load()}catch(e){add(e.message||'创建失败','error')}};
+      const leave=async(id)=>{if(!confirm('确认退出此团队？'))return;try{await teamsAPI.leave(id);add('已退出团队');load()}catch(e){add('操作失败','error')}};
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}><div style={{width:36,height:36,borderRadius:10,background:'#E8FFED',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="users" s={18} c="#00B42A"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>团队管理</div><div style={{fontSize:12,color:'#8F959E'}}>共 {filtered.length} 个团队</div></div></div>
+          <div style={{display:'flex',gap:10}}><SearchBar value={search} onChange={setSearch} placeholder="搜索团队..."/><Btn icon={<Ic n="plus" s={14} c="#fff"/>} onClick={()=>{setForm({name:'',description:'',competition_id:''});setModal(true)}}>创建团队</Btn></div>
+        </div>
+        {filtered.length===0?<Empty text="暂无团队" sub="点击右上角创建团队"/>:<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))',gap:14}}>
+          {filtered.map(t=><Card key={t.id} hover style={{padding:20}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+              <div style={{width:40,height:40,borderRadius:10,background:'#EEF3FF',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="users" s={18} c="#3370FF"/></div>
+              <div style={{flex:1}}><div style={{fontSize:15,fontWeight:600,color:'#1F2329'}}>{t.name}</div><div style={{fontSize:12,color:'#8F959E'}}>{t.competition?.title||'未关联赛事'}</div></div>
+              <StatusBadge status={t.status||'active'}/>
+            </div>
+            {t.description&&<div style={{fontSize:13,color:'#646A73',marginBottom:12,lineHeight:1.6}}>{t.description}</div>}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{fontSize:12,color:'#8F959E'}}>👥 {t.members?.length||0} 名成员{t.leader?.name&&` · 队长: ${t.leader.name}`}</div>
+              <button onClick={()=>leave(t.id)} style={{background:'none',border:'1px solid #E5E6E8',borderRadius:6,padding:'4px 12px',fontSize:12,color:'#F53F3F',cursor:'pointer'}}>退出</button>
+            </div>
+          </Card>)}
+        </div>}
+        <Modal open={modal} title="创建团队" onClose={()=>setModal(false)}>
+          <FormField label="团队名称" required><TextInput value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="输入团队名称"/></FormField>
+          <FormField label="关联赛事"><SelectInput value={form.competition_id} onChange={v=>setForm({...form,competition_id:v})} options={comps.map(c=>({value:String(c.id),label:c.title}))} placeholder="选择赛事"/></FormField>
+          <FormField label="团队描述"><TextArea value={form.description} onChange={v=>setForm({...form,description:v})} placeholder="团队介绍"/></FormField>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:8}}><Btn variant="secondary" onClick={()=>setModal(false)}>取消</Btn><Btn onClick={create}>创建</Btn></div>
+        </Modal>
+      </PageWrap>
+    };
+
+    // ═══ Approvals Page ═════════════════════════════════════
+    const ApprovalsPage=({navigate})=>{
+      const{add}=useContext(ToastContext);const{role}=useContext(AppContext);
+      const[items,setItems]=useState([]);const[loading,setLoading]=useState(true);const[tab,setTab]=useState('pending');
+      const[reasonModal,setReasonModal]=useState(false);const[rejectId,setRejectId]=useState(null);const[reason,setReason]=useState('');
+      const load=async()=>{try{const d=await workflowsAPI.list({tab});setItems(d.workflows||[])}catch{}finally{setLoading(false)}};
+      useEffect(()=>{load()},[tab]);
+      const approve=async(id)=>{try{await workflowsAPI.approve(id);add('已批准');load()}catch(e){add('操作失败','error')}};
+      const reject=async()=>{if(!rejectId)return;try{await workflowsAPI.reject(rejectId,reason);add('已拒绝');setReasonModal(false);setRejectId(null);setReason('');load()}catch(e){add('操作失败','error')}};
+      const batchApprove=async()=>{const pending=items.filter(i=>i.status==='pending');if(!pending.length)return;try{await registrationsAPI.batchApprove(pending.map(i=>i.id));add(`批量批准 ${pending.length} 条`);load()}catch(e){add('批量操作失败','error')}};
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}><div style={{width:36,height:36,borderRadius:10,background:'#FFF7E8',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="checksq" s={18} c="#FF7D00"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>审批中心</div><div style={{fontSize:12,color:'#8F959E'}}>处理赛事报名和预案审批</div></div></div>
+        <div style={{display:'flex',gap:2,background:'#fff',border:'1px solid #E5E6E8',borderRadius:8,padding:3,marginBottom:16,width:'fit-content'}}>
+          {[['pending','待处理'],['approved','已批准'],['rejected','已拒绝']].map(([k,l])=><div key={k} onClick={()=>setTab(k)} style={{padding:'6px 16px',borderRadius:6,fontSize:13,cursor:'pointer',fontWeight:tab===k?600:400,background:tab===k?'#FF7D00':'transparent',color:tab===k?'#fff':'#646A73'}}>{l}</div>)}
+        </div>
+        {items.length===0?<Empty text={`暂无${tab==='pending'?'待处理':'已'+tab}的审批`}/>:<div style={{display:'grid',gap:10}}>
+          {items.map(a=><Card key={a.id} style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:14}}>
+            <div style={{width:40,height:40,borderRadius:10,background:a.type==='pre_plan'?'#F5F0FF':'#EEF3FF',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ic n={a.type==='pre_plan'?'file':'trophy'} s={18} c={a.type==='pre_plan'?'#7C3AED':'#3370FF'}/></div>
+            <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600,color:'#1F2329',marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.title||a.type||'审批项'}</div><div style={{fontSize:12,color:'#8F959E'}}>{a.submitter?.name||''} · {a.created_at?.split('T')[0]||''}</div></div>
+            <StatusBadge status={a.status}/>
+            {tab==='pending'&&<div style={{display:'flex',gap:6}}>
+              <Btn size="sm" onClick={()=>approve(a.id)}>批准</Btn>
+              <Btn size="sm" variant="secondary" onClick={()=>{setRejectId(a.id);setReasonModal(true)}}>拒绝</Btn>
+            </div>}
+          </Card>)}
+        </div>}
+        {tab==='pending'&&items.length>1&&<div style={{marginTop:16,textAlign:'center'}><Btn variant="secondary" onClick={batchApprove}>批量批准全部 ({items.length})</Btn></div>}
+        <Modal open={reasonModal} title="拒绝审批" onClose={()=>setReasonModal(false)}>
+          <FormField label="拒绝原因"><TextArea value={reason} onChange={setReason} placeholder="请输入拒绝原因（可选）"/></FormField>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:10}}><Btn variant="secondary" onClick={()=>setReasonModal(false)}>取消</Btn><Btn style={{background:'#F53F3F'}} onClick={reject}>确认拒绝</Btn></div>
+        </Modal>
+      </PageWrap>
+    };
+
+    // ═══ PrePlans Page ═══════════════════════════════════════
+    const PrePlansPage=({navigate})=>{
+      const{add}=useContext(ToastContext);const{role}=useContext(AppContext);
+      const[plans,setPlans]=useState([]);const[loading,setLoading]=useState(true);
+      const[modal,setModal]=useState(false);const[form,setForm]=useState({title:'',content:'',competition_id:''});
+      const[comps,setComps]=useState([]);const[aiLoading,setAiLoading]=useState(null);
+      const isStaff=role==='admin'||role==='teacher';
+      const load=async()=>{try{const[p,c]=await Promise.all([prePlansAPI.list(),competitionsAPI.list()]);setPlans(p.pre_plans||[]);setComps(c.competitions||[])}catch{}finally{setLoading(false)}};
+      useEffect(()=>{load()},[]);
+      const create=async()=>{try{await prePlansAPI.create(form);add('预案创建成功');setModal(false);load()}catch(e){add(e.message||'创建失败','error')}};
+      const aiReview=async(id)=>{setAiLoading(id);try{await prePlansAPI.aiReview(id);add('AI 评审完成');load()}catch(e){add('AI 评审失败','error')}finally{setAiLoading(null)}};
+      const teacherReview=async(id,status)=>{try{await prePlansAPI.teacherReview(id,{status,comment:status==='approved'?'审核通过':'审核不通过'});add(`已${status==='approved'?'通过':'驳回'}`);load()}catch(e){add('操作失败','error')}};
+      const remove=async(id)=>{if(!confirm('确认删除此预案？'))return;try{await prePlansAPI.delete(id);add('已删除');load()}catch(e){add('删除失败','error')}};
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}><div style={{width:36,height:36,borderRadius:10,background:'#F5F0FF',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="file" s={18} c="#7C3AED"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>预计划管理</div><div style={{fontSize:12,color:'#8F959E'}}>共 {plans.length} 个预案</div></div></div>
+          <Btn icon={<Ic n="plus" s={14} c="#fff"/>} onClick={()=>{setForm({title:'',content:'',competition_id:''});setModal(true)}}>创建预案</Btn>
+        </div>
+        {plans.length===0?<Empty text="暂无预案" sub="点击右上角创建第一个预案"/>:<div style={{display:'grid',gap:12}}>
+          {plans.map(p=><Card key={p.id} style={{padding:20}}>
+            <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
+              <div style={{width:44,height:44,borderRadius:12,background:'#F5F0FF',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ic n="file" s={20} c="#7C3AED"/></div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}><span style={{fontSize:15,fontWeight:600,color:'#1F2329'}}>{p.title}</span><StatusBadge status={p.status}/>{p.ai_review_score&&<span style={{fontSize:12,fontWeight:700,color:'#7C3AED',background:'#F5F0FF',padding:'2px 8px',borderRadius:99}}>AI {p.ai_review_score}分</span>}</div>
+                <div style={{fontSize:13,color:'#646A73',lineHeight:1.6,maxHeight:60,overflow:'hidden'}}>{p.content?.slice(0,200)}</div>
+                {p.ai_review_notes&&<div style={{marginTop:8,padding:'10px 12px',background:'#F5F0FF',borderRadius:8,fontSize:12,color:'#7C3AED',lineHeight:1.6}}>🤖 AI 评语：{p.ai_review_notes.slice(0,200)}</div>}
+              </div>
+              <div style={{display:'flex',gap:6,flexShrink:0}}>
+                <Btn size="sm" variant="ghost" onClick={()=>aiReview(p.id)} disabled={aiLoading===p.id}>{aiLoading===p.id?'评审中...':'AI 评审'}</Btn>
+                {isStaff&&p.status==='submitted'&&<><Btn size="sm" onClick={()=>teacherReview(p.id,'approved')}>通过</Btn><Btn size="sm" variant="secondary" onClick={()=>teacherReview(p.id,'rejected')}>驳回</Btn></>}
+                {!isStaff&&(p.status==='draft'||p.status==='rejected')&&<button onClick={()=>remove(p.id)} style={{background:'none',border:'none',cursor:'pointer',padding:4}}><Ic n="trash" s={16} c="#F53F3F"/></button>}
+              </div>
+            </div>
+          </Card>)}
+        </div>}
+        <Modal open={modal} title="创建预案" onClose={()=>setModal(false)} width={560}>
+          <FormField label="预案标题" required><TextInput value={form.title} onChange={v=>setForm({...form,title:v})} placeholder="输入预案标题"/></FormField>
+          <FormField label="关联赛事"><SelectInput value={form.competition_id} onChange={v=>setForm({...form,competition_id:v})} options={comps.map(c=>({value:String(c.id),label:c.title}))} placeholder="选择赛事"/></FormField>
+          <FormField label="预案内容" required><TextArea value={form.content} onChange={v=>setForm({...form,content:v})} placeholder="详细描述你的项目计划、目标、实施方案..." rows={8}/></FormField>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:8}}><Btn variant="secondary" onClick={()=>setModal(false)}>取消</Btn><Btn onClick={create}>创建</Btn></div>
+        </Modal>
+      </PageWrap>
+    };
+
+    // ═══ Awards Page ═════════════════════════════════════════
+    const AwardsPage=({navigate})=>{
+      const{add}=useContext(ToastContext);const{role}=useContext(AppContext);
+      const[awards,setAwards]=useState([]);const[loading,setLoading]=useState(true);
+      const isStaff=role==='admin'||role==='teacher';
+      const load=async()=>{try{const d=await awardsAPI.list();setAwards(d.awards||[])}catch{}finally{setLoading(false)}};
+      useEffect(()=>{load()},[]);
+      const confirm=async(id)=>{try{await awardsAPI.confirm(id);add('已确认');load()}catch(e){add('操作失败','error')}};
+      const settle=async(id)=>{try{await awardsAPI.settle(id);add('已结算');load()}catch(e){add('操作失败','error')}};
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}><div style={{width:36,height:36,borderRadius:10,background:'#FFFBE6',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="gift" s={18} c="#FAAD14"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>获奖管理</div><div style={{fontSize:12,color:'#8F959E'}}>共 {awards.length} 个奖项</div></div></div>
+        {awards.length===0?<Empty text="暂无奖项" sub="赛事结束后将显示获奖信息"/>:<div style={{display:'grid',gap:12}}>
+          {awards.map(a=><Card key={a.id} style={{padding:0,overflow:'hidden'}}>
+            <div style={{height:3,background:a.rank<=3?['#FFD700','#C0C0C0','#CD7F32'][a.rank-1]:'#E5E6E8'}}/>
+            <div style={{display:'flex',alignItems:'center',padding:'16px 20px',gap:16}}>
+              <div style={{fontSize:28}}>{['🥇','🥈','🥉'][a.rank-1]||'🏆'}</div>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:15,fontWeight:600,color:'#1F2329',marginBottom:4}}>{a.rank_name||`第${a.rank}名`}</div><div style={{fontSize:12,color:'#8F959E'}}>{a.team_name||''} · {a.competition_title||''}{a.prize_amount?` · ¥${a.prize_amount.toLocaleString()}`:''}</div></div>
+              <StatusBadge status={a.status}/>
+              {isStaff&&a.status==='teacher_confirm'&&<Btn size="sm" onClick={()=>confirm(a.id)}>确认</Btn>}
+              {role==='admin'&&a.status==='confirmed'&&<Btn size="sm" onClick={()=>settle(a.id)}>结算</Btn>}
+            </div>
+          </Card>)}
+        </div>}
+      </PageWrap>
+    };
+
+    // ═══ Evaluations Page ════════════════════════════════════
+    const EvaluationsPage=({navigate})=>{
+      const{add}=useContext(ToastContext);const{role}=useContext(AppContext);
+      const[evals,setEvals]=useState([]);const[loading,setLoading]=useState(true);
+      const[modal,setModal]=useState(false);const[form,setForm]=useState({target_name:'',score:80,content:'',type:'teacher'});
+      const isStaff=role==='admin'||role==='teacher';
+      const load=async()=>{try{const d=await evaluationsAPI.list();setEvals(d.evaluations||[])}catch{}finally{setLoading(false)}};
+      useEffect(()=>{load()},[]);
+      const create=async()=>{try{await evaluationsAPI.create(form);add('评价提交成功');setModal(false);load()}catch(e){add(e.message||'提交失败','error')}};
+      const moderate=async(id,status)=>{try{await evaluationsAPI.moderate(id,{status});add('已审核');load()}catch(e){add('操作失败','error')}};
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}><div style={{width:36,height:36,borderRadius:10,background:'#FFF7E8',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="star" s={18} c="#FF7D00"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>学生评价</div><div style={{fontSize:12,color:'#8F959E'}}>共 {evals.length} 条评价</div></div></div>
+          {role==='student'&&<Btn icon={<Ic n="plus" s={14} c="#fff"/>} onClick={()=>{setForm({target_name:'',score:80,content:'',type:'teacher'});setModal(true)}}>提交评价</Btn>}
+        </div>
+        {evals.length===0?<Empty text="暂无评价"/>:<div style={{display:'grid',gap:10}}>
+          {evals.map(e=><Card key={e.id} style={{padding:'14px 20px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
+              <div style={{width:36,height:36,borderRadius:'50%',background:'#FFF7E8',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ic n="star" s={16} c="#FF7D00"/></div>
+              <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,color:'#1F2329'}}>{e.target_name||'评价对象'}</div><div style={{fontSize:12,color:'#8F959E'}}>{e.type==='teacher'?'教师评价':'学生评价'} · {e.created_at?.split('T')[0]||''}</div></div>
+              <div style={{fontSize:16,fontWeight:800,color:'#FF7D00'}}>{e.score}<span style={{fontSize:11,color:'#8F959E',fontWeight:400}}>/100</span></div>
+              <StatusBadge status={e.status||'submitted'}/>
+            </div>
+            {e.content&&<div style={{fontSize:13,color:'#646A73',lineHeight:1.6,paddingLeft:48}}>{e.content}</div>}
+            {isStaff&&e.status==='submitted'&&<div style={{display:'flex',gap:6,marginTop:10,paddingLeft:48}}>
+              <Btn size="sm" onClick={()=>moderate(e.id,'approved')}>通过</Btn>
+              <Btn size="sm" variant="secondary" onClick={()=>moderate(e.id,'rejected')}>驳回</Btn>
+            </div>}
+          </Card>)}
+        </div>}
+        <Modal open={modal} title="提交评价" onClose={()=>setModal(false)}>
+          <FormField label="评价对象" required><TextInput value={form.target_name} onChange={v=>setForm({...form,target_name:v})} placeholder="输入教师或学生姓名"/></FormField>
+          <FormField label="评分" required><div style={{display:'flex',alignItems:'center',gap:12}}><input type="range" min={0} max={100} value={form.score} onChange={e=>setForm({...form,score:parseInt(e.target.value)})} style={{flex:1}}/><span style={{fontSize:18,fontWeight:700,color:'#FF7D00',minWidth:40}}>{form.score}</span></div></FormField>
+          <FormField label="评价内容"><TextArea value={form.content} onChange={v=>setForm({...form,content:v})} placeholder="详细评价..."/></FormField>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:8}}><Btn variant="secondary" onClick={()=>setModal(false)}>取消</Btn><Btn onClick={create}>提交</Btn></div>
+        </Modal>
+      </PageWrap>
+    };
+
+    // ═══ Stats Page ═════════════════════════════════════════
+    const StatsPage=({navigate})=>{
+      const[overview,setOverview]=useState(null);const[loading,setLoading]=useState(true);
+      const[trends,setTrends]=useState(null);const[engagement,setEngagement]=useState(null);
+      const[popularity,setPopularity]=useState(null);
+      useEffect(()=>{const f=async()=>{try{const[o,t,e,p]=await Promise.all([statsAPI.overview(),statsAPI.trends().catch(()=>null),statsAPI.engagement().catch(()=>null),statsAPI.popularity().catch(()=>null)]);setOverview(o);setTrends(t);setEngagement(e);setPopularity(p)}catch{}finally{setLoading(false)}};f()},[]);
+      if(loading)return <PageWrap><Spinner size={40}/></PageWrap>;
+      const cards=[{label:'赛事总数',value:overview?.total_competitions||0,color:'#3370FF',icon:'trophy'},{label:'团队总数',value:overview?.total_teams||0,color:'#00B42A',icon:'users'},{label:'学生总数',value:overview?.total_students||0,color:'#7C3AED',icon:'star'},{label:'教师总数',value:overview?.total_teachers||0,color:'#FF7D00',icon:'medal'}];
+      return <PageWrap>
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}><div style={{width:36,height:36,borderRadius:10,background:'#EEF3FF',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="barchart" s={18} c="#3370FF"/></div><div><div style={{fontSize:18,fontWeight:700,color:'#1F2329'}}>统计分析</div><div style={{fontSize:12,color:'#8F959E'}}>平台数据总览</div></div></div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
+          {cards.map(k=><Card key={k.label} style={{padding:'20px',borderTop:`3px solid ${k.color}`}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}><span style={{fontSize:12,color:'#8F959E',fontWeight:500}}>{k.label}</span><div style={{width:32,height:32,borderRadius:8,background:k.color+'15',display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n={k.icon} s={16} c={k.color}/></div></div>
+            <div style={{fontSize:32,fontWeight:800,color:'#1F2329'}}>{k.value}</div>
+          </Card>)}
+        </div>
+        {popularity?.competitions?.length>0&&<Card style={{padding:20,marginBottom:16}}>
+          <SHead title="🏆 赛事热度排行" sub="基于报名人数、团队数等综合评分"/>
+          <div style={{display:'grid',gap:8}}>{popularity.competitions.slice(0,8).map((c,i)=><div key={c.id||i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:i<3?'#FAFBFC':'transparent',borderRadius:8}}>
+            <div style={{width:28,height:28,borderRadius:8,background:i<3?['#FFD700','#C0C0C0','#CD7F32'][i]:'#F0F1F3',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:i<3?'#fff':'#646A73',flexShrink:0}}>{i+1}</div>
+            <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,color:'#1F2329',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.title}</div></div>
+            {c.score!==undefined&&<div style={{display:'flex',alignItems:'center',gap:8}}><div style={{width:80,height:6,background:'#F0F1F3',borderRadius:3,overflow:'hidden'}}><div style={{width:`${Math.min((c.score/(popularity.competitions[0]?.score||1))*100,100)}%`,height:'100%',background:'#3370FF',borderRadius:3}}/></div><span style={{fontSize:13,fontWeight:600,color:'#3370FF',fontFamily:'JetBrains Mono,monospace'}}>{c.score}</span></div>}
+          </div>)}</div>
+        </Card>}
+        {engagement&&<Card style={{padding:20}}>
+          <SHead title="📊 参与度指标"/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16}}>
+            {[{l:'报名率',v:engagement.registration_rate||'0%',c:'#3370FF'},{l:'预案提交率',v:engagement.preplan_rate||'0%',c:'#7C3AED'},{l:'获奖率',v:engagement.award_rate||'0%',c:'#FAAD14'}].map(s=><div key={s.l} style={{textAlign:'center',padding:16,background:'#FAFBFC',borderRadius:10}}><div style={{fontSize:28,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:12,color:'#8F959E',marginTop:4}}>{s.l}</div></div>)}
+          </div>
+        </Card>}
+      </PageWrap>
+    };
+
     const GenericPage=({title})=><PageWrap><Card style={{padding:40,textAlign:'center'}}><div style={{fontSize:18,fontWeight:600,color:'#1F2329',marginBottom:8}}>{title}</div><div style={{fontSize:13,color:'#8F959E'}}>此页面正在开发中</div></Card></PageWrap>;
 
     // ═══ App ═══════════════════════════════════════════════
@@ -668,7 +961,7 @@
       const navigate=(p,data)=>{setPage(p);setPageData(data||null)};
       const ctx={role,setRole,page,navigate,pageData};
       const pageTitle=PAGE_LABELS[page]||'首页';
-      const renderPage=()=>{switch(page){case 'dashboard':return <Dashboard navigate={navigate}/>;case 'competitions':return <GenericPage title="赛事管理"/>;case 'teams':return <GenericPage title="团队管理"/>;case 'approvals':return <GenericPage title="审批中心"/>;case 'preplans':return <GenericPage title="预计划管理"/>;case 'aitools':return <AIToolsPage/>;case 'stats':return <GenericPage title="统计分析"/>;case 'awards':return <GenericPage title="获奖管理"/>;case 'evaluations':return <GenericPage title="学生评价"/>;case 'calendar':return <CalendarPage navigate={navigate}/>;case 'knowledgebase':return <KnowledgeBase navigate={navigate}/>;case 'showcase':return <ShowcasePage navigate={navigate}/>;default:return <Dashboard navigate={navigate}/>}};
+      const renderPage=()=>{switch(page){case 'dashboard':return <Dashboard navigate={navigate}/>;case 'competitions':return <CompetitionsPage navigate={navigate}/>;case 'teams':return <TeamsPage navigate={navigate}/>;case 'approvals':return <ApprovalsPage navigate={navigate}/>;case 'preplans':return <PrePlansPage navigate={navigate}/>;case 'aitools':return <AIToolsPage/>;case 'stats':return <StatsPage navigate={navigate}/>;case 'awards':return <AwardsPage navigate={navigate}/>;case 'evaluations':return <EvaluationsPage navigate={navigate}/>;case 'calendar':return <CalendarPage navigate={navigate}/>;case 'knowledgebase':return <KnowledgeBase navigate={navigate}/>;case 'showcase':return <ShowcasePage navigate={navigate}/>;default:return <Dashboard navigate={navigate}/>}};
       return <AuthProvider><ToastProvider><AppContext.Provider value={ctx}><Layout pageTitle={pageTitle}>{renderPage()}</Layout></AppContext.Provider></ToastProvider></AuthProvider>
     };
 

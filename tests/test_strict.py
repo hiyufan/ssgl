@@ -2165,16 +2165,22 @@ def test_knowledge_base():
     """Test knowledge base: upload, ingest, search, chunks, delete."""
     print("\n📚 4c. 知识库管理测试")
 
-    # Text ingest (embedding can be slow, retry on failure)
-    resp = _api("POST", "/ai/api/v1/rag/ingest", base=AI_SERVICE, json={
-        "content": "蓝桥杯全国软件和信息技术专业人才大赛是由工业和信息化部人才交流中心主办的全国性IT学科赛事。大赛分为省赛和全国总决赛两个阶段。",
-        "metadata": {"source": "test", "category": "competition_intro"},
-        "chunk_strategy": "semantic",
-    }, timeout=90, max_retries=3)
-    if _ok(resp) and resp.status_code == 200:
-        data = resp.json()
-        _log("PASS", "rag-ingest", f"文本摄入成功, {data.get('chunk_count', 0)} 个分块")
-    else:
+    # Text ingest (embedding can be slow + rate limits, retry with backoff)
+    ingest_ok = False
+    resp = None
+    for _attempt in range(4):
+        resp = _api("POST", "/ai/api/v1/rag/ingest", base=AI_SERVICE, json={
+            "content": "蓝桥杯全国软件和信息技术专业人才大赛是由工业和信息化部人才交流中心主办的全国性IT学科赛事。大赛分为省赛和全国总决赛两个阶段。",
+            "metadata": {"source": "test", "category": "competition_intro"},
+            "chunk_strategy": "semantic",
+        }, timeout=120, max_retries=0)
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            _log("PASS", "rag-ingest", f"文本摄入成功, {data.get('chunk_count', 0)} 个分块")
+            ingest_ok = True
+            break
+        time.sleep(5)  # backoff between attempts
+    if not ingest_ok:
         _log("FAIL", "rag-ingest", f"文本摄入失败 → {resp.status_code if _ok(resp) else 'None'}")
 
     # File upload
@@ -2211,6 +2217,56 @@ def test_knowledge_base():
         _log("PASS", "rag-delete", f"文档删除成功, 删除 {data.get('chunks_deleted', 0)} 个分块")
     else:
         _log("FAIL", "rag-delete", f"文档删除失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
+# 4d. Student Growth Profile Tests
+# ============================================================
+def test_growth_profile():
+    """Test student growth profile endpoint."""
+    print("\n🌱 4d. 学生竞赛成长档案测试")
+
+    # Get admin user ID for testing
+    admin_id = _get_admin_user_id()
+    if not admin_id:
+        _log("SKIP", "growth-profile", "无法获取用户 ID")
+        return
+
+    # Growth profile for existing student (user 5 = zhangm)
+    resp = _api_auth("GET", f"/api/v1/students/5/growth", timeout=15)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_summary = "summary" in data
+        has_skills = "skills" in data
+        has_timeline = "timeline" in data
+        has_recs = "recommendations" in data
+        _log("PASS", "growth-profile",
+             f"学生成长档案成功, summary={has_summary}, skills={has_skills}, "
+             f"timeline={has_timeline}, recommendations={has_recs}, "
+             f"competitions={data.get('summary', {}).get('total_competitions', 0)}")
+    else:
+        _log("FAIL", "growth-profile", f"成长档案失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Growth profile for non-existent student
+    resp = _api_auth("GET", "/api/v1/students/99999/growth", timeout=10)
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "growth-profile-404", "不存在的学生 → 404 ✓")
+    else:
+        _log("FAIL", "growth-profile-404", f"expected 404, got {resp.status_code if _ok(resp) else 'None'}")
+
+    # Growth profile with invalid ID
+    resp = _api_auth("GET", "/api/v1/students/abc/growth", timeout=10)
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "growth-profile-bad-id", "无效 ID → 400 ✓")
+    else:
+        _log("FAIL", "growth-profile-bad-id", f"expected 400, got {resp.status_code if _ok(resp) else 'None'}")
+
+    # No-auth should return 401
+    resp = _api("GET", "/api/v1/students/5/growth", timeout=10)
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "growth-profile-no-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "growth-profile-no-auth", f"expected 401, got {resp.status_code if _ok(resp) else 'None'}")
 
 
 # ============================================================
@@ -2509,6 +2565,7 @@ def run_all():
     test_ai_service()
     test_coach_flow()
     test_knowledge_base()
+    test_growth_profile()
     test_rbac()
     test_security()
     test_performance()

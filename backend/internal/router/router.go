@@ -92,6 +92,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	subscriptionHandler := handlers.NewSubscriptionHandler()
 	scheduleHandler := handlers.NewScheduleHandler()
 	reportHandler := handlers.NewReportHandler()
+	growthHandler := handlers.NewGrowthHandler()
 	timelineHandler := handlers.NewTimelineHandler()
 
 	v1 := r.Group("/api/v1")
@@ -253,6 +254,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Platform timeline — unified event feed.
 		protected.GET("/timeline", timelineHandler.List)
+
+		// Student growth profile.
+		protected.GET("/students/:id/growth", growthHandler.GetGrowthProfile)
 	}
 
 	// Competition management — teacher/admin only (inherits auth + audit from protected).
