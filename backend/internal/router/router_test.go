@@ -103,6 +103,7 @@ func TestSetup_HasAPIRoutes(t *testing.T) {
 		"POST /api/v1/pre-plans/:id/teacher-review",
 		"DELETE /api/v1/pre-plans/:id",
 		"GET /api/v1/competitions/:id/stats",
+		"GET /api/v1/competitions/:id/activity",
 		"GET /api/v1/timeline",
 		"GET /api/v1/students/:id/growth",
 		// Subscriptions

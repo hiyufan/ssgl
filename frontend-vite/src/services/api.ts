@@ -606,6 +606,11 @@ export const statsAPI = {
     const response = await api.get('/stats/insights');
     return response.data;
   },
+
+  annualReport: async (): Promise<Record<string, unknown>> => {
+    const response = await api.get('/report/annual');
+    return response.data;
+  },
 };
 
 // System Diagnostics API

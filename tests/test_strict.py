@@ -1475,6 +1475,100 @@ def test_crud():
 
 
 # ============================================================
+# 3a1. Batch Competition Operations Tests
+# ============================================================
+def test_batch_operations():
+    """Test batch publish, close, delete competitions."""
+    print("\n📦 3a1. 批量赛事操作测试")
+
+    # Create 3 draft competitions for batch testing
+    comp_ids = []
+    for i in range(3):
+        resp = _api_auth("POST", "/api/v1/competitions", json={
+            "title": f"批量操作测试-{i+1}-{int(time.time())}",
+            "description": f"批量测试赛事 {i+1}",
+            "type": "innovation",
+            "max_team_size": 3,
+            "min_team_size": 1,
+            "start_date": "2026-09-01T00:00:00+08:00",
+            "end_date": "2026-10-01T00:00:00+08:00",
+        })
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            comp = data.get("competition", data)
+            cid = comp.get("id") or data.get("id")
+            if cid:
+                comp_ids.append(cid)
+
+    if len(comp_ids) < 3:
+        _log("WARN", "batch-create", f"只创建了 {len(comp_ids)}/3 测试赛事")
+        if not comp_ids:
+            return
+
+    _log("PASS", "batch-create", f"批量测试赛事创建成功, {len(comp_ids)} 个")
+
+    # Test: batch publish
+    resp = _api_auth("POST", "/api/v1/competitions/batch-publish", json={"ids": comp_ids})
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "batch-publish", f"批量发布成功, 成功={data.get('succeeded', 0)}, 失败={data.get('failed_count', 0)}")
+    else:
+        _log("FAIL", "batch-publish", f"批量发布失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: batch publish with empty body
+    resp = _api_auth("POST", "/api/v1/competitions/batch-publish", json={})
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "batch-publish-empty", "空body → 400 ✓")
+    else:
+        _log("WARN", "batch-publish-empty", f"空body → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test: batch close
+    resp = _api_auth("POST", "/api/v1/competitions/batch-close", json={"ids": comp_ids})
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "batch-close", f"批量关闭成功, 成功={data.get('succeeded', 0)}, 失败={data.get('failed_count', 0)}")
+    else:
+        _log("FAIL", "batch-close", f"批量关闭失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Cleanup: batch delete (should fail for non-draft)
+    resp = _api_auth("POST", "/api/v1/competitions/batch-delete", json={"ids": comp_ids[:1]})
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        _log("PASS", "batch-delete-completed", f"批量删除(已完成赛事): 成功={data.get('succeeded', 0)}, 失败={data.get('failed_count', 0)}")
+
+    # Create 2 more drafts and batch-delete them
+    draft_ids = []
+    for i in range(2):
+        resp = _api_auth("POST", "/api/v1/competitions", json={
+            "title": f"待删除-{i+1}-{int(time.time())}",
+            "description": "即将删除",
+            "type": "hackathon",
+            "max_team_size": 5,
+            "min_team_size": 1,
+            "start_date": "2026-11-01T00:00:00+08:00",
+            "end_date": "2026-12-01T00:00:00+08:00",
+        })
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            comp = data.get("competition", data)
+            cid = comp.get("id") or data.get("id")
+            if cid:
+                draft_ids.append(cid)
+
+    if draft_ids:
+        resp = _api_auth("POST", "/api/v1/competitions/batch-delete", json={"ids": draft_ids})
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            _log("PASS", "batch-delete-drafts", f"批量删除草稿: 成功={data.get('succeeded', 0)}, 失败={data.get('failed_count', 0)}")
+        else:
+            _log("FAIL", "batch-delete-drafts", f"批量删除草稿失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Cleanup remaining
+    for cid in comp_ids:
+        _api_auth("DELETE", f"/api/v1/competitions/{cid}")
+
+
+# ============================================================
 # 3b. Registration Flow Tests
 # ============================================================
 def test_registration_flow():
@@ -3132,6 +3226,146 @@ def test_learning_path():
 
 
 # ============================================================
+# 13. Annual Report Integration Tests
+# ============================================================
+def test_annual_report():
+    """Test platform annual report endpoint."""
+    print("\n📊 13. 平台年度报告测试")
+
+    # Annual report — full JSON
+    resp = _api_auth("GET", "/api/v1/report/annual")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_platform = "platform" in data
+        has_competitions = "competitions" in data
+        has_teams = "teams" in data
+        has_students = "students" in data
+        has_awards = "awards" in data
+        has_trends = "trends" in data and isinstance(data["trends"], list)
+        has_highlights = "highlights" in data
+        has_top_comps = "top_competitions" in data
+        has_top_teams = "top_teams" in data
+
+        all_fields = has_platform and has_competitions and has_teams and has_students and has_awards and has_trends
+        if all_fields:
+            p = data["platform"]
+            _log("PASS", "annual-report",
+                 f"年度报告成功: 用户={p.get('total_users', '?')}, 赛事={p.get('total_competitions', '?')}, "
+                 f"团队={p.get('total_teams', '?')}, 奖项={p.get('total_awards', '?')}, "
+                 f"趋势={len(data['trends'])}月, 亮点={len(data.get('highlights', []))}条")
+        else:
+            missing = []
+            if not has_platform: missing.append("platform")
+            if not has_competitions: missing.append("competitions")
+            if not has_teams: missing.append("teams")
+            if not has_students: missing.append("students")
+            if not has_awards: missing.append("awards")
+            if not has_trends: missing.append("trends")
+            _log("FAIL", "annual-report", f"年度报告缺少字段: {', '.join(missing)}")
+    else:
+        _log("FAIL", "annual-report", f"年度报告失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # No-auth should return 401
+    resp = _api("GET", "/api/v1/report/annual")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "annual-report-no-auth", "无 token → 401 ✓")
+    else:
+        _log("WARN", "annual-report-no-auth", f"无 token → {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
+# Analytics Dashboard Tests
+# ============================================================
+def test_analytics_dashboard():
+    """Test all stats endpoints used by the analytics dashboard page."""
+    print("\n📊 数据分析中心测试")
+
+    # 1. Overview — key metrics
+    resp = _api_auth("GET", "/api/v1/stats/overview")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        required = ["total_competitions", "total_teams", "total_users", "total_awards", "ongoing_competitions"]
+        missing = [k for k in required if k not in d]
+        if missing:
+            _log("WARN", "analytics-overview", f"概览缺少字段: {', '.join(missing)}")
+        else:
+            _log("PASS", "analytics-overview", f"概览成功: 赛事={d['total_competitions']}, 团队={d['total_teams']}, 用户={d['total_users']}, 奖项={d['total_awards']}")
+    else:
+        _log("FAIL", "analytics-overview", f"概览失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # 2. Trends — area chart data
+    resp = _api_auth("GET", "/api/v1/stats/trends")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        trends = d.get("trends", [])
+        if len(trends) > 0:
+            sample = trends[0]
+            has_fields = all(k in sample for k in ["month", "competitions", "teams", "awards"])
+            if has_fields:
+                _log("PASS", "analytics-trends", f"趋势数据成功: {len(trends)} 个月")
+            else:
+                _log("WARN", "analytics-trends", f"趋势数据字段不完整: {list(sample.keys())}")
+        else:
+            _log("PASS", "analytics-trends", "趋势数据为空（可能无历史数据）")
+    else:
+        _log("FAIL", "analytics-trends", f"趋势数据失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # 3. Competitions — bar chart data
+    resp = _api_auth("GET", "/api/v1/stats/competitions")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        comps = d.get("competitions", [])
+        _log("PASS", "analytics-competitions", f"赛事数据成功: {len(comps)} 个赛事")
+    else:
+        _log("FAIL", "analytics-competitions", f"赛事数据失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # 4. Type distribution — pie chart
+    resp = _api_auth("GET", "/api/v1/stats/type-distribution")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        types = d.get("types", [])
+        _log("PASS", "analytics-types", f"类型分布成功: {len(types)} 种类型")
+    else:
+        _log("FAIL", "analytics-types", f"类型分布失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # 5. Engagement — radar chart
+    resp = _api_auth("GET", "/api/v1/stats/engagement")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        has_metrics = "team_formation_rate" in d and "ai_review_rate" in d
+        if has_metrics:
+            _log("PASS", "analytics-engagement", f"参与度成功: 组队率={d.get('team_formation_rate', 0):.1f}%, AI评审率={d.get('ai_review_rate', 0):.1f}%")
+        else:
+            _log("WARN", "analytics-engagement", f"参与度字段不完整: {list(d.keys())}")
+    else:
+        _log("FAIL", "analytics-engagement", f"参与度失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # 6. Popularity — horizontal bar chart
+    resp = _api_auth("GET", "/api/v1/stats/popularity?limit=10")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        comps = d.get("competitions", [])
+        _log("PASS", "analytics-popularity", f"热度排行成功: {len(comps)} 个赛事")
+    else:
+        _log("FAIL", "analytics-popularity", f"热度排行失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # 7. Students — for leaderboard
+    resp = _api_auth("GET", "/api/v1/stats/students")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        _log("PASS", "analytics-students", f"学生统计成功: 总学生={d.get('total_students', 0)}")
+    else:
+        _log("FAIL", "analytics-students", f"学生统计失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # 8. No-auth should fail
+    resp = _api("GET", "/api/v1/stats/overview")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "analytics-no-auth", "无 token → 401 ✓")
+    else:
+        _log("WARN", "analytics-no-auth", f"无 token → {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
 # Run all tests
 # ============================================================
 def run_all():
@@ -3144,6 +3378,7 @@ def run_all():
     test_auth()
     test_crud()
     test_insights()
+    test_batch_operations()
     test_registration_flow()
     test_batch_registration()
     test_competition_report()
@@ -3163,6 +3398,8 @@ def run_all():
     test_database()
     test_lifecycle()
     test_learning_path()
+    test_annual_report()
+    test_analytics_dashboard()
 
     elapsed = time.time() - start_time
 

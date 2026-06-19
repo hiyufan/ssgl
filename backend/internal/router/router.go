@@ -99,6 +99,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 	insightsHandler := handlers.NewInsightsHandler()
 
 	lifecycleHandler := handlers.NewLifecycleHandler()
+	batchHandler := handlers.NewBatchHandler()
+	activityFeedHandler := handlers.NewActivityFeedHandler()
+	annualReportHandler := handlers.NewAnnualReportHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -135,6 +138,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/competitions/recommend", recommendHandler.Recommend)
 		protected.GET("/competitions/:id", compHandler.Get)
 		protected.GET("/competitions/:id/stats", compHandler.CompetitionStats)
+
+		// Competition activity feed.
+		protected.GET("/competitions/:id/activity", activityFeedHandler.GetFeed)
 
 		// Teams.
 		protected.GET("/teams", teamHandler.List)
@@ -261,6 +267,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/competitions/:id/report", reportHandler.GenerateReport)
 		protected.GET("/competitions/:id/report/html", reportHandler.GenerateReportHTML)
 
+		// Platform annual report.
+		protected.GET("/report/annual", annualReportHandler.Generate)
+
 		// Platform timeline — unified event feed.
 		protected.GET("/timeline", timelineHandler.List)
 
@@ -317,6 +326,11 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Award achievement points — teacher/admin only.
 		staff.POST("/points/award", achievementHandler.AwardPoints)
+
+		// Batch competition operations — teacher/admin only.
+		staff.POST("/competitions/batch-publish", batchHandler.BatchPublish)
+		staff.POST("/competitions/batch-close", batchHandler.BatchClose)
+		staff.POST("/competitions/batch-delete", batchHandler.BatchDelete)
 	}
 
 	// Admin-only routes.

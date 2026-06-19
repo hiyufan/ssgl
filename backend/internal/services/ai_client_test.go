@@ -20,8 +20,8 @@ func TestNewAIServiceClient_DefaultURL(t *testing.T) {
 	if client.HTTPClient == nil {
 		t.Fatal("HTTPClient should not be nil")
 	}
-	if client.HTTPClient.Timeout != 120*time.Second {
-		t.Errorf("expected timeout 120s, got %v", client.HTTPClient.Timeout)
+	if client.HTTPClient.Timeout != 60*time.Second {
+		t.Errorf("expected timeout 60s, got %v", client.HTTPClient.Timeout)
 	}
 }
 
@@ -87,4 +87,58 @@ func TestAIServiceClient_EmptyPlan(t *testing.T) {
 
 func jsonMarshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
+}
+
+func TestAIServiceClient_CircuitBreaker(t *testing.T) {
+	cfg := &config.AIConfig{BaseURL: "http://localhost:99999"}
+	client := NewAIServiceClient(cfg)
+
+	// Initially circuit should be closed.
+	if !client.circuitAllows() {
+		t.Error("circuit should be closed initially")
+	}
+
+	// Record failures to open circuit.
+	for i := 0; i < 5; i++ {
+		client.circuitRecordFailure()
+	}
+
+	// Circuit should now be open.
+	if client.circuitAllows() {
+		t.Error("circuit should be open after 5 failures")
+	}
+
+	// After cooldown, circuit should allow probe.
+	client.lastFailureTime = time.Now().Add(-31 * time.Second)
+	if !client.circuitAllows() {
+		t.Error("circuit should allow probe after cooldown")
+	}
+
+	// Success resets the circuit.
+	client.circuitRecordSuccess()
+	if !client.circuitAllows() {
+		t.Error("circuit should be closed after success")
+	}
+	if client.consecFailures != 0 {
+		t.Errorf("expected 0 consecutive failures, got %d", client.consecFailures)
+	}
+}
+
+func TestAIServiceClient_CircuitBreakerThreshold(t *testing.T) {
+	cfg := &config.AIConfig{BaseURL: "http://localhost:99999"}
+	client := NewAIServiceClient(cfg)
+	client.maxFailures = 3
+
+	// Fail below threshold — circuit stays closed.
+	client.circuitRecordFailure()
+	client.circuitRecordFailure()
+	if !client.circuitAllows() {
+		t.Error("circuit should be closed with 2 failures (threshold=3)")
+	}
+
+	// Hit threshold — circuit opens.
+	client.circuitRecordFailure()
+	if client.circuitAllows() {
+		t.Error("circuit should be open after hitting threshold")
+	}
 }
