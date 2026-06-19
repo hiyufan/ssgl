@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { competitionsAPI, milestonesAPI, registrationsAPI } from '@/services/api';
+import { competitionsAPI, milestonesAPI, registrationsAPI, subscriptionsAPI } from '@/services/api';
 import { useRole } from '@/hooks/use-role';
 import { StatusBadge, TypeBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
@@ -198,9 +198,18 @@ export function CompetitionsPage() {
   const [recommendations, setRecommendations] = useState<Array<Competition & { match_score: number; match_tags: string[]; reason: string }>>([]);
   const [showRecommend, setShowRecommend] = useState(false);
   const [loadingRecs, setLoadingRecs] = useState(false);
+  const [subscribedIds, setSubscribedIds] = useState<Set<number>>(new Set());
+  const [subscribing, setSubscribing] = useState<number | null>(null);
 
   useEffect(() => {
     competitionsAPI.list().then(res => setCompetitions(res.competitions || [])).catch(console.error).finally(() => setLoading(false));
+    // Load user's subscriptions (students only)
+    if (role === 'student') {
+      subscriptionsAPI.list().then(res => {
+        const ids = new Set((res.subscriptions || []).map(s => s.competition_id));
+        setSubscribedIds(ids);
+      }).catch(() => {});
+    }
   }, []);
 
   const loadRecommendations = async () => {
@@ -243,6 +252,25 @@ export function CompetitionsPage() {
     setCompetitions((prev) => (isNew ? [comp, ...prev] : prev.map((c) => (c.id === comp.id ? comp : c))));
   const handleDeleted = (id: number) =>
     setCompetitions((prev) => prev.filter((c) => c.id !== id));
+
+  const toggleSubscription = async (compId: number) => {
+    setSubscribing(compId);
+    try {
+      if (subscribedIds.has(compId)) {
+        await subscriptionsAPI.unsubscribe(compId);
+        setSubscribedIds(prev => { const n = new Set(prev); n.delete(compId); return n; });
+        toast.success('已取消订阅');
+      } else {
+        await subscriptionsAPI.subscribe(compId);
+        setSubscribedIds(prev => new Set(prev).add(compId));
+        toast.success('已订阅，将在截止前收到提醒');
+      }
+    } catch {
+      toast.error('操作失败');
+    } finally {
+      setSubscribing(null);
+    }
+  };
 
   const openCreate = () => { setEditing(null); setFormOpen(true); };
   const openEdit = (comp: Competition) => { setEditing(comp); setFormOpen(true); };
@@ -479,6 +507,15 @@ export function CompetitionsPage() {
                     )}
                     {canManage && (
                       <Button variant="outline" size="sm" icon={<Icon name="edit" size={12}/>} onClick={() => openEdit(comp)} />
+                    )}
+                    {role === 'student' && (comp.status === 'published' || comp.status === 'ongoing') && (
+                      <Button variant="ghost" size="sm"
+                        icon={<Icon name={subscribedIds.has(comp.id) ? 'bell' : 'bell'} size={12}
+                          style={{ color: subscribedIds.has(comp.id) ? 'var(--amber)' : 'var(--text-3)' }}/>}
+                        disabled={subscribing === comp.id}
+                        onClick={(e) => { e.stopPropagation(); toggleSubscription(comp.id); }}
+                        title={subscribedIds.has(comp.id) ? '取消订阅提醒' : '订阅截止提醒'}
+                      />
                     )}
                     <Button variant="ghost" size="sm" iconRight={<Icon name="right" size={12}/>} onClick={() => openDetail(comp)}>详情</Button>
                   </div>

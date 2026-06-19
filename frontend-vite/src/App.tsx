@@ -30,6 +30,8 @@ import { DiagnosticsPage } from '@/pages/diagnostics';
 import { NotificationsPage } from '@/pages/notifications';
 import { InsightsPage } from '@/pages/insights';
 import { PointsPage } from '@/pages/points';
+import { ComparePage } from '@/pages/compare';
+import { GrowthPage } from '@/pages/growth';
 
 /** Restricts a route to one or more roles; otherwise redirects to the dashboard. */
 function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
@@ -57,6 +59,8 @@ function AppRoutes() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/points" element={<PointsPage />} />
+        <Route path="/compare" element={<ComparePage />} />
+        <Route path="/growth" element={<GrowthPage />} />
 
         {/* teacher + admin */}
         <Route path="/approvals" element={<RequireRole roles={['teacher', 'admin']}><ApprovalsPage /></RequireRole>} />
@@ -65,7 +69,7 @@ function AppRoutes() {
         <Route path="/awards" element={<RequireRole roles={['teacher', 'admin']}><AwardsPage /></RequireRole>} />
         <Route path="/stats" element={<RequireRole roles={['teacher', 'admin']}><StatsPage /></RequireRole>} />
         <Route path="/kanban" element={<RequireRole roles={['teacher', 'admin']}><KanbanPage /></RequireRole>} />
-        <Route path="/knowledge-base" element={<RequireRole roles={['teacher', 'admin']}><KnowledgeBasePage /></RequireRole>} />
+        <Route path="/knowledge-base" element={<RequireRole roles={['student', 'teacher', 'admin']}><KnowledgeBasePage /></RequireRole>} />
 
         {/* all roles — students manage, teachers review, admins oversee */}
         <Route path="/preplans" element={<PrePlansPage />} />

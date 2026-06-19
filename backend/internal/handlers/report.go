@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -302,4 +303,255 @@ func (h *ReportHandler) GenerateReport(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, report)
+}
+
+// GenerateReportHTML handles GET /competitions/:id/report/html — renders a styled HTML report.
+func (h *ReportHandler) GenerateReportHTML(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var comp models.Competition
+	if err := db.First(&comp, id).Error; err != nil {
+		c.Data(http.StatusNotFound, "text/html; charset=utf-8", []byte("<h1>404 Not Found</h1>"))
+		return
+	}
+
+	var organizer models.User
+	db.First(&organizer, comp.OrganizerID)
+
+	// Registration stats
+	var regs []models.CompetitionRegistration
+	db.Where("competition_id = ?", comp.ID).Find(&regs)
+	regApproved, regPending, regRejected := 0, 0, 0
+	for _, r := range regs {
+		switch r.Status {
+		case models.RegStatusApproved:
+			regApproved++
+		case models.RegStatusPending:
+			regPending++
+		case models.RegStatusRejected:
+			regRejected++
+		}
+	}
+
+	// Team stats
+	var teams []models.Team
+	db.Where("competition_id = ?", comp.ID).Find(&teams)
+	totalMembers := 0
+	for _, t := range teams {
+		var mc int64
+		db.Model(&models.TeamMember{}).Where("team_id = ?", t.ID).Count(&mc)
+		totalMembers += int(mc)
+	}
+
+	// Award stats
+	var awards []models.Award
+	db.Where("competition_id = ?", comp.ID).Find(&awards)
+	totalPrize := 0.0
+	for _, a := range awards {
+		totalPrize += a.PrizeAmount
+	}
+
+	// Milestone stats
+	var milestones []models.Milestone
+	db.Where("competition_id = ?", comp.ID).Order("sort_order ASC").Find(&milestones)
+	mCompleted := 0
+	for _, m := range milestones {
+		if m.Status == models.MilestoneStatusCompleted {
+			mCompleted++
+		}
+	}
+
+	// Preplan stats
+	var preplans []models.PrePlan
+	db.Where("competition_id = ?", comp.ID).Find(&preplans)
+
+	typeName := map[string]string{
+		"innovation": "创新创业", "hackathon": "黑客马拉松", "academic": "学术竞赛",
+		"design": "设计竞赛", "programming": "编程竞赛", "other": "其他",
+	}[comp.Type]
+	if typeName == "" {
+	typeName = comp.Type
+	}
+
+	statusName := map[string]string{
+		"draft": "草稿", "published": "已发布", "ongoing": "进行中",
+		"completed": "已完成", "cancelled": "已取消",
+	}[comp.Status]
+	if statusName == "" {
+		statusName = comp.Status
+	}
+
+	html := `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>` + comp.Title + ` — 赛事报告</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; }
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header h1 { font-size: 28px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+  .header .meta { color: #64748b; font-size: 14px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .badge-teal { background: #ccfbf1; color: #0f766e; }
+  .badge-amber { background: #fef3c7; color: #92400e; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+  .card .label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .card .value { font-size: 28px; font-weight: 700; color: #0f172a; }
+  .card .sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .section h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+  th { color: #64748b; font-weight: 500; font-size: 12px; text-transform: uppercase; }
+  .progress-bar { width: 100%; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #0ea5e9, #06b6d4); border-radius: 4px; }
+  .footer { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+  @media print { body { background: #fff; } .container { padding: 20px; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>` + comp.Title + `</h1>
+    <div class="meta">
+      <span class="badge badge-teal">` + typeName + `</span>
+      <span class="badge badge-amber">` + statusName + `</span>
+      ` + func() string {
+		if comp.Level != "" {
+			return `<span class="badge badge-purple">` + comp.Level + `</span>`
+		}
+		return ""
+	}() + `
+      &nbsp;·&nbsp; 主办方: ` + organizer.Username + `
+      &nbsp;·&nbsp; ` + comp.StartDate.Format("2006-01-02") + ` ~ ` + comp.EndDate.Format("2006-01-02") + `
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">报名人数</div>
+      <div class="value">` + fmt.Sprintf("%d", len(regs)) + `</div>
+      <div class="sub">通过 ` + fmt.Sprintf("%d", regApproved) + ` · 待审 ` + fmt.Sprintf("%d", regPending) + `</div>
+    </div>
+    <div class="card">
+      <div class="label">参赛团队</div>
+      <div class="value">` + fmt.Sprintf("%d", len(teams)) + `</div>
+      <div class="sub">成员 ` + fmt.Sprintf("%d", totalMembers) + ` 人</div>
+    </div>
+    <div class="card">
+      <div class="label">提交预案</div>
+      <div class="value">` + fmt.Sprintf("%d", len(preplans)) + `</div>
+      <div class="sub">AI 已评审</div>
+    </div>
+    <div class="card">
+      <div class="label">获奖总数</div>
+      <div class="value">` + fmt.Sprintf("%d", len(awards)) + `</div>
+      <div class="sub">奖金 ¥` + fmt.Sprintf("%.0f", totalPrize) + `</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📊 里程碑进度</h2>
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;">
+        <span>` + fmt.Sprintf("%d/%d 已完成", mCompleted, len(milestones)) + `</span>
+        <span>` + func() string {
+			if len(milestones) > 0 {
+				return fmt.Sprintf("%.0f%%", float64(mCompleted)/float64(len(milestones))*100)
+			}
+			return "0%"
+		}() + `</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:` + func() string {
+			if len(milestones) > 0 {
+				return fmt.Sprintf("%.0f", float64(mCompleted)/float64(len(milestones))*100)
+			}
+			return "0"
+		}() + `%"></div>
+      </div>
+    </div>
+    <table>
+      <tr><th>里程碑</th><th>类型</th><th>截止日期</th><th>状态</th></tr>` + func() string {
+		rows := ""
+		for _, m := range milestones {
+			status := "待开始"
+			if m.Status == models.MilestoneStatusCompleted {
+				status = "✅ 已完成"
+			} else if m.Status == models.MilestoneStatusInProgress {
+				status = "🔄 进行中"
+			}
+			rows += "<tr><td>" + m.Title + "</td><td>" + m.Type + "</td><td>" + m.DueDate.Format("2006-01-02") + "</td><td>" + status + "</td></tr>"
+		}
+		return rows
+	}() + `
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>🏆 获奖清单</h2>
+    <table>
+      <tr><th>奖项</th><th>团队</th><th>奖金</th><th>状态</th></tr>` + func() string {
+		rows := ""
+		for _, a := range awards {
+			status := "待结算"
+			if a.Status == models.AwardStatusSettled {
+				status = "✅ 已结算"
+			}
+			rows += "<tr><td>" + a.PrizeName + "</td><td>" + fmt.Sprintf("Team #%d", a.TeamID) + "</td><td>¥" + fmt.Sprintf("%.0f", a.PrizeAmount) + "</td><td>" + status + "</td></tr>"
+		}
+		return rows
+	}() + `
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>📈 参与指标</h2>
+    <div class="grid" style="grid-template-columns: repeat(2, 1fr);">` + func() string {
+		totalStudents := int64(0)
+		db.Model(&models.User{}).Where("role = ?", models.RoleStudent).Count(&totalStudents)
+		partRate := 0.0
+		if totalStudents > 0 {
+			partRate = float64(len(regs)) / float64(totalStudents) * 100
+		}
+		teamRate := 0.0
+		if len(regs) > 0 {
+			teamRate = float64(len(teams)) / float64(len(regs)) * 100
+		}
+		awardRate := 0.0
+		if len(teams) > 0 {
+			awardRate = float64(len(awards)) / float64(len(teams)) * 100
+		}
+		return fmt.Sprintf(`
+      <div class="card"><div class="label">参与率</div><div class="value">%.1f%%</div><div class="sub">%d/%d 学生</div></div>
+      <div class="card"><div class="label">组队率</div><div class="value">%.1f%%</div><div class="sub">%d 团队/%d 报名</div></div>
+      <div class="card"><div class="label">获奖率</div><div class="value">%.1f%%</div><div class="sub">%d 奖项/%d 团队</div></div>
+      <div class="card"><div class="label">预案覆盖率</div><div class="value">%s</div><div class="sub">%d 预案</div></div>`,
+			partRate, len(regs), totalStudents,
+			teamRate, len(teams), len(regs),
+			awardRate, len(awards), len(teams),
+			func() string {
+				if len(teams) > 0 {
+					return fmt.Sprintf("%.0f%%", float64(len(preplans))/float64(len(teams))*100)
+				}
+				return "0%"
+			}(), len(preplans))
+	}() + `
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>SSGL 竞赛知识库平台 · 报告生成于 ` + time.Now().Format("2006-01-02 15:04:05") + `</p>
+  </div>
+</div>
+</body>
+</html>`
+
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }

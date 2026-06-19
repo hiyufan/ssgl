@@ -6,7 +6,8 @@ import type {
   AuditLog, AuditStats, RAGDocument, RAGStats,
   CalendarEvent, ShowcaseData,
   LeaderboardEntry, MatchResult, TeamInvite, Milestone,
-  CompetitionRegistration, TeamAnalysis,
+  CompetitionRegistration, TeamAnalysis, CompetitionSubscription,
+  CompareResponse,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -269,6 +270,39 @@ export const teamsAPI = {
 
   analysis: async (teamId: number): Promise<TeamAnalysis> => {
     const response = await api.get<TeamAnalysis>(`/teams/${teamId}/analysis`);
+    return response.data;
+  },
+};
+
+// Subscriptions API (competition deadline reminders)
+export const subscriptionsAPI = {
+  list: async (): Promise<{ subscriptions: CompetitionSubscription[]; total: number }> => {
+    const response = await api.get('/subscriptions');
+    return response.data;
+  },
+
+  subscribe: async (compId: number, remindDaysBefore?: number): Promise<{ subscription: CompetitionSubscription }> => {
+    const body = remindDaysBefore ? { remind_days_before: remindDaysBefore } : {};
+    const response = await api.post<{ subscription: CompetitionSubscription }>(`/subscriptions/${compId}`, body);
+    return response.data;
+  },
+
+  unsubscribe: async (compId: number): Promise<void> => {
+    await api.delete(`/subscriptions/${compId}`);
+  },
+
+  check: async (compId: number): Promise<{ subscribed: boolean; subscription: CompetitionSubscription | null }> => {
+    const response = await api.get(`/subscriptions/${compId}/check`);
+    return response.data;
+  },
+
+  reminders: async (): Promise<{ reminders: Array<{ competition: Competition; subscription: CompetitionSubscription; days_until: number }>; total: number }> => {
+    const response = await api.get('/subscriptions/reminders');
+    return response.data;
+  },
+
+  updateSettings: async (compId: number, remindDaysBefore: number): Promise<{ subscription: CompetitionSubscription }> => {
+    const response = await api.put<{ subscription: CompetitionSubscription }>(`/subscriptions/${compId}`, { remind_days_before: remindDaysBefore });
     return response.data;
   },
 };
@@ -1039,4 +1073,14 @@ export const pointsAPI = {
     const response = await api.post('/points/award', data);
     return response.data;
   },
+};
+
+// Competition comparison
+export const comparisonAPI = {
+  compare: (ids: number[]) => api.get(`/competitions/compare?ids=${ids.join(',')}`).then(r => r.data),
+};
+
+// Student growth profile
+export const growthAPI = {
+  getProfile: (userId: number) => api.get(`/students/${userId}/growth`).then(r => r.data),
 };

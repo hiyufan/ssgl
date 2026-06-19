@@ -256,6 +256,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Competition achievement report.
 		protected.GET("/competitions/:id/report", reportHandler.GenerateReport)
+		protected.GET("/competitions/:id/report/html", reportHandler.GenerateReportHTML)
 
 		// Platform timeline — unified event feed.
 		protected.GET("/timeline", timelineHandler.List)

@@ -2715,6 +2715,274 @@ def test_achievement_points():
 
 
 # ============================================================
+# Health Score & Team Analysis Tests
+# ============================================================
+def test_health_analysis():
+    """Test health score, team analysis, and subscription endpoints."""
+    print("\n🏥 健康评分 & 团队分析 & 订阅测试")
+
+    # --- Health Score ---
+    resp = _api_auth("GET", "/api/v1/stats/health-score", timeout=15)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_score = "overall_score" in data
+        has_dims = "dimensions" in data and isinstance(data["dimensions"], list)
+        has_level = "level" in data
+        has_summary = "summary" in data
+        if has_score and has_dims and has_level and has_summary:
+            _log("PASS", "health-score",
+                 f"健康评分: {data['overall_score']:.1f}, level={data['level']}, "
+                 f"dimensions={len(data['dimensions'])}")
+        else:
+            missing = []
+            if not has_score: missing.append("overall_score")
+            if not has_dims: missing.append("dimensions")
+            if not has_level: missing.append("level")
+            if not has_summary: missing.append("summary")
+            _log("FAIL", "health-score", f"缺少字段: {', '.join(missing)}")
+    else:
+        _log("FAIL", "health-score", f"请求失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Health score no-auth → 401
+    resp = _api("GET", "/api/v1/stats/health-score")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "health-score-no-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "health-score-no-auth", f"expected 401, got {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Team Analysis ---
+    # First find a team with members
+    resp = _api_auth("GET", "/api/v1/teams", timeout=10)
+    team_id = None
+    if _ok(resp) and resp.status_code == 200:
+        teams = resp.json().get("teams", [])
+        for t in teams:
+            if t.get("member_count", 0) > 0 or (t.get("members") and len(t["members"]) > 0):
+                team_id = t["id"]
+                break
+        if not team_id and teams:
+            team_id = teams[0]["id"]
+
+    if team_id:
+        resp = _api_auth("GET", f"/api/v1/teams/{team_id}/analysis", timeout=15)
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            has_score = "overall_score" in data
+            has_members = "members" in data and isinstance(data["members"], list)
+            has_strengths = "strengths" in data
+            has_gaps = "gaps" in data
+            has_recs = "recommendations" in data
+            if has_score and has_members and has_strengths and has_gaps and has_recs:
+                _log("PASS", "team-analysis",
+                     f"团队分析: team={data.get('team_name', '?')}, "
+                     f"score={data['overall_score']}, members={len(data['members'])}, "
+                     f"strengths={len(data['strengths'])}, gaps={len(data['gaps'])}")
+            else:
+                missing = []
+                if not has_score: missing.append("overall_score")
+                if not has_members: missing.append("members")
+                if not has_strengths: missing.append("strengths")
+                if not has_gaps: missing.append("gaps")
+                if not has_recs: missing.append("recommendations")
+                _log("FAIL", "team-analysis", f"缺少字段: {', '.join(missing)}")
+        else:
+            _log("FAIL", "team-analysis", f"请求失败 → {resp.status_code if _ok(resp) else 'None'}")
+    else:
+        _log("WARN", "team-analysis", "无可用团队，跳过分析测试")
+
+    # Team analysis no-auth → 401
+    resp = _api("GET", f"/api/v1/teams/{team_id or 1}/analysis")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "team-analysis-no-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "team-analysis-no-auth", f"expected 401, got {resp.status_code if _ok(resp) else 'None'}")
+
+    # --- Subscription flow ---
+    # Create a test competition for subscription
+    sub_comp_id = None
+    comp_data = {
+        "title": f"订阅测试赛事_{int(time.time())}",
+        "type": "hackathon",
+        "level": "school",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-08-01T00:00:00+08:00",
+        "end_date": "2026-09-01T00:00:00+08:00",
+    }
+    resp = _api_auth("POST", "/api/v1/competitions", json=comp_data, timeout=10)
+    if _ok(resp) and resp.status_code in (200, 201):
+        sub_comp_id = resp.json().get("competition", {}).get("id") or resp.json().get("id")
+
+    if sub_comp_id:
+        # Subscribe
+        resp = _api_auth("POST", f"/api/v1/subscriptions/{sub_comp_id}", json={"remind_days_before": 5}, timeout=10)
+        if _ok(resp) and resp.status_code in (200, 201):
+            _log("PASS", "sub-create", f"订阅成功, comp_id={sub_comp_id}")
+        else:
+            _log("FAIL", "sub-create", f"订阅失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Check subscription
+        resp = _api_auth("GET", f"/api/v1/subscriptions/{sub_comp_id}/check", timeout=10)
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            if data.get("subscribed"):
+                _log("PASS", "sub-check", f"订阅状态确认: subscribed=True")
+            else:
+                _log("FAIL", "sub-check", f"订阅状态异常: {data}")
+        else:
+            _log("FAIL", "sub-check", f"检查失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # List subscriptions
+        resp = _api_auth("GET", "/api/v1/subscriptions", timeout=10)
+        if _ok(resp) and resp.status_code == 200:
+            subs = resp.json().get("subscriptions", [])
+            _log("PASS", "sub-list", f"订阅列表: {len(subs)} 条")
+        else:
+            _log("FAIL", "sub-list", f"列表失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Update settings
+        resp = _api_auth("PUT", f"/api/v1/subscriptions/{sub_comp_id}", json={"remind_days_before": 7}, timeout=10)
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "sub-update", "更新提醒天数成功")
+        else:
+            _log("FAIL", "sub-update", f"更新失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Reminders
+        resp = _api_auth("GET", "/api/v1/subscriptions/reminders", timeout=10)
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "sub-reminders", f"提醒列表获取成功")
+        else:
+            _log("FAIL", "sub-reminders", f"提醒失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Unsubscribe
+        resp = _api_auth("DELETE", f"/api/v1/subscriptions/{sub_comp_id}", timeout=10)
+        if _ok(resp) and resp.status_code == 200:
+            _log("PASS", "sub-unsubscribe", "取消订阅成功")
+        else:
+            _log("FAIL", "sub-unsubscribe", f"取消失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # Verify unsubscribed
+        resp = _api_auth("GET", f"/api/v1/subscriptions/{sub_comp_id}/check", timeout=10)
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            if not data.get("subscribed"):
+                _log("PASS", "sub-verify-unsub", "确认已取消订阅")
+            else:
+                _log("FAIL", "sub-verify-unsub", f"仍然显示已订阅: {data}")
+
+        # Cleanup: delete test competition
+        _api_auth("DELETE", f"/api/v1/competitions/{sub_comp_id}", timeout=10)
+    else:
+        _log("WARN", "sub-flow", "无法创建测试赛事，跳过订阅测试")
+
+
+# ============================================================
+# 10. HTML Report & Import Tests
+# ============================================================
+def test_html_report():
+    """Test HTML competition report endpoint."""
+    print("\n📄 10. HTML 报告 & 导入测试")
+
+    # Find an existing competition with data
+    resp = _api_auth("GET", "/api/v1/stats/progress", timeout=10)
+    comp_id = None
+    if _ok(resp) and resp.status_code == 200:
+        comps = resp.json().get("competitions", [])
+        for c in comps:
+            if c.get("team_count", 0) > 0 or c.get("registration_count", 0) > 0:
+                comp_id = c.get("id")
+                break
+        if not comp_id and comps:
+            comp_id = comps[0].get("id")
+
+    if comp_id:
+        # JSON report
+        resp = _api_auth("GET", f"/api/v1/competitions/{comp_id}/report", timeout=15)
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            has_title = "title" in data
+            has_teams = "team_stats" in data
+            has_timeline = "timeline" in data
+            _log("PASS", "report-json", f"JSON 报告成功, title={has_title}, teams={has_teams}, timeline={has_timeline}")
+        else:
+            _log("FAIL", "report-json", f"JSON 报告失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+        # HTML report
+        resp = _api_auth("GET", f"/api/v1/competitions/{comp_id}/report/html", timeout=15)
+        if _ok(resp) and resp.status_code == 200:
+            content_type = resp.headers.get("Content-Type", "")
+            body = resp.text
+            has_html = "<html" in body.lower() or "<!doctype" in body.lower()
+            has_css = "<style" in body.lower() or "css" in body.lower()
+            _log("PASS", "report-html", f"HTML 报告成功, CT={content_type}, has_html={has_html}, has_css={has_css}, size={len(body)}")
+        else:
+            _log("FAIL", "report-html", f"HTML 报告失败 → {resp.status_code if _ok(resp) else 'None'}")
+    else:
+        _log("WARN", "report-html", "无可用赛事，跳过报告测试")
+
+    # Test batch import (API expects a direct array, not {"competitions": [...]})
+    import_data = [
+        {
+            "title": f"批量导入赛事A_{int(time.time())}",
+            "type": "hackathon",
+            "level": "school",
+            "max_team_size": 4,
+            "min_team_size": 2,
+            "start_date": "2026-10-01T00:00:00+08:00",
+            "end_date": "2026-11-01T00:00:00+08:00",
+        },
+        {
+            "title": f"批量导入赛事B_{int(time.time())}",
+            "type": "innovation",
+            "level": "provincial",
+            "max_team_size": 3,
+            "min_team_size": 1,
+            "start_date": "2026-10-15T00:00:00+08:00",
+            "end_date": "2026-11-15T00:00:00+08:00",
+        },
+    ]
+    resp = _api_auth("POST", "/api/v1/competitions/import", json=import_data, timeout=15)
+    imported_ids = []
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        imported = data.get("imported", data.get("competitions", []))
+        errors = data.get("errors", [])
+        if isinstance(imported, list):
+            imported_ids = [c.get("id") for c in imported if c.get("id")]
+        _log("PASS", "batch-import", f"批量导入成功, imported={len(imported_ids)}, errors={len(errors)}")
+    else:
+        _log("FAIL", "batch-import", f"批量导入失败 → {resp.status_code if _ok(resp) else 'None'}", resp.text[:200] if _ok(resp) else "")
+
+    # Cleanup imported competitions
+    for cid in imported_ids:
+        _api_auth("DELETE", f"/api/v1/competitions/{cid}", timeout=10)
+
+    # Test import with empty body
+    resp = _api_auth("POST", "/api/v1/competitions/import", json=[], timeout=10)
+    if _ok(resp) and resp.status_code in (400, 422):
+        _log("PASS", "import-empty", f"空导入 → {resp.status_code} ✓")
+    elif _ok(resp) and resp.status_code in (200, 201):
+        _log("PASS", "import-empty", f"空导入被接受 (空列表) ✓")
+    else:
+        _log("WARN", "import-empty", f"空导入 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test import with invalid data (direct array format)
+    resp = _api_auth("POST", "/api/v1/competitions/import", json=[{"title": "缺少必填字段"}], timeout=10)
+    if _ok(resp):
+        if resp.status_code in (400, 422):
+            _log("PASS", "import-invalid", f"无效数据导入被拒绝 → {resp.status_code} ✓")
+        elif resp.status_code in (200, 201):
+            data = resp.json()
+            errors = data.get("errors", [])
+            if errors:
+                _log("PASS", "import-invalid", f"无效数据导入有错误报告: {len(errors)} 条")
+            else:
+                _log("WARN", "import-invalid", "无效数据导入无错误报告")
+    else:
+        _log("FAIL", "import-invalid", "无效数据导入请求失败")
+
+
+# ============================================================
 # Run all tests
 # ============================================================
 def run_all():
@@ -2741,6 +3009,8 @@ def run_all():
     test_performance()
     test_code_quality()
     test_achievement_points()
+    test_health_analysis()
+    test_html_report()
     test_database()
 
     elapsed = time.time() - start_time

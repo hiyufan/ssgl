@@ -492,6 +492,263 @@ func TestReportHandler_GenerateReport_ReportFields(t *testing.T) {
 	db.Unscoped().Delete(&comp)
 }
 
+func TestReportHandler_GenerateReportHTML_Success(t *testing.T) {
+	r, h := setupReportTest(t)
+	db := database.GetDB()
+
+	comp := models.Competition{
+		Title:       "HTML Report Comp " + time.Now().Format("150405"),
+		Type:        models.CompTypeHackathon,
+		Status:      models.CompStatusPublished,
+		Level:       "省级",
+		OrganizerID: 1,
+		StartDate:   time.Now(),
+		EndDate:     time.Now().Add(30 * 24 * time.Hour),
+		Location:    "福州",
+	}
+	db.Create(&comp)
+
+	team := models.Team{
+		Name:          "HTML Report Team " + time.Now().Format("150405"),
+		CompetitionID: comp.ID,
+		LeaderID:      1,
+	}
+	db.Create(&team)
+
+	reg := models.CompetitionRegistration{
+		CompetitionID: comp.ID,
+		UserID:        1,
+		Status:        models.RegStatusApproved,
+	}
+	db.Create(&reg)
+
+	award := models.Award{
+		CompetitionID: comp.ID,
+		TeamID:        team.ID,
+		Rank:          1,
+		RankName:      "一等奖",
+		PrizeName:     "最佳创意奖",
+		PrizeAmount:   3000,
+		Status:        models.AwardStatusSettled,
+	}
+	db.Create(&award)
+
+	r.GET("/api/v1/competitions/:id/report/html", h.GenerateReportHTML)
+	req := httptest.NewRequest("GET", "/api/v1/competitions/"+fmtUint(comp.ID)+"/report/html", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String()[:200])
+	}
+
+	ct := w.Header().Get("Content-Type")
+	if ct != "text/html; charset=utf-8" {
+		t.Errorf("expected Content-Type text/html; charset=utf-8, got %q", ct)
+	}
+
+	body := w.Body.String()
+	if len(body) < 500 {
+		t.Errorf("HTML body too short: %d bytes", len(body))
+	}
+	// Check key content is present
+	checks := []string{comp.Title, "赛事报告", "报名人数", "参赛团队", "里程碑进度", "获奖清单", "参与指标"}
+	for _, check := range checks {
+		if !contains(body, check) {
+			t.Errorf("HTML missing expected content: %q", check)
+		}
+	}
+
+	// Cleanup
+	db.Unscoped().Where("competition_id = ?", comp.ID).Delete(&models.Award{})
+	db.Unscoped().Where("competition_id = ?", comp.ID).Delete(&models.CompetitionRegistration{})
+	db.Unscoped().Where("competition_id = ?", comp.ID).Delete(&models.Team{})
+	db.Unscoped().Delete(&comp)
+}
+
+func TestReportHandler_GenerateReportHTML_NotFound(t *testing.T) {
+	r, h := setupReportTest(t)
+	r.GET("/api/v1/competitions/:id/report/html", h.GenerateReportHTML)
+
+	req := httptest.NewRequest("GET", "/api/v1/competitions/99999/report/html", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestReportHandler_GenerateReportHTML_Printable(t *testing.T) {
+	r, h := setupReportTest(t)
+	db := database.GetDB()
+
+	comp := models.Competition{
+		Title:       "Print Report " + time.Now().Format("150405"),
+		Type:        models.CompTypeInnovation,
+		Status:      models.CompStatusOngoing,
+		OrganizerID: 1,
+	}
+	db.Create(&comp)
+
+	r.GET("/api/v1/competitions/:id/report/html", h.GenerateReportHTML)
+	req := httptest.NewRequest("GET", "/api/v1/competitions/"+fmtUint(comp.ID)+"/report/html", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	// Verify print-friendly CSS
+	if !contains(body, "@media print") {
+		t.Error("HTML missing @media print styles")
+	}
+	// Verify no external dependencies (self-contained)
+	if contains(body, "https://cdn") || contains(body, "https://fonts") {
+		t.Error("HTML should be self-contained, no external CDN dependencies")
+	}
+
+	// Cleanup
+	db.Unscoped().Delete(&comp)
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && searchString(s, substr)
+}
+
+func searchString(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+func TestReportHandler_GenerateReportHTML_CSSFeatures(t *testing.T) {
+	r, h := setupReportTest(t)
+	db := database.GetDB()
+
+	comp := models.Competition{
+		Title:       "CSS Features Report " + time.Now().Format("150405"),
+		Type:        models.CompTypeHackathon,
+		Status:      models.CompStatusPublished,
+		Level:       "国家级",
+		OrganizerID: 1,
+		StartDate:   time.Now(),
+		EndDate:     time.Now().Add(30 * 24 * time.Hour),
+		Location:    "北京",
+	}
+	db.Create(&comp)
+
+	team := models.Team{
+		Name:          "CSS Test Team " + time.Now().Format("150405"),
+		CompetitionID: comp.ID,
+		LeaderID:      1,
+	}
+	db.Create(&team)
+
+	r.GET("/api/v1/competitions/:id/report/html", h.GenerateReportHTML)
+	req := httptest.NewRequest("GET", "/api/v1/competitions/"+fmtUint(comp.ID)+"/report/html", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+
+	// Check responsive design features
+	cssChecks := []struct {
+		name  string
+		check string
+	}{
+		{"viewport meta", "viewport"},
+		{"border-radius", "border-radius"},
+		{"CSS grid", "grid-template-columns"},
+		{"box-sizing", "box-sizing: border-box"},
+		{"font-family", "font-family"},
+		{"background color", "background"},
+		{"padding", "padding"},
+		{"border", "border"},
+		{"color", "color"},
+	}
+	for _, c := range cssChecks {
+		if !contains(body, c.check) {
+			t.Errorf("HTML missing %s: %q", c.name, c.check)
+		}
+	}
+
+	// Cleanup
+	db.Unscoped().Where("competition_id = ?", comp.ID).Delete(&models.Team{})
+	db.Unscoped().Delete(&comp)
+}
+
+func TestReportHandler_GenerateReportHTML_DataAccuracy(t *testing.T) {
+	r, h := setupReportTest(t)
+	db := database.GetDB()
+
+	comp := models.Competition{
+		Title:       "Data Accuracy Report " + time.Now().Format("150405"),
+		Type:        models.CompTypeInnovation,
+		Status:      models.CompStatusCompleted,
+		Level:       "省级",
+		OrganizerID: 1,
+		StartDate:   time.Now().Add(-30 * 24 * time.Hour),
+		EndDate:     time.Now(),
+		Location:    "福州",
+	}
+	db.Create(&comp)
+
+	// Create teams with members
+	team1 := models.Team{Name: "Acc Team 1 " + time.Now().Format("150405"), CompetitionID: comp.ID, LeaderID: 1}
+	team2 := models.Team{Name: "Acc Team 2 " + time.Now().Format("150405"), CompetitionID: comp.ID, LeaderID: 2}
+	db.Create(&team1)
+	db.Create(&team2)
+
+	// Create awards
+	award := models.Award{
+		CompetitionID: comp.ID,
+		TeamID:        team1.ID,
+		Rank:          1,
+		RankName:      "特等奖",
+		PrizeName:     "最佳创新奖",
+		PrizeAmount:   5000,
+		Status:        models.AwardStatusSettled,
+	}
+	db.Create(&award)
+
+	r.GET("/api/v1/competitions/:id/report/html", h.GenerateReportHTML)
+	req := httptest.NewRequest("GET", "/api/v1/competitions/"+fmtUint(comp.ID)+"/report/html", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+
+	// Check data accuracy
+	if !contains(body, comp.Title) {
+		t.Error("HTML missing competition title")
+	}
+	if !contains(body, "获奖清单") {
+		t.Error("HTML missing award section header")
+	}
+	if !contains(body, "奖金") {
+		t.Error("HTML missing prize section")
+	}
+
+	// Cleanup
+	db.Unscoped().Where("competition_id = ?", comp.ID).Delete(&models.Award{})
+	db.Unscoped().Where("competition_id = ?", comp.ID).Delete(&models.Team{})
+	db.Unscoped().Delete(&comp)
+}
+
 // fmtUint converts a uint to string for URL building.
 func fmtUint(n uint) string {
 	return fmt.Sprintf("%d", n)

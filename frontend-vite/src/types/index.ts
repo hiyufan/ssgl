@@ -396,3 +396,87 @@ export interface UserSummary {
   dept?: string;
   role?: string;
 }
+
+export interface CompetitionSubscription {
+  id: number;
+  user_id: number;
+  competition_id: number;
+  remind_days_before: number;
+  is_active: boolean;
+  created_at: string;
+  competition?: Competition;
+}
+
+// Competition Comparison types
+export interface CompetitionComparison {
+  id: number;
+  title: string;
+  type: string;
+  status: string;
+  level: string;
+  location: string;
+  tags: string;
+  max_team_size: number;
+  min_team_size: number;
+  team_count: number;
+  student_count: number;
+  preplan_count: number;
+  award_count: number;
+  avg_team_size: number;
+  registration_pct: number;
+  days_until_start: number;
+  duration_days: number;
+}
+
+export interface ComparisonSummary {
+  most_popular: string;
+  most_popular_id: number;
+  best_team_size: string;
+  best_team_size_id: number;
+  avg_teams_overall: number;
+  total_teams: number;
+  total_students: number;
+}
+
+export interface CompareResponse {
+  competitions: CompetitionComparison[];
+  summary: ComparisonSummary;
+}
+
+// Growth Profile types
+export interface GrowthProfile {
+  student_id: number;
+  student_name: string;
+  generated_at: string;
+  summary: {
+    total_competitions: number;
+    total_awards: number;
+    total_teams: number;
+    total_pre_plans: number;
+    award_rate: number;
+    participation_days: number;
+    top_competition_type: string;
+  };
+  competitions: Array<{
+    id: number;
+    title: string;
+    type: string;
+    level: string;
+    status: string;
+    team_name?: string;
+    role?: string;
+    award_rank?: string;
+  }>;
+  awards: Array<{
+    id: number;
+    competition_id: number;
+    comp_title: string;
+    rank_name: string;
+    prize_amount: number;
+    status: string;
+    settled_at?: string;
+  }>;
+  skills: Array<{ name: string; score: number; count: number }>;
+  timeline: Array<{ date: string; type: string; title: string; detail?: string }>;
+  recommendations: string[];
+}

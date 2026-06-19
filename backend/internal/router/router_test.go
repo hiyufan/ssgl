@@ -105,6 +105,23 @@ func TestSetup_HasAPIRoutes(t *testing.T) {
 		"GET /api/v1/competitions/:id/stats",
 		"GET /api/v1/timeline",
 		"GET /api/v1/students/:id/growth",
+		// Subscriptions
+		"GET /api/v1/subscriptions",
+		"POST /api/v1/subscriptions/:comp_id",
+		"DELETE /api/v1/subscriptions/:comp_id",
+		"GET /api/v1/subscriptions/:comp_id/check",
+		"GET /api/v1/subscriptions/reminders",
+		"PUT /api/v1/subscriptions/:comp_id",
+		// Health score & analysis
+		"GET /api/v1/stats/health-score",
+		"GET /api/v1/teams/:id/analysis",
+		"GET /api/v1/competitions/compare",
+		"GET /api/v1/competitions/recommend",
+		"GET /api/v1/teams/match",
+		// Points system
+		"GET /api/v1/points",
+		"GET /api/v1/points/me",
+		"GET /api/v1/points/leaderboard",
 	}
 
 	for _, route := range requiredRoutes {
