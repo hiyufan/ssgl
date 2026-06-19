@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+export { Spinner } from './spinner';
 
 /* ─── Avatar ──────────────────────────────────────────── */
 const AVATAR_COLORS = ['#b8860b', '#2a7a6d', '#5a3d8a', '#a63d2f', '#3a7d44', '#a85e10'];

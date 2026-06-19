@@ -94,8 +94,11 @@ func Setup(cfg *config.Config) *gin.Engine {
 	scheduleHandler := handlers.NewScheduleHandler()
 	reportHandler := handlers.NewReportHandler()
 	growthHandler := handlers.NewGrowthHandler()
+	learningPathHandler := handlers.NewLearningPathHandler()
 	timelineHandler := handlers.NewTimelineHandler()
 	insightsHandler := handlers.NewInsightsHandler()
+
+	lifecycleHandler := handlers.NewLifecycleHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -263,6 +266,12 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Student growth profile.
 		protected.GET("/students/:id/growth", growthHandler.GetGrowthProfile)
+
+		// Personalized learning path.
+		protected.GET("/students/:id/learning-path", learningPathHandler.GetLearningPath)
+
+		// Competition lifecycle tracker.
+		protected.GET("/competitions/:id/lifecycle", lifecycleHandler.GetLifecycle)
 
 		// Achievement points.
 		protected.GET("/points", achievementHandler.ListPoints)

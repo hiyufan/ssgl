@@ -480,3 +480,61 @@ export interface GrowthProfile {
   timeline: Array<{ date: string; type: string; title: string; detail?: string }>;
   recommendations: string[];
 }
+
+// Learning Path types
+export interface LearningPath {
+  student_id: number;
+  student_name: string;
+  generated_at: string;
+  overall_level: string;
+  total_points: number;
+  current_phase: string;
+  phases: PathPhase[];
+  skill_radar: SkillDimension[];
+  goals: LearningGoal[];
+  resources: LearningResource[];
+}
+
+export interface PathPhase {
+  id: number;
+  title: string;
+  description: string;
+  status: 'completed' | 'current' | 'upcoming';
+  progress: number;
+  tasks: PathTask[];
+  est_duration: string;
+}
+
+export interface PathTask {
+  id: number;
+  title: string;
+  type: 'competition' | 'skill' | 'project' | 'study';
+  status: 'done' | 'in_progress' | 'pending';
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface SkillDimension {
+  name: string;
+  current: number;
+  target: number;
+  level: string;
+}
+
+export interface LearningGoal {
+  id: number;
+  title: string;
+  category: string;
+  target_date: string;
+  progress: number;
+  description: string;
+}
+
+export interface LearningResource {
+  id: number;
+  title: string;
+  type: 'article' | 'video' | 'course' | 'tool';
+  category: string;
+  url?: string;
+  duration: string;
+}

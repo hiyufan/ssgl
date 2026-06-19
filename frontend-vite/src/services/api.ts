@@ -1084,3 +1084,8 @@ export const comparisonAPI = {
 export const growthAPI = {
   getProfile: (userId: number) => api.get(`/students/${userId}/growth`).then(r => r.data),
 };
+
+// Personalized learning path
+export const learningPathAPI = {
+  getPath: (userId: number) => api.get(`/students/${userId}/learning-path`).then(r => r.data),
+};

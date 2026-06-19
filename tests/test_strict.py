@@ -2983,6 +2983,155 @@ def test_html_report():
 
 
 # ============================================================
+# 11. Competition Lifecycle Tracker Tests
+# ============================================================
+def test_lifecycle():
+    """Test the competition lifecycle tracker endpoint."""
+    print("\n🔄 11. 赛事生命周期追踪测试")
+
+    # Create a competition for lifecycle testing
+    comp_data = {
+        "title": f"生命周期测试赛事-{int(time.time())}",
+        "description": "用于测试赛事全生命周期追踪",
+        "type": "innovation",
+        "max_team_size": 3,
+        "min_team_size": 1,
+        "start_date": "2026-07-01T00:00:00+08:00",
+        "end_date": "2026-12-01T00:00:00+08:00",
+        "location": "线上",
+    }
+    resp = _api_auth("POST", "/api/v1/competitions", json=comp_data)
+    lc_comp_id = None
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        comp = data.get("competition", data)
+        lc_comp_id = comp.get("id") or data.get("id")
+        _log("PASS", "lc-comp-create", f"生命周期测试赛事创建成功, id={lc_comp_id}")
+    else:
+        _log("FAIL", "lc-comp-create", f"创建失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    # Publish the competition
+    _api_auth("POST", f"/api/v1/competitions/{lc_comp_id}/publish")
+
+    # Test lifecycle endpoint — empty competition
+    resp = _api_auth("GET", f"/api/v1/competitions/{lc_comp_id}/lifecycle")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_stages = "stages" in data and isinstance(data["stages"], list)
+        has_progress = "overall_progress" in data
+        has_risk = "risk_level" in data
+        stage_count = len(data.get("stages", []))
+        if has_stages and has_progress and has_risk and stage_count == 6:
+            _log("PASS", "lc-empty", f"空赛事生命周期成功, stages={stage_count}, progress={data['overall_progress']:.1f}%, risk={data['risk_level']}")
+        else:
+            _log("FAIL", "lc-empty", f"生命周期结构不完整: stages={has_stages}, progress={has_progress}, risk={has_risk}")
+    else:
+        _log("FAIL", "lc-empty", f"生命周期失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Create a team + register to add data
+    team_resp = _api_auth("POST", "/api/v1/teams", json={
+        "name": f"生命周期测试团队-{int(time.time())}",
+        "competition_id": lc_comp_id,
+        "description": "测试用团队",
+    })
+    lc_team_id = None
+    if _ok(team_resp) and team_resp.status_code in (200, 201):
+        tdata = team_resp.json()
+        team = tdata.get("team", tdata)
+        lc_team_id = team.get("id") or tdata.get("id")
+
+    # Test lifecycle with data
+    if lc_team_id:
+        resp = _api_auth("GET", f"/api/v1/competitions/{lc_comp_id}/lifecycle")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            tc = data.get("team_count", 0)
+            rc = data.get("registration_count", 0)
+            _log("PASS", "lc-with-data", f"有数据的生命周期成功, teams={tc}, registrations={rc}")
+        else:
+            _log("FAIL", "lc-with-data", f"生命周期失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test invalid ID
+    resp = _api_auth("GET", "/api/v1/competitions/abc/lifecycle")
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "lc-bad-id", "无效 ID → 400 ✓")
+    else:
+        _log("WARN", "lc-bad-id", f"无效 ID → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test non-existent competition
+    resp = _api_auth("GET", "/api/v1/competitions/999999/lifecycle")
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "lc-not-found", "不存在的赛事 → 404 ✓")
+    else:
+        _log("WARN", "lc-not-found", f"不存在的赛事 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test no-auth
+    resp = _api("GET", f"/api/v1/competitions/{lc_comp_id}/lifecycle")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "lc-no-auth", "无 token → 401 ✓")
+    else:
+        _log("WARN", "lc-no-auth", f"无 token → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Cleanup
+    if lc_comp_id:
+        _api_auth("DELETE", f"/api/v1/competitions/{lc_comp_id}")
+
+
+# ============================================================
+# 12. Learning Path Integration Tests
+# ============================================================
+def test_learning_path():
+    """Test personalized learning path endpoint."""
+    print("\n🧭 12. 个性化学习路径测试")
+
+    # Get admin user ID
+    admin_id = _get_admin_user_id()
+    if not admin_id:
+        _log("SKIP", "lp-test", "无法获取用户 ID")
+        return
+
+    # Learning path for existing student (user 5 = zhangm)
+    resp = _api_auth("GET", "/api/v1/students/5/learning-path")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_phases = "phases" in data and isinstance(data["phases"], list)
+        has_level = "overall_level" in data
+        has_current = "current_phase" in data
+        has_name = "student_name" in data
+        if has_phases and has_level and has_current and has_name:
+            phase_count = len(data["phases"])
+            _log("PASS", "lp-student",
+                 f"学习路径成功: {data['student_name']}, level={data['overall_level']}, "
+                 f"phase={data['current_phase']}, phases={phase_count}")
+        else:
+            _log("FAIL", "lp-student", f"学习路径缺少字段: phases={has_phases}, level={has_level}")
+    else:
+        _log("FAIL", "lp-student", f"学习路径失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Learning path for non-existent student
+    resp = _api_auth("GET", "/api/v1/students/99999/learning-path")
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "lp-404", "不存在的学生 → 404 ✓")
+    else:
+        _log("WARN", "lp-404", f"不存在的学生 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Learning path with invalid ID
+    resp = _api_auth("GET", "/api/v1/students/abc/learning-path")
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "lp-bad-id", "无效 ID → 400 ✓")
+    else:
+        _log("WARN", "lp-bad-id", f"无效 ID → {resp.status_code if _ok(resp) else 'None'}")
+
+    # No-auth should return 401
+    resp = _api("GET", "/api/v1/students/5/learning-path")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "lp-no-auth", "无 token → 401 ✓")
+    else:
+        _log("WARN", "lp-no-auth", f"无 token → {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
 # Run all tests
 # ============================================================
 def run_all():
@@ -3012,6 +3161,8 @@ def run_all():
     test_health_analysis()
     test_html_report()
     test_database()
+    test_lifecycle()
+    test_learning_path()
 
     elapsed = time.time() - start_time
 
