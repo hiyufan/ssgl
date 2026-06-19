@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -58,7 +59,7 @@ func TestExportOverview_ResponseFormat(t *testing.T) {
 		if ct != "" && ct != "text/csv; charset=utf-8" {
 			t.Errorf("expected Content-Type text/csv, got %s", ct)
 		}
-		if cd != "" && cd[:20] != "attachment; filename=" {
+		if cd != "" && !strings.HasPrefix(cd, "attachment; filename=") {
 			t.Errorf("expected Content-Disposition attachment, got %s", cd)
 		}
 	}()

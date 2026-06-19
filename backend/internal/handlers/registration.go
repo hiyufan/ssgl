@@ -300,6 +300,116 @@ func (h *RegistrationHandler) Reject(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "registration rejected", "registration": reg})
 }
 
+// BatchActionRequest is the payload for batch approve/reject.
+type BatchActionRequest struct {
+	IDs    []uint `json:"ids" binding:"required,min=1"`
+	Reason string `json:"reason" binding:"max=512"`
+}
+
+// BatchApprove handles POST /registrations/batch-approve — approve multiple registrations at once.
+func (h *RegistrationHandler) BatchApprove(c *gin.Context) {
+	db := database.GetDB()
+
+	var req BatchActionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: ids array required"})
+		return
+	}
+
+	var approved int
+	var notFound []uint
+	var notPending []uint
+
+	for _, id := range req.IDs {
+		var reg models.CompetitionRegistration
+		if err := db.First(&reg, id).Error; err != nil {
+			notFound = append(notFound, id)
+			continue
+		}
+		if reg.Status != models.RegStatusPending {
+			notPending = append(notPending, id)
+			continue
+		}
+		reg.Status = models.RegStatusApproved
+		if err := db.Save(&reg).Error; err != nil {
+			continue
+		}
+		// Notify student.
+		var comp models.Competition
+		db.First(&comp, reg.CompetitionID)
+		notif := models.Notification{
+			UserID:  reg.UserID,
+			Type:    "registration_approved",
+			Title:   "报名审核通过",
+			Message: "您报名的赛事「" + comp.Title + "」已通过审核",
+		}
+		db.Create(&notif)
+		approved++
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "batch approve completed",
+		"approved":     approved,
+		"not_found":    notFound,
+		"not_pending":  notPending,
+		"total":        len(req.IDs),
+	})
+}
+
+// BatchReject handles POST /registrations/batch-reject — reject multiple registrations at once.
+func (h *RegistrationHandler) BatchReject(c *gin.Context) {
+	db := database.GetDB()
+
+	var req BatchActionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: ids array required"})
+		return
+	}
+
+	var rejected int
+	var notFound []uint
+	var notPending []uint
+
+	for _, id := range req.IDs {
+		var reg models.CompetitionRegistration
+		if err := db.First(&reg, id).Error; err != nil {
+			notFound = append(notFound, id)
+			continue
+		}
+		if reg.Status != models.RegStatusPending {
+			notPending = append(notPending, id)
+			continue
+		}
+		reg.Status = models.RegStatusRejected
+		if err := db.Save(&reg).Error; err != nil {
+			continue
+		}
+		// Notify student.
+		var comp models.Competition
+		db.First(&comp, reg.CompetitionID)
+		rejectMsg := "您报名的赛事「" + comp.Title + "」未通过审核"
+		if req.Reason != "" {
+			rejectMsg += "，原因：" + req.Reason
+		}
+		notif := models.Notification{
+			UserID:  reg.UserID,
+			Type:    "registration_rejected",
+			Title:   "报名审核未通过",
+			Message: rejectMsg,
+		}
+		db.Create(&notif)
+		rejected++
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "batch reject completed",
+		"rejected":     rejected,
+		"not_found":    notFound,
+		"not_pending":  notPending,
+		"total":        len(req.IDs),
+	})
+}
+
 // CompetitionRegistrations handles GET /competitions/:id/registrations — list registrations for a competition.
 func (h *RegistrationHandler) CompetitionRegistrations(c *gin.Context) {
 	db := database.GetDB()

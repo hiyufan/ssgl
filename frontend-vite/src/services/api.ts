@@ -396,6 +396,16 @@ export const registrationsAPI = {
     const response = await api.delete(`/competitions/${compId}/register`);
     return response.data;
   },
+
+  batchApprove: async (ids: number[]): Promise<{ message: string; approved: number; not_found: number[]; not_pending: number[]; total: number }> => {
+    const response = await api.post('/registrations/batch-approve', { ids });
+    return response.data;
+  },
+
+  batchReject: async (ids: number[], reason?: string): Promise<{ message: string; rejected: number; not_found: number[]; not_pending: number[]; total: number }> => {
+    const response = await api.post('/registrations/batch-reject', { ids, reason });
+    return response.data;
+  },
 };
 
 // Stats API

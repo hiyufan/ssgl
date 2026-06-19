@@ -91,6 +91,8 @@ func Setup(cfg *config.Config) *gin.Engine {
 	comparisonHandler := handlers.NewComparisonHandler()
 	subscriptionHandler := handlers.NewSubscriptionHandler()
 	scheduleHandler := handlers.NewScheduleHandler()
+	reportHandler := handlers.NewReportHandler()
+	timelineHandler := handlers.NewTimelineHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -245,6 +247,12 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Milestones (read — any authenticated user).
 		protected.GET("/competitions/:id/milestones", milestoneHandler.List)
 		protected.GET("/milestones/:id", milestoneHandler.Get)
+
+		// Competition achievement report.
+		protected.GET("/competitions/:id/report", reportHandler.GenerateReport)
+
+		// Platform timeline — unified event feed.
+		protected.GET("/timeline", timelineHandler.List)
 	}
 
 	// Competition management — teacher/admin only (inherits auth + audit from protected).
@@ -277,6 +285,10 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Registration approval — teacher/admin only.
 		staff.POST("/registrations/:id/approve", registrationHandler.Approve)
 		staff.POST("/registrations/:id/reject", registrationHandler.Reject)
+
+		// Batch registration operations — teacher/admin only.
+		staff.POST("/registrations/batch-approve", registrationHandler.BatchApprove)
+		staff.POST("/registrations/batch-reject", registrationHandler.BatchReject)
 	}
 
 	// Admin-only routes.

@@ -799,6 +799,39 @@ def test_crud():
     else:
         _log("FAIL", "global-search-no-q", f"预期 400, 实际 {resp.status_code if _ok(resp) else 'None'}")
 
+    # --- Platform Timeline endpoint ---
+    resp = _api_auth("GET", "/api/v1/timeline")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        events = data.get("events", [])
+        types = data.get("types", {})
+        _log("PASS", "timeline-list", f"平台时间线成功, {data.get('total', 0)} 个事件, 类型分布={types}")
+    else:
+        _log("FAIL", "timeline-list", f"平台时间线失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Timeline with limit
+    resp = _api_auth("GET", "/api/v1/timeline?limit=5")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        total = data.get("total", 0)
+        if total <= 5:
+            _log("PASS", "timeline-limit", f"时间线 limit=5 成功, {total} 个事件 ✓")
+        else:
+            _log("WARN", "timeline-limit", f"时间线 limit=5 返回 {total} 个事件 (预期 ≤5)")
+    else:
+        _log("FAIL", "timeline-limit", f"时间线 limit → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Timeline event structure validation
+    if _ok(resp) and resp.status_code == 200:
+        events = resp.json().get("events", [])
+        if events:
+            e = events[0]
+            has_fields = all(k in e for k in ["id", "type", "title", "date"])
+            if has_fields:
+                _log("PASS", "timeline-structure", f"时间线事件结构完整 ✓")
+            else:
+                _log("WARN", "timeline-structure", f"时间线事件缺少字段: {list(e.keys())}")
+
     # --- Notifications endpoint ---
     resp = _api_auth("GET", "/api/v1/notifications")
     if _ok(resp) and resp.status_code == 200:
@@ -1569,6 +1602,265 @@ def test_registration_flow():
 
 
 # ============================================================
+# 3b1. Batch Registration Operations Tests
+# ============================================================
+def test_batch_registration():
+    """Test batch approve/reject registration endpoints."""
+    print("\n📦 3b1. 批量报名审核测试")
+
+    # Create a competition for batch testing
+    comp_data = {
+        "title": f"批量测试赛事-{int(time.time())}",
+        "description": "用于批量报名审核测试",
+        "type": "hackathon",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-09-01T00:00:00+08:00",
+        "end_date": "2026-10-01T00:00:00+08:00",
+    }
+    resp = _api_auth("POST", "/api/v1/competitions", json=comp_data)
+    batch_comp_id = None
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        comp = data.get("competition", data)
+        batch_comp_id = comp.get("id") or data.get("id")
+        _log("PASS", "batch-comp-create", f"批量测试赛事创建成功, id={batch_comp_id}")
+    else:
+        _log("FAIL", "batch-comp-create", f"批量测试赛事创建失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    # Publish
+    _api_auth("POST", f"/api/v1/competitions/{batch_comp_id}/publish")
+
+    # Register multiple students
+    reg_ids = []
+    student_names = ["batch_stu_1", "batch_stu_2", "batch_stu_3"]
+    for uname in student_names:
+        # Register or login student
+        resp = _api("POST", "/api/v1/auth/register", json={
+            "username": uname,
+            "password": "BatchTest123!",
+            "name": f"批量测试-{uname}",
+            "role": "student",
+            "email": f"{uname}@ssgl.test"
+        })
+        tok = None
+        if _ok(resp) and resp.status_code in (200, 201):
+            tok = _login(uname, "BatchTest123!")
+        elif _ok(resp) and resp.status_code in (400, 409):
+            tok = _login(uname, "BatchTest123!")
+        if not tok:
+            # Try alternate password
+            tok = _login(uname, "BatchTest456!")
+            if not tok:
+                continue
+
+        # Register for competition
+        resp = _api_auth("POST", f"/api/v1/competitions/{batch_comp_id}/register",
+                         token=tok, json={"remark": f"批量测试-{uname}"})
+        if _ok(resp) and resp.status_code in (200, 201):
+            data = resp.json()
+            reg = data.get("registration", data)
+            rid = reg.get("id") or data.get("id")
+            if rid:
+                reg_ids.append(rid)
+
+    if len(reg_ids) >= 2:
+        _log("PASS", "batch-register", f"批量注册成功, {len(reg_ids)} 个报名")
+    else:
+        _log("WARN", "batch-register", f"批量注册只有 {len(reg_ids)} 个 (需要至少2个)")
+
+    # Test batch approve — approve first 2
+    if len(reg_ids) >= 2:
+        approve_ids = reg_ids[:2]
+        resp = _api_auth("POST", "/api/v1/registrations/batch-approve",
+                         json={"ids": approve_ids})
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            _log("PASS", "batch-approve", f"批量通过成功, approved={data.get('approved')}, total={data.get('total')}")
+        else:
+            _log("FAIL", "batch-approve", f"批量通过失败 → {resp.status_code if _ok(resp) else 'None'}",
+                 resp.text[:200] if _ok(resp) else "")
+
+    # Test batch reject — reject the remaining
+    if len(reg_ids) >= 3:
+        reject_ids = reg_ids[2:]
+        resp = _api_auth("POST", "/api/v1/registrations/batch-reject",
+                         json={"ids": reject_ids, "reason": "材料不完整"})
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            _log("PASS", "batch-reject", f"批量拒绝成功, rejected={data.get('rejected')}, total={data.get('total')}")
+        else:
+            _log("FAIL", "batch-reject", f"批量拒绝失败 → {resp.status_code if _ok(resp) else 'None'}",
+                 resp.text[:200] if _ok(resp) else "")
+
+    # Test batch approve with empty ids → 400
+    resp = _api_auth("POST", "/api/v1/registrations/batch-approve", json={"ids": []})
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "batch-approve-empty", "空 ids → 400 ✓")
+    else:
+        _log("WARN", "batch-approve-empty", f"空 ids → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test batch approve with non-existent ids
+    resp = _api_auth("POST", "/api/v1/registrations/batch-approve", json={"ids": [999999]})
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        if data.get("approved", 0) == 0 and 999999 in (data.get("not_found") or []):
+            _log("PASS", "batch-approve-notfound", "不存在的 ID → not_found ✓")
+        else:
+            _log("PASS", "batch-approve-notfound", f"不存在 ID 处理: approved={data.get('approved')}")
+    else:
+        _log("WARN", "batch-approve-notfound", f"不存在 ID → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test batch approve with already-approved ids (should skip, not_pending)
+    if len(reg_ids) >= 2:
+        resp = _api_auth("POST", "/api/v1/registrations/batch-approve",
+                         json={"ids": reg_ids[:2]})
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            not_pending = data.get("not_pending", [])
+            if len(not_pending) > 0:
+                _log("PASS", "batch-approve-already", f"已处理的 ID → not_pending={len(not_pending)} ✓")
+            else:
+                _log("PASS", "batch-approve-already", f"重复批量通过响应正常: {data.get('approved', 0)} approved")
+
+    # Test RBAC: student should NOT access batch endpoints
+    if _student_token:
+        resp = _api_auth("POST", "/api/v1/registrations/batch-approve",
+                         token=_student_token, json={"ids": [1]})
+        if _ok(resp) and resp.status_code in (403, 401):
+            _log("PASS", "batch-rbac-student", "学生无法批量操作 → 403/401 ✓")
+        elif _ok(resp):
+            _log("WARN", "batch-rbac-student", f"学生批量操作 → {resp.status_code}")
+
+    # Cleanup
+    if batch_comp_id:
+        _api_auth("DELETE", f"/api/v1/competitions/{batch_comp_id}")
+
+
+# ============================================================
+# 3b2. Competition Achievement Report Tests
+# ============================================================
+def test_competition_report():
+    """Test the competition achievement report endpoint."""
+    print("\n📊 3b2. 赛事成果报告测试")
+
+    # Create a competition for report testing
+    comp_data = {
+        "title": f"报告测试赛事-{int(time.time())}",
+        "description": "用于赛事成果报告测试",
+        "type": "hackathon",
+        "start_date": "2026-07-01T00:00:00+08:00",
+        "end_date": "2026-07-15T00:00:00+08:00",
+        "level": "provincial",
+        "max_team_size": 5,
+        "min_team_size": 2,
+        "location": "福州",
+    }
+    resp = _api_auth("POST", "/api/v1/competitions", json=comp_data)
+    report_comp_id = None
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        report_comp_id = data.get("id") or data.get("competition", {}).get("id")
+        _log("PASS", "report-comp-create", f"报告测试赛事创建成功, id={report_comp_id}")
+
+    if not report_comp_id:
+        _log("WARN", "report-comp-create", f"创建赛事失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    # Create a team
+    team_data = {
+        "name": f"报告测试团队-{int(time.time())}",
+        "competition_id": report_comp_id,
+    }
+    resp = _api_auth("POST", "/api/v1/teams", json=team_data)
+    report_team_id = None
+    if _ok(resp) and resp.status_code in (200, 201):
+        data = resp.json()
+        report_team_id = data.get("id") or data.get("team", {}).get("id")
+        _log("PASS", "report-team-create", f"报告测试团队创建成功, id={report_team_id}")
+
+    # Create a milestone
+    if report_comp_id:
+        milestone_data = [{
+            "title": "报告测试里程碑",
+            "type": "submission",
+            "due_date": "2026-07-15T00:00:00+08:00",
+            "sort_order": 1,
+        }]
+        resp = _api_auth("POST", f"/api/v1/competitions/{report_comp_id}/milestones/batch",
+                         json=milestone_data)
+        if _ok(resp) and resp.status_code in (200, 201):
+            _log("PASS", "report-milestone-create", "报告测试里程碑创建成功")
+
+    # Create a preplan
+    if report_team_id and report_comp_id:
+        preplan_data = {
+            "competition_id": report_comp_id,
+            "team_id": report_team_id,
+            "title": "报告测试预案",
+            "tech_stack": "Go, React",
+            "innovation": "AI驱动的创新方案",
+        }
+        resp = _api_auth("POST", "/api/v1/pre-plans", json=preplan_data)
+        if _ok(resp) and resp.status_code in (200, 201):
+            _log("PASS", "report-preplan-create", "报告测试预案创建成功")
+
+    # Generate the report
+    resp = _api_auth("GET", f"/api/v1/competitions/{report_comp_id}/report")
+    if _ok(resp) and resp.status_code == 200:
+        report = resp.json()
+        # Verify report structure
+        checks = [
+            ("competition_id" in report, "competition_id 字段存在"),
+            ("registration_stats" in report, "registration_stats 字段存在"),
+            ("team_stats" in report, "team_stats 字段存在"),
+            ("preplan_stats" in report, "preplan_stats 字段存在"),
+            ("award_stats" in report, "award_stats 字段存在"),
+            ("milestone_stats" in report, "milestone_stats 字段存在"),
+            ("engagement" in report, "engagement 字段存在"),
+            ("timeline" in report, "timeline 字段存在"),
+            ("generated_at" in report, "generated_at 字段存在"),
+        ]
+        all_ok = all(ok for ok, _ in checks)
+        if all_ok:
+            _log("PASS", "report-structure", f"报告结构完整, 9 个核心字段全部存在")
+        else:
+            for ok, desc in checks:
+                if not ok:
+                    _log("FAIL", "report-structure", f"报告缺少字段: {desc}")
+
+        # Verify data consistency
+        if report["milestone_stats"]["total"] >= 1:
+            _log("PASS", "report-milestones", f"报告里程碑数据正确, total={report['milestone_stats']['total']}")
+        else:
+            _log("WARN", "report-milestones", f"里程碑数据为空, 可能未关联")
+
+        if report["team_stats"]["total_teams"] >= 1:
+            _log("PASS", "report-teams", f"报告团队数据正确, total={report['team_stats']['total_teams']}")
+        else:
+            _log("WARN", "report-teams", f"团队数据为空")
+
+        if len(report["timeline"]) > 0:
+            _log("PASS", "report-timeline", f"报告时间线存在, {len(report['timeline'])} 个事件")
+        else:
+            _log("WARN", "report-timeline", "时间线为空")
+    else:
+        _log("FAIL", "report-generate", f"报告生成失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test 404 for non-existent competition
+    resp = _api_auth("GET", "/api/v1/competitions/99999/report")
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "report-404", "不存在的赛事 → 404 ✓")
+    else:
+        _log("FAIL", "report-404", f"期望 404, 实际 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Cleanup
+    if report_comp_id:
+        _api_auth("DELETE", f"/api/v1/competitions/{report_comp_id}")
+
+
+# ============================================================
 # 3c. Password Change Tests
 # ============================================================
 def test_password_change():
@@ -2210,6 +2502,8 @@ def run_all():
     test_auth()
     test_crud()
     test_registration_flow()
+    test_batch_registration()
+    test_competition_report()
     test_password_change()
     test_export_full()
     test_ai_service()

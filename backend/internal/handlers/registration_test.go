@@ -169,3 +169,67 @@ func TestCompRegistrationRequest_MaxLength(t *testing.T) {
 		t.Errorf("expected Remark length 600, got %d", len(req.Remark))
 	}
 }
+
+func TestBatchActionRequest_Fields(t *testing.T) {
+	req := BatchActionRequest{
+		IDs:    []uint{1, 2, 3},
+		Reason: "不符合参赛条件",
+	}
+	if len(req.IDs) != 3 {
+		t.Errorf("expected 3 IDs, got %d", len(req.IDs))
+	}
+	if req.IDs[0] != 1 || req.IDs[1] != 2 || req.IDs[2] != 3 {
+		t.Errorf("unexpected IDs: %v", req.IDs)
+	}
+	if req.Reason != "不符合参赛条件" {
+		t.Errorf("expected Reason='不符合参赛条件', got '%s'", req.Reason)
+	}
+}
+
+func TestBatchActionRequest_EmptyIDs(t *testing.T) {
+	req := BatchActionRequest{
+		IDs: []uint{},
+	}
+	if len(req.IDs) != 0 {
+		t.Errorf("expected 0 IDs, got %d", len(req.IDs))
+	}
+}
+
+func TestBatchActionRequest_SingleID(t *testing.T) {
+	req := BatchActionRequest{
+		IDs: []uint{42},
+	}
+	if len(req.IDs) != 1 {
+		t.Errorf("expected 1 ID, got %d", len(req.IDs))
+	}
+	if req.IDs[0] != 42 {
+		t.Errorf("expected ID=42, got %d", req.IDs[0])
+	}
+}
+
+func TestBatchActionRequest_NoReason(t *testing.T) {
+	req := BatchActionRequest{
+		IDs: []uint{1, 2},
+	}
+	if req.Reason != "" {
+		t.Errorf("expected empty Reason, got '%s'", req.Reason)
+	}
+}
+
+func TestBatchAction_BatchApproveExists(t *testing.T) {
+	handler := NewRegistrationHandler()
+	if handler == nil {
+		t.Error("NewRegistrationHandler returned nil")
+	}
+	// Verify that BatchApprove method exists (compile-time check)
+	_ = handler.BatchApprove
+}
+
+func TestBatchAction_BatchRejectExists(t *testing.T) {
+	handler := NewRegistrationHandler()
+	if handler == nil {
+		t.Error("NewRegistrationHandler returned nil")
+	}
+	// Verify that BatchReject method exists (compile-time check)
+	_ = handler.BatchReject
+}
