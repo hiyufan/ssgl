@@ -3638,7 +3638,8 @@ def test_streaming_tools():
     skip_slow = os.getenv("SSGL_SKIP_SLOW", "0") == "1"
     fast_timeout = 5
 
-    tools = ["business-plan", "market-analysis", "swot-analysis", "study-plan"]
+    tools = ["business-plan", "market-analysis", "swot-analysis", "study-plan",
+             "improvement", "tech-route", "resource-match", "pitch-deck", "advisor", "competition-report"]
 
     for tool in tools:
         try:
@@ -3762,6 +3763,164 @@ def test_roi_calculator():
 
 
 # ============================================================
+# Student Competency Map Tests
+# ============================================================
+def test_competency_map():
+    """Test student competency map endpoint."""
+    print("\n🎯 学生能力图谱测试")
+
+    # Competency map for existing student (user 5)
+    resp = _api_auth("GET", "/api/v1/students/5/competency", timeout=15)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_dims = "dimensions" in data and len(data["dimensions"]) > 0
+        has_grade = "grade" in data and data["grade"] in ("S", "A", "B", "C", "D")
+        has_score = "overall_score" in data
+        has_badges = "badges" in data
+        has_roadmap = "roadmap" in data
+        has_strengths = "strengths" in data
+        has_weaknesses = "weaknesses" in data
+        dim_names = [d["name"] for d in data.get("dimensions", [])]
+        _log("PASS", "competency-map",
+             f"能力图谱成功, grade={data.get('grade')}, score={data.get('overall_score')}, "
+             f"dimensions={len(data.get('dimensions', []))}, badges={len(data.get('badges', []))}, "
+             f"roadmap={len(data.get('roadmap', []))}, dims={dim_names}")
+    else:
+        _log("FAIL", "competency-map", f"能力图谱失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Competency for non-existent student
+    resp = _api_auth("GET", "/api/v1/students/99999/competency", timeout=10)
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "competency-404", "不存在的学生 → 404 ✓")
+    else:
+        _log("FAIL", "competency-404", f"expected 404, got {resp.status_code if _ok(resp) else 'None'}")
+
+    # Invalid ID
+    resp = _api_auth("GET", "/api/v1/students/abc/competency", timeout=10)
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "competency-bad-id", "无效 ID → 400 ✓")
+    else:
+        _log("FAIL", "competency-bad-id", f"expected 400, got {resp.status_code if _ok(resp) else 'None'}")
+
+    # No auth
+    resp = requests.get(f"{BACKEND}/api/v1/students/5/competency")
+    if resp.status_code == 401:
+        _log("PASS", "competency-no-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "competency-no-auth", f"expected 401, got {resp.status_code}")
+
+    # Verify dimension structure
+    resp = _api_auth("GET", "/api/v1/students/5/competency", timeout=15)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        dims = data.get("dimensions", [])
+        if dims:
+            dim = dims[0]
+            required_fields = ["name", "score", "level", "weight", "description", "evidence"]
+            missing = [f for f in required_fields if f not in dim]
+            if not missing:
+                _log("PASS", "competency-dim-structure", f"维度结构完整, 字段={required_fields}")
+            else:
+                _log("FAIL", "competency-dim-structure", f"缺少字段: {missing}")
+
+        # Verify badges structure
+        badges = data.get("badges", [])
+        if badges:
+            badge = badges[0]
+            badge_fields = ["name", "description", "icon"]
+            badge_missing = [f for f in badge_fields if f not in badge]
+            if not badge_missing:
+                _log("PASS", "competency-badge-structure", f"徽章结构完整, 共{len(badges)}个")
+            else:
+                _log("FAIL", "competency-badge-structure", f"缺少字段: {badge_missing}")
+
+        # Verify roadmap structure
+        roadmap = data.get("roadmap", [])
+        if roadmap:
+            step = roadmap[0]
+            step_fields = ["dimension", "target", "current", "gap", "actions", "priority"]
+            step_missing = [f for f in step_fields if f not in step]
+            if not step_missing:
+                _log("PASS", "competency-roadmap-structure", f"路线图结构完整, 共{len(roadmap)}步")
+            else:
+                _log("FAIL", "competency-roadmap-structure", f"缺少字段: {step_missing}")
+
+        # Verify peer comparison (may be nil for sparse data)
+        peer = data.get("peer_comparison")
+        if peer:
+            _log("PASS", "competency-peer-comparison",
+                 f"同行对比: percentile={peer.get('percentile')}, rank={peer.get('rank')}/{peer.get('total_peers')}")
+        else:
+            _log("PASS", "competency-peer-comparison", "同行对比: 数据不足时为空 ✓")
+
+
+# ============================================================
+# Registration Trends Tests
+# ============================================================
+def test_registration_trends():
+    """Test registration trend statistics endpoint."""
+    print("\n📈 报名趋势统计测试")
+
+    # Basic request
+    resp = _api_auth("GET", "/api/v1/stats/registration-trends")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        trend = data.get("trend", [])
+        required_fields = ["trend", "total", "days", "avg_per_day", "peak_day", "peak_count", "growth_rate"]
+        missing = [f for f in required_fields if f not in data]
+        if not missing:
+            _log("PASS", "reg-trend-basic", f"报名趋势统计成功, {len(trend)} 天数据, total={data.get('total')}, peak={data.get('peak_day')}")
+        else:
+            _log("FAIL", "reg-trend-basic", f"缺少字段: {missing}")
+    else:
+        _log("FAIL", "reg-trend-basic", f"报名趋势统计失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Custom days parameter
+    resp = _api_auth("GET", "/api/v1/stats/registration-trends?days=7")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        trend = data.get("trend", [])
+        if len(trend) == 7 and data.get("days") == 7:
+            _log("PASS", "reg-trend-7days", f"7天趋势正确, {len(trend)} 个数据点")
+        else:
+            _log("FAIL", "reg-trend-7days", f"期望7个数据点, 实际 {len(trend)}, days={data.get('days')}")
+    else:
+        _log("FAIL", "reg-trend-7days", f"7天趋势失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Verify trend structure
+    resp = _api_auth("GET", "/api/v1/stats/registration-trends?days=3")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        trend = data.get("trend", [])
+        if trend:
+            point = trend[0]
+            if "date" in point and "count" in point:
+                _log("PASS", "reg-trend-structure", f"趋势数据结构完整: date={point['date']}, count={point['count']}")
+            else:
+                _log("FAIL", "reg-trend-structure", f"缺少字段: {list(point.keys())}")
+        else:
+            _log("PASS", "reg-trend-structure", "3天趋势: 数据为空（新系统预期）")
+
+    # Verify growth rate calculation
+    resp = _api_auth("GET", "/api/v1/stats/registration-trends?days=30")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        growth = data.get("growth_rate", None)
+        avg = data.get("avg_per_day", None)
+        if growth is not None and avg is not None:
+            _log("PASS", "reg-trend-metrics", f"增长率={growth:.1f}%, 日均={avg:.1f}")
+        else:
+            _log("FAIL", "reg-trend-metrics", f"指标缺失: growth_rate={growth}, avg_per_day={avg}")
+
+    # No auth → 401
+    resp = _api("GET", "/api/v1/stats/registration-trends")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "reg-trend-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "reg-trend-auth", f"预期 401, 实际 {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
 # Run all tests
 # ============================================================
 def run_all():
@@ -3801,6 +3960,8 @@ def run_all():
     test_competition_notes()
     test_streaming_tools()
     test_roi_calculator()
+    test_competency_map()
+    test_registration_trends()
 
     elapsed = time.time() - start_time
 

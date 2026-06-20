@@ -123,6 +123,8 @@ func TestSetup_HasAPIRoutes(t *testing.T) {
 		"GET /api/v1/points",
 		"GET /api/v1/points/me",
 		"GET /api/v1/points/leaderboard",
+		// Registration trends
+		"GET /api/v1/stats/registration-trends",
 	}
 
 	for _, route := range requiredRoutes {

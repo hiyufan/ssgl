@@ -765,6 +765,63 @@ export const assistantAPI = {
     const response = await aiApi.post<AssistantReply>('/assistant/chat', payload);
     return response.data;
   },
+
+  // Streaming chat via SSE
+  chatStream: async (
+    payload: { message: string; role?: string; context?: string; page?: string },
+    handlers: { onChunk: (text: string) => void; onDone: () => void; onError: (msg: string) => void },
+  ): Promise<void> => {
+    const token = getToken();
+    try {
+      const res = await fetch(`${AI_BASE}/assistant/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok || !res.body) { handlers.onError('AI 服务暂时不可用'); return; }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') { handlers.onDone(); return; }
+            try { const j = JSON.parse(data); if (j.text || j.chunk) handlers.onChunk(j.text || j.chunk); } catch { handlers.onChunk(data); }
+          }
+        }
+      }
+      handlers.onDone();
+    } catch (e) { handlers.onError(String(e)); }
+  },
+
+  // Quick action — execute predefined platform actions
+  quickAction: async (action: string, params?: Record<string, unknown>): Promise<AssistantReply> => {
+    const response = await aiApi.post<AssistantReply>('/assistant/quick-action', { action, ...params });
+    return response.data;
+  },
+};
+
+// Execution Match — compare pre-plan vs actual execution
+export const executionMatchAPI = {
+  match: async (payload: { pre_plan_id?: number; execution_text: string; plan_text?: string }): Promise<{
+    match_score: number;
+    dimension_scores: Record<string, number>;
+    gaps: { area: string; severity: string; description: string }[];
+    recommendations: string[];
+    summary: string;
+  }> => {
+    const response = await aiApi.post('/review/execution-match', payload);
+    return response.data;
+  },
 };
 
 // AI Pitch Coach (模拟答辩) API
@@ -917,6 +974,28 @@ export const ragAPI = {
     const formData = new FormData();
     formData.append('file', file);
     const response = await aiApi.post('/rag/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  // Get chunks for a specific document
+  getDocumentChunks: async (filename: string): Promise<{ filename: string; chunks: { id: number; content: string; metadata: unknown; similarity?: number }[]; total: number }> => {
+    const response = await aiApi.get(`/rag/documents/${encodeURIComponent(filename)}/chunks`);
+    return response.data;
+  },
+
+  // Batch ingest multiple text items
+  batchIngest: async (items: { content: string; metadata?: Record<string, unknown> }[]): Promise<{ ingested: number; errors: number }> => {
+    const response = await aiApi.post('/rag/ingest/batch', { items });
+    return response.data;
+  },
+
+  // Batch upload multiple files
+  batchUpload: async (files: File[]): Promise<{ uploaded: number; errors: number; details: { filename: string; chunks: number }[] }> => {
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    const response = await aiApi.post('/rag/upload/batch', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;

@@ -99,6 +99,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	timelineHandler := handlers.NewTimelineHandler()
 	insightsHandler := handlers.NewInsightsHandler()
 	roiHandler := handlers.NewROIHandler()
+	regTrendHandler := handlers.NewRegistrationTrendHandler()
 
 	lifecycleHandler := handlers.NewLifecycleHandler()
 	batchHandler := handlers.NewBatchHandler()
@@ -106,6 +107,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	annualReportHandler := handlers.NewAnnualReportHandler()
 	difficultyHandler := handlers.NewDifficultyHandler()
 	studentDashboardHandler := handlers.NewStudentDashboardHandler()
+	competencyHandler := handlers.NewCompetencyHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -210,6 +212,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/stats/countdown", statsHandler.Countdown)
 		protected.GET("/stats/popularity", statsHandler.Popularity)
 
+		// Registration trend statistics.
+		protected.GET("/stats/registration-trends", regTrendHandler.GetTrend)
+
 		// Platform health score.
 		protected.GET("/stats/health-score", healthScoreHandler.Score)
 
@@ -298,6 +303,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Personalized learning path.
 		protected.GET("/students/:id/learning-path", learningPathHandler.GetLearningPath)
+
+		// Student competency map — multi-dimensional skill analysis.
+		protected.GET("/students/:id/competency", competencyHandler.GetCompetencyMap)
 
 		// Competition lifecycle tracker.
 		protected.GET("/competitions/:id/lifecycle", lifecycleHandler.GetLifecycle)

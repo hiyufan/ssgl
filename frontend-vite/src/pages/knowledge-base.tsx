@@ -23,6 +23,21 @@ export function KnowledgeBasePage() {
   const [textContent, setTextContent] = useState('');
   const [textFilename, setTextFilename] = useState('');
   const [ingesting, setIngesting] = useState(false);
+  // Chunk viewer state
+  const [viewingChunks, setViewingChunks] = useState<{ filename: string; chunks: { id: number; content: string; metadata: unknown }[]; total: number } | null>(null);
+  const [chunkLoading, setChunkLoading] = useState(false);
+
+  const handleViewChunks = async (filename: string) => {
+    setChunkLoading(true);
+    try {
+      const res = await ragAPI.getDocumentChunks(filename);
+      setViewingChunks(res);
+    } catch (err) {
+      console.error('Failed to load chunks:', err);
+    } finally {
+      setChunkLoading(false);
+    }
+  };
 
   const fetchData = () => {
     setLoading(true);
@@ -176,6 +191,38 @@ export function KnowledgeBasePage() {
         </div>
       )}
 
+      {/* Chunk Viewer Modal */}
+      {viewingChunks && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }} onClick={() => setViewingChunks(null)}>
+          <div className="card" style={{ width: 700, maxHeight: '80vh', padding: 24, overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>📦 文档分块详情</h3>
+              <button className="btn btn-ghost" onClick={() => setViewingChunks(null)} style={{ fontSize: 18, padding: '4px 8px' }}>✕</button>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
+              文档: <strong style={{ color: 'var(--text)' }}>{viewingChunks.filename}</strong> · 共 {viewingChunks.total} 个分块
+            </div>
+            {chunkLoading ? (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>加载中...</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {viewingChunks.chunks.map((chunk, i) => (
+                  <div key={chunk.id || i} style={{ padding: 14, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'var(--amber-bg)', color: 'var(--amber)' }}>#{i + 1}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>ID: {chunk.id}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      {chunk.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="anim-in" style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 12px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', flex: 1, maxWidth: 360 }}>
           <Icon name="search" size={14}/>
@@ -279,15 +326,26 @@ export function KnowledgeBasePage() {
                   <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
                     {doc.created_at ? new Date(doc.created_at).toLocaleDateString('zh-CN') : '-'}
                   </span>
-                  <button
-                    onClick={() => handleDelete(doc.filename)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, color: 'var(--text-3)', transition: 'all 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)'; e.currentTarget.style.background = 'var(--red-bg)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'none'; }}
-                    title="删除文档"
-                  >
-                    <Icon name="trash" size={14}/>
-                  </button>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button
+                      onClick={() => handleViewChunks(doc.filename)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, color: 'var(--text-3)', transition: 'all 0.15s', fontSize: 11 }}
+                      onMouseEnter={e => { e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.background = 'var(--teal-bg)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'none'; }}
+                      title="查看分块"
+                    >
+                      <Icon name="eye" size={14}/>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(doc.filename)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, color: 'var(--text-3)', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)'; e.currentTarget.style.background = 'var(--red-bg)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'none'; }}
+                      title="删除文档"
+                    >
+                      <Icon name="trash" size={14}/>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
