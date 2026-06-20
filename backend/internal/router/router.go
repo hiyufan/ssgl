@@ -80,6 +80,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	showcaseHandler := handlers.NewShowcaseHandler()
 	matchHandler := handlers.NewMatchHandler()
 	profileHandler := handlers.NewProfileHandler()
+	noteHandler := handlers.NewCompetitionNoteHandler()
 	milestoneHandler := handlers.NewMilestoneHandler()
 	achievementHandler := handlers.NewAchievementPointsHandler()
 	globalSearchHandler := handlers.NewGlobalSearchHandler()
@@ -97,11 +98,14 @@ func Setup(cfg *config.Config) *gin.Engine {
 	learningPathHandler := handlers.NewLearningPathHandler()
 	timelineHandler := handlers.NewTimelineHandler()
 	insightsHandler := handlers.NewInsightsHandler()
+	roiHandler := handlers.NewROIHandler()
 
 	lifecycleHandler := handlers.NewLifecycleHandler()
 	batchHandler := handlers.NewBatchHandler()
 	activityFeedHandler := handlers.NewActivityFeedHandler()
 	annualReportHandler := handlers.NewAnnualReportHandler()
+	difficultyHandler := handlers.NewDifficultyHandler()
+	studentDashboardHandler := handlers.NewStudentDashboardHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -141,6 +145,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Competition activity feed.
 		protected.GET("/competitions/:id/activity", activityFeedHandler.GetFeed)
+
+		// Competition difficulty assessment.
+		protected.GET("/competitions/:id/difficulty", difficultyHandler.AssessDifficulty)
 
 		// Teams.
 		protected.GET("/teams", teamHandler.List)
@@ -236,6 +243,10 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Competition comparison.
 		protected.GET("/competitions/compare", comparisonHandler.Compare)
 
+		// Competition ROI analysis.
+		protected.GET("/competitions/:id/roi", roiHandler.CalculateROI)
+		protected.GET("/competitions/roi/compare", roiHandler.BatchROI)
+
 		// Competition subscriptions (deadline reminders).
 		protected.GET("/subscriptions", subscriptionHandler.List)
 
@@ -275,6 +286,15 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Student growth profile.
 		protected.GET("/students/:id/growth", growthHandler.GetGrowthProfile)
+		protected.GET("/students/me/dashboard", studentDashboardHandler.GetDashboard)
+
+		// Competition notes (personal annotations).
+		protected.GET("/competitions/:id/notes", noteHandler.ListByCompetition)
+		protected.POST("/competitions/:id/notes", noteHandler.Create)
+		protected.GET("/notes", noteHandler.ListMyNotes)
+		protected.GET("/notes/:id", noteHandler.Get)
+		protected.PUT("/notes/:id", noteHandler.Update)
+		protected.DELETE("/notes/:id", noteHandler.Delete)
 
 		// Personalized learning path.
 		protected.GET("/students/:id/learning-path", learningPathHandler.GetLearningPath)

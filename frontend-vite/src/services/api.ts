@@ -165,6 +165,15 @@ export const competitionsAPI = {
     return response.data;
   },
 
+  difficulty: async (id: number): Promise<{
+    competition_id: number; title: string; overall_score: number; level: string;
+    dimensions: Array<{ name: string; score: number; weight: number; details: string }>;
+    summary: string; tips: string[]; recommended_team_size: number; estimated_prep_weeks: number;
+  }> => {
+    const response = await api.get(`/competitions/${id}/difficulty`);
+    return response.data;
+  },
+
   batchImport: async (competitions: Array<Record<string, unknown>>): Promise<{ created_count: number; error_count: number; errors: Array<{ index: number; title: string; message: string }> }> => {
     const response = await api.post('/competitions/import', competitions);
     return response.data;
@@ -1093,4 +1102,18 @@ export const growthAPI = {
 // Personalized learning path
 export const learningPathAPI = {
   getPath: (userId: number) => api.get(`/students/${userId}/learning-path`).then(r => r.data),
+};
+
+// Competition notes (personal annotations)
+export const notesAPI = {
+  listByCompetition: (compId: number, page = 1, pageSize = 20) =>
+    api.get(`/competitions/${compId}/notes`, { params: { page, page_size: pageSize } }).then(r => r.data),
+  listMy: (page = 1, pageSize = 20) =>
+    api.get('/notes', { params: { page, page_size: pageSize } }).then(r => r.data),
+  get: (noteId: number) => api.get(`/notes/${noteId}`).then(r => r.data),
+  create: (compId: number, data: { title: string; content: string; color?: string; pinned?: boolean }) =>
+    api.post(`/competitions/${compId}/notes`, data).then(r => r.data),
+  update: (noteId: number, data: { title?: string; content?: string; color?: string; pinned?: boolean }) =>
+    api.put(`/notes/${noteId}`, data).then(r => r.data),
+  delete: (noteId: number) => api.delete(`/notes/${noteId}`).then(r => r.data),
 };

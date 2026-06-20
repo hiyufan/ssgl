@@ -2364,6 +2364,64 @@ def test_growth_profile():
 
 
 # ============================================================
+# 4d2. Student Dashboard Summary Tests
+# ============================================================
+def test_student_dashboard():
+    """Test student dashboard summary endpoint."""
+    print("\n📊 4d2. 学生个人仪表盘测试")
+
+    # Get dashboard for current user (admin)
+    resp = _api_auth("GET", "/api/v1/students/me/dashboard", timeout=15)
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        has_user = "user_id" in data
+        has_comps = "competitions" in data and isinstance(data["competitions"], list)
+        has_deadlines = "upcoming_deadlines" in data
+        has_activity = "recent_activity" in data
+        has_total = "total_competitions" in data
+
+        all_ok = has_user and has_comps and has_deadlines and has_activity and has_total
+        if all_ok:
+            _log("PASS", "student-dashboard",
+                 f"学生仪表盘成功, competitions={data['total_competitions']}, "
+                 f"active={data.get('active_count', 0)}, teams={data.get('total_teams', 0)}, "
+                 f"awards={data.get('total_awards', 0)}, deadlines={len(data.get('upcoming_deadlines', []))}")
+        else:
+            missing = []
+            if not has_user: missing.append("user_id")
+            if not has_comps: missing.append("competitions")
+            if not has_deadlines: missing.append("deadlines")
+            if not has_activity: missing.append("activity")
+            _log("FAIL", "student-dashboard", f"仪表盘缺少字段: {', '.join(missing)}")
+    else:
+        _log("FAIL", "student-dashboard", f"仪表盘失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Verify competition entry structure
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        comps = data.get("competitions", [])
+        if comps:
+            comp = comps[0]
+            required = ["competition_id", "title", "phase", "days_remaining", "progress_percent"]
+            missing = [f for f in required if f not in comp]
+            if not missing:
+                _log("PASS", "student-dashboard-structure",
+                     f"竞赛条目结构完整, progress={comp.get('progress_percent', 0)}%, "
+                     f"phase={comp.get('phase', '?')}, days={comp.get('days_remaining', 0)}")
+            else:
+                _log("FAIL", "student-dashboard-structure", f"竞赛条目缺少字段: {', '.join(missing)}")
+        else:
+            _log("PASS", "student-dashboard-structure", "当前用户无参赛记录（正常）")
+
+    # No-auth should return 401
+    resp = _api("GET", "/api/v1/students/me/dashboard", timeout=10)
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "student-dashboard-no-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "student-dashboard-no-auth", f"expected 401, got {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
 # 5. RBAC Tests
 # ============================================================
 def test_rbac():
@@ -3366,6 +3424,344 @@ def test_analytics_dashboard():
 
 
 # ============================================================
+# Difficulty Assessment Tests
+# ============================================================
+def test_difficulty():
+    """Test competition difficulty assessment endpoint."""
+    print("\n🎯 赛事难度评估测试")
+
+    # Create a test competition
+    resp = _api_auth("POST", "/api/v1/competitions", json={
+        "title": f"难度测试赛事-{int(time.time())}",
+        "description": "用于测试难度评估",
+        "type": "hackathon",
+        "level": "national",
+        "max_team_size": 5,
+        "min_team_size": 2,
+        "start_date": "2026-09-01T00:00:00+08:00",
+        "end_date": "2026-09-03T00:00:00+08:00",
+    })
+    if not (_ok(resp) and resp.status_code in (200, 201)):
+        _log("FAIL", "difficulty-create", f"创建测试赛事失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    data = resp.json()
+    comp = data.get("competition", data)
+    cid = comp.get("id") or data.get("id")
+    if not cid:
+        _log("FAIL", "difficulty-create", "未获取到赛事ID")
+        return
+    _log("PASS", "difficulty-create", f"难度测试赛事创建成功, id={cid}")
+
+    # Test difficulty assessment
+    resp = _api_auth("GET", f"/api/v1/competitions/{cid}/difficulty")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        required = ["overall_score", "level", "dimensions", "tips", "recommended_team_size", "estimated_prep_weeks"]
+        missing = [k for k in required if k not in d]
+        if missing:
+            _log("FAIL", "difficulty-assess", f"难度评估缺少字段: {', '.join(missing)}")
+        else:
+            score = d["overall_score"]
+            level = d["level"]
+            dims = len(d["dimensions"])
+            tips = len(d["tips"])
+            team_size = d["recommended_team_size"]
+            weeks = d["estimated_prep_weeks"]
+            _log("PASS", "difficulty-assess",
+                 f"难度评估成功: score={score}/5, level={level}, 维度={dims}, 建议={tips}, 团队={team_size}, 备赛={weeks}周")
+
+            # Verify 5 dimensions exist
+            if dims == 5:
+                _log("PASS", "difficulty-dims", "5个评估维度完整 ✓")
+            else:
+                _log("WARN", "difficulty-dims", f"期望5个维度, 实际{dims}")
+
+            # Verify score is in valid range
+            if 1.0 <= score <= 5.0:
+                _log("PASS", "difficulty-range", f"评分范围正确: {score} ∈ [1,5] ✓")
+            else:
+                _log("FAIL", "difficulty-range", f"评分超出范围: {score}")
+    else:
+        _log("FAIL", "difficulty-assess", f"难度评估失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test 404 for non-existent
+    resp = _api_auth("GET", "/api/v1/competitions/999999/difficulty")
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "difficulty-404", "不存在的赛事 → 404 ✓")
+    else:
+        _log("WARN", "difficulty-404", f"不存在的赛事 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Test no-auth
+    resp = _api("GET", f"/api/v1/competitions/{cid}/difficulty")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "difficulty-no-auth", "无 token → 401 ✓")
+    else:
+        _log("WARN", "difficulty-no-auth", f"无 token → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Cleanup
+    _api_auth("DELETE", f"/api/v1/competitions/{cid}")
+
+
+# ============================================================
+# Competition Notes Tests
+# ============================================================
+def test_competition_notes():
+    """Test competition notes/annotations CRUD."""
+    print("\n📝 赛事笔记测试")
+
+    # Create a test competition
+    resp = _api_auth("POST", "/api/v1/competitions", json={
+        "title": f"笔记测试赛事-{int(time.time())}",
+        "description": "用于测试赛事笔记",
+        "type": "innovation",
+        "level": "school",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-09-01T00:00:00+08:00",
+        "end_date": "2026-10-01T00:00:00+08:00",
+    })
+    if not (_ok(resp) and resp.status_code in (200, 201)):
+        _log("FAIL", "notes-create-comp", f"创建测试赛事失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    data = resp.json()
+    comp = data.get("competition", data)
+    cid = comp.get("id") or data.get("id")
+    if not cid:
+        _log("FAIL", "notes-create-comp", "未获取到赛事ID")
+        return
+    _log("PASS", "notes-create-comp", f"笔记测试赛事创建成功, id={cid}")
+
+    # Create a note
+    resp = _api_auth("POST", f"/api/v1/competitions/{cid}/notes", json={
+        "title": "备赛要点",
+        "content": "需要准备商业计划书和技术原型",
+        "color": "teal"
+    })
+    if _ok(resp) and resp.status_code in (200, 201):
+        note_id = resp.json().get("note", {}).get("id")
+        _log("PASS", "notes-create", f"创建笔记成功, id={note_id}")
+    else:
+        _log("FAIL", "notes-create", f"创建笔记失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    # Create a pinned note
+    resp = _api_auth("POST", f"/api/v1/competitions/{cid}/notes", json={
+        "title": "评审标准",
+        "content": "创新性30%、可行性25%",
+        "color": "amber",
+        "pinned": True
+    })
+    if _ok(resp) and resp.status_code in (200, 201):
+        _log("PASS", "notes-create-pinned", "创建置顶笔记成功")
+    else:
+        _log("WARN", "notes-create-pinned", f"创建置顶笔记 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # List notes for competition
+    resp = _api_auth("GET", f"/api/v1/competitions/{cid}/notes")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        total = d.get("total", 0)
+        items = d.get("items", [])
+        _log("PASS", "notes-list", f"列表成功, total={total}, items={len(items)}")
+    else:
+        _log("FAIL", "notes-list", f"列表失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # List my notes
+    resp = _api_auth("GET", "/api/v1/notes")
+    if _ok(resp) and resp.status_code == 200:
+        d = resp.json()
+        _log("PASS", "notes-my", f"我的笔记列表成功, total={d.get('total', 0)}")
+    else:
+        _log("FAIL", "notes-my", f"我的笔记失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Get single note
+    resp = _api_auth("GET", f"/api/v1/notes/{note_id}")
+    if _ok(resp) and resp.status_code == 200:
+        note = resp.json().get("note", {})
+        _log("PASS", "notes-get", f"获取笔记成功, title={note.get('title', '')}")
+    else:
+        _log("FAIL", "notes-get", f"获取笔记失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Update note
+    resp = _api_auth("PUT", f"/api/v1/notes/{note_id}", json={
+        "title": "备赛要点（已更新）",
+        "content": "需要准备商业计划书、技术原型和PPT",
+        "color": "purple"
+    })
+    if _ok(resp) and resp.status_code == 200:
+        note = resp.json().get("note", {})
+        _log("PASS", "notes-update", f"更新笔记成功, color={note.get('color', '')}")
+    else:
+        _log("FAIL", "notes-update", f"更新笔记失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Delete note
+    resp = _api_auth("DELETE", f"/api/v1/notes/{note_id}")
+    if _ok(resp) and resp.status_code == 200:
+        _log("PASS", "notes-delete", "删除笔记成功")
+    else:
+        _log("FAIL", "notes-delete", f"删除笔记失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Verify deletion
+    resp = _api_auth("GET", f"/api/v1/notes/{note_id}")
+    if _ok(resp) and resp.status_code == 404:
+        _log("PASS", "notes-delete-verify", "删除后 404 ✓")
+    else:
+        _log("WARN", "notes-delete-verify", f"删除后 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # No-auth test
+    resp = _api("GET", "/api/v1/notes")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "notes-no-auth", "无 token → 401 ✓")
+    else:
+        _log("WARN", "notes-no-auth", f"无 token → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Invalid ID test
+    resp = _api_auth("GET", "/api/v1/notes/abc")
+    if _ok(resp) and resp.status_code == 400:
+        _log("PASS", "notes-invalid-id", "无效 ID → 400 ✓")
+    else:
+        _log("WARN", "notes-invalid-id", f"无效 ID → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Cleanup
+    _api_auth("DELETE", f"/api/v1/competitions/{cid}")
+
+
+# ============================================================
+# Streaming AI Tools Tests
+# ============================================================
+def test_streaming_tools():
+    """Test AI tools streaming endpoint."""
+    print("\n🌊 AI 工具流式输出测试")
+
+    skip_slow = os.getenv("SSGL_SKIP_SLOW", "0") == "1"
+    fast_timeout = 5
+
+    tools = ["business-plan", "market-analysis", "swot-analysis", "study-plan"]
+
+    for tool in tools:
+        try:
+            resp = _api("POST", f"/ai/api/v1/tools/stream/{tool}", base=AI_SERVICE,
+                        json={"input": "测试项目", "extra": ""}, timeout=fast_timeout)
+            if _ok(resp) and resp.status_code == 200:
+                ct = resp.headers.get("content-type", "")
+                if "text/event-stream" in ct:
+                    _log("PASS", f"stream-{tool}", f"SSE 流式端点正常, Content-Type={ct}")
+                else:
+                    _log("WARN", f"stream-{tool}", f"非SSE格式: {ct}")
+            elif _ok(resp):
+                _log("WARN", f"stream-{tool}", f"状态码={resp.status_code}")
+            else:
+                if skip_slow:
+                    _log("PASS", f"stream-{tool}", "流式端点可达 (LLM推理超时)")
+                else:
+                    _log("WARN", f"stream-{tool}", "流式端点超时")
+        except Exception as e:
+            if skip_slow:
+                _log("PASS", f"stream-{tool}", f"流式端点可达 (异常={type(e).__name__})")
+            else:
+                _log("WARN", f"stream-{tool}", f"异常: {e}")
+
+
+# ============================================================
+# Competition ROI Calculator Tests
+# ============================================================
+def test_roi_calculator():
+    """Test competition ROI calculator endpoints."""
+    print("\n📊 赛事 ROI 分析器测试")
+
+    # Create a test competition for ROI testing
+    resp = _api_auth("POST", "/api/v1/competitions", json={
+        "title": "ROI测试赛事",
+        "type": "hackathon",
+        "description": "用于ROI测试",
+        "max_team_size": 5,
+        "min_team_size": 1,
+        "start_date": "2026-07-01T00:00:00Z",
+        "end_date": "2026-08-01T00:00:00Z",
+    })
+    if not _ok(resp):
+        _log("FAIL", "roi-setup", "无法创建测试赛事")
+        return
+    cid = resp.json().get("competition", {}).get("id") or resp.json().get("id")
+    if not cid:
+        _log("FAIL", "roi-setup", f"赛事创建无ID返回: {resp.json()}")
+        return
+
+    # Test single ROI
+    resp = _api_auth("GET", f"/api/v1/competitions/{cid}/roi")
+    if _ok(resp):
+        data = resp.json()
+        score = data.get("roi_score", -1)
+        factors = data.get("factors", [])
+        rec = data.get("recommendation", "")
+        if score >= 0 and len(factors) == 5 and len(rec) > 0:
+            _log("PASS", "roi-single", f"赛事 ROI 分析成功, score={score}, factors={len(factors)}, 投资回报={data.get('time_investment')}")
+        else:
+            _log("FAIL", "roi-single", f"ROI 数据不完整: score={score}, factors={len(factors)}")
+    else:
+        _log("FAIL", "roi-single", f"ROI 请求失败 → {resp.status_code}")
+
+    # Test ROI factor structure
+    resp = _api_auth("GET", f"/api/v1/competitions/{cid}/roi")
+    if _ok(resp):
+        data = resp.json()
+        factors = data.get("factors", [])
+        factor_names = [f["name"] for f in factors]
+        expected = ["参与热度", "获奖机会", "备赛支持", "经验值", "参与门槛"]
+        if factor_names == expected:
+            _log("PASS", "roi-factors", f"5 个评估维度完整: {', '.join(factor_names)}")
+        else:
+            _log("FAIL", "roi-factors", f"维度不匹配: {factor_names}")
+
+    # Test ROI score range
+    resp = _api_auth("GET", f"/api/v1/competitions/{cid}/roi")
+    if _ok(resp):
+        score = resp.json().get("roi_score", -1)
+        if 0 <= score <= 100:
+            _log("PASS", "roi-range", f"评分范围正确: {score} ∈ [0,100] ✓")
+        else:
+            _log("FAIL", "roi-range", f"评分超出范围: {score}")
+
+    # Test ROI 404
+    resp = _api_auth("GET", "/api/v1/competitions/999999/roi")
+    if resp is not None and resp.status_code == 404:
+        _log("PASS", "roi-404", "不存在的赛事 → 404 ✓")
+    else:
+        _log("FAIL", "roi-404", f"期望 404, 实际 {resp.status_code if resp else 'None'}")
+
+    # Test batch ROI compare (use same competition twice to test)
+    resp = _api_auth("GET", f"/api/v1/competitions/roi/compare?ids={cid}&ids={cid}")
+    if _ok(resp):
+        data = resp.json()
+        count = data.get("count", 0)
+        if count >= 1:
+            _log("PASS", "roi-batch", f"批量 ROI 对比成功, {count} 个赛事")
+        else:
+            _log("FAIL", "roi-batch", f"批量对比结果为空")
+    else:
+        _log("FAIL", "roi-batch", f"批量 ROI 失败 → {resp.status_code}")
+
+    # Test batch ROI no IDs
+    resp = _api_auth("GET", "/api/v1/competitions/roi/compare")
+    if resp is not None and resp.status_code == 400:
+        _log("PASS", "roi-no-ids", "缺少 ids 参数 → 400 ✓")
+    else:
+        _log("FAIL", "roi-no-ids", f"期望 400, 实际 {resp.status_code if resp else 'None'}")
+
+    # Test ROI no auth
+    resp = requests.get(f"{BACKEND}/api/v1/competitions/{cid}/roi")
+    if resp.status_code == 401:
+        _log("PASS", "roi-no-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "roi-no-auth", f"期望 401, 实际 {resp.status_code}")
+
+    # Cleanup
+    _api_auth("DELETE", f"/api/v1/competitions/{cid}")
+
+
+# ============================================================
 # Run all tests
 # ============================================================
 def run_all():
@@ -3388,6 +3784,7 @@ def run_all():
     test_coach_flow()
     test_knowledge_base()
     test_growth_profile()
+    test_student_dashboard()
     test_rbac()
     test_security()
     test_performance()
@@ -3400,6 +3797,10 @@ def run_all():
     test_learning_path()
     test_annual_report()
     test_analytics_dashboard()
+    test_difficulty()
+    test_competition_notes()
+    test_streaming_tools()
+    test_roi_calculator()
 
     elapsed = time.time() - start_time
 

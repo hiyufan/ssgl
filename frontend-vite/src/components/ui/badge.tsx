@@ -32,3 +32,18 @@ export function TypeBadge({ type }: { type: string }) {
   }[type] || { cls: 'badge-muted', label: type };
   return <span className={`badge ${m.cls}`}>{m.label}</span>;
 }
+
+/* ─── Difficulty Badge ─────────────────────────────────── */
+const DIFFICULTY_MAP: Record<string, { cls: string; label: string; stars: string }> = {
+  '入门': { cls: 'badge-green',  label: '入门', stars: '★' },
+  '进阶': { cls: 'badge-teal',   label: '进阶', stars: '★★' },
+  '挑战': { cls: 'badge-amber',  label: '挑战', stars: '★★★' },
+  '精英': { cls: 'badge-purple', label: '精英', stars: '★★★★' },
+  '极限': { cls: 'badge-red',    label: '极限', stars: '★★★★★' },
+};
+
+export function DifficultyBadge({ level }: { level: string }) {
+  const m = DIFFICULTY_MAP[level];
+  if (!m) return null;
+  return <span className={`badge ${m.cls}`} title={m.label}>{m.stars} {m.label}</span>;
+}

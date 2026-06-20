@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { competitionsAPI, milestonesAPI, registrationsAPI, subscriptionsAPI } from '@/services/api';
+import { competitionsAPI, milestonesAPI, registrationsAPI, subscriptionsAPI, notesAPI } from '@/services/api';
 import { useRole } from '@/hooks/use-role';
 import { StatusBadge, TypeBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
@@ -557,17 +557,30 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
   const [msSaving, setMsSaving] = useState(false);
   const [compStats, setCompStats] = useState<Record<string, number | string> | null>(null);
 
+  // Notes state
+  type Note = { id: number; title: string; content: string; color: string; pinned: boolean; created_at: string; updated_at: string };
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [addNote, setAddNote] = useState(false);
+  const [noteForm, setNoteForm] = useState({ title: '', content: '', color: 'teal' });
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [editNoteId, setEditNoteId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', content: '', color: 'teal' });
+
   useEffect(() => {
     if (!comp) return;
     setMsLoading(true);
+    setNotesLoading(true);
     Promise.all([
       milestonesAPI.list(comp.id).catch(() => ({ milestones: [], progress: 0 })),
       competitionsAPI.stats(comp.id).catch(() => null),
-    ]).then(([msRes, statsRes]) => {
+      notesAPI.listByCompetition(comp.id).catch(() => ({ items: [] })),
+    ]).then(([msRes, statsRes, notesRes]) => {
       setMilestones(msRes.milestones || []);
       setMsProgress(msRes.progress || 0);
       setCompStats(statsRes);
-    }).finally(() => setMsLoading(false));
+      setNotes(notesRes.items || []);
+    }).finally(() => { setMsLoading(false); setNotesLoading(false); });
   }, [comp?.id]);
 
   if (!comp) return null;
@@ -608,6 +621,54 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
       toast.success('里程碑已创建');
     } catch (err) { toast.error(getApiError(err, '创建失败')); }
     finally { setMsSaving(false); }
+  };
+
+  // Notes CRUD
+  const NOTE_COLORS: Record<string, { bg: string; border: string; accent: string; label: string }> = {
+    teal: { bg: 'var(--teal-bg)', border: 'var(--teal-border)', accent: 'var(--teal)', label: '蓝绿' },
+    amber: { bg: 'var(--amber-bg)', border: 'var(--amber-border)', accent: 'var(--amber)', label: '琥珀' },
+    purple: { bg: 'var(--purple-bg)', border: 'var(--border)', accent: 'var(--purple)', label: '紫色' },
+    green: { bg: 'var(--green-bg)', border: 'var(--border)', accent: 'var(--green)', label: '绿色' },
+    red: { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)', accent: 'var(--red)', label: '红色' },
+  };
+
+  const createNote = async () => {
+    if (!noteForm.title.trim() || !noteForm.content.trim()) { toast.error('请填写标题和内容'); return; }
+    setNoteSaving(true);
+    try {
+      const res = await notesAPI.create(comp.id, { title: noteForm.title.trim(), content: noteForm.content.trim(), color: noteForm.color });
+      setNotes(prev => [res.note, ...prev]);
+      setAddNote(false);
+      setNoteForm({ title: '', content: '', color: 'teal' });
+      toast.success('笔记已创建');
+    } catch (err) { toast.error(getApiError(err, '创建失败')); }
+    finally { setNoteSaving(false); }
+  };
+
+  const saveEditNote = async () => {
+    if (!editNoteId || !editForm.title.trim() || !editForm.content.trim()) return;
+    try {
+      const res = await notesAPI.update(editNoteId, { title: editForm.title.trim(), content: editForm.content.trim(), color: editForm.color });
+      setNotes(prev => prev.map(n => n.id === editNoteId ? res.note : n));
+      setEditNoteId(null);
+      toast.success('笔记已更新');
+    } catch (err) { toast.error(getApiError(err, '更新失败')); }
+  };
+
+  const deleteNote = async (noteId: number) => {
+    if (!confirm('删除此笔记？')) return;
+    try {
+      await notesAPI.delete(noteId);
+      setNotes(prev => prev.filter(n => n.id !== noteId));
+      toast.success('已删除');
+    } catch (err) { toast.error(getApiError(err, '删除失败')); }
+  };
+
+  const togglePin = async (note: Note) => {
+    try {
+      const res = await notesAPI.update(note.id, { pinned: !note.pinned });
+      setNotes(prev => prev.map(n => n.id === note.id ? res.note : n));
+    } catch (err) { toast.error(getApiError(err, '操作失败')); }
   };
 
   return (
@@ -777,6 +838,95 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Notes Section */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="edit" size={15} />
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>我的笔记</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>({notes.length})</span>
+            </div>
+            <Button variant="outline" size="sm" icon={<Icon name="plus" size={12}/>} onClick={() => setAddNote(!addNote)}>添加</Button>
+          </div>
+
+          {/* Add note form */}
+          {addNote && (
+            <div style={{ padding: 14, background: 'var(--surface-2)', borderRadius: 10, marginBottom: 12, border: '1px solid var(--border)' }}>
+              <input className="forge-input" placeholder="笔记标题" value={noteForm.title} onChange={e => setNoteForm(f => ({...f, title: e.target.value}))} style={{ marginBottom: 8 }} />
+              <textarea className="forge-input" rows={3} placeholder="笔记内容…" value={noteForm.content} onChange={e => setNoteForm(f => ({...f, content: e.target.value}))} style={{ resize: 'none', marginBottom: 8 }} />
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                {Object.entries(NOTE_COLORS).map(([key, val]) => (
+                  <button key={key} onClick={() => setNoteForm(f => ({...f, color: key}))} style={{
+                    width: 24, height: 24, borderRadius: 6, border: `2px solid ${noteForm.color === key ? val.accent : 'var(--border)'}`,
+                    background: val.bg, cursor: 'pointer',
+                  }} title={val.label} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <Button variant="ghost" size="sm" onClick={() => setAddNote(false)}>取消</Button>
+                <Button variant="primary" size="sm" loading={noteSaving} onClick={createNote}>创建</Button>
+              </div>
+            </div>
+          )}
+
+          {/* Notes list */}
+          {notesLoading ? (
+            <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-3)', fontSize: 12 }}>加载中...</div>
+          ) : notes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-3)', fontSize: 12 }}>暂无笔记，点击「添加」开始记录</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {notes.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).map(note => {
+                const colors = NOTE_COLORS[note.color] || NOTE_COLORS.teal;
+                const isEditing = editNoteId === note.id;
+                return (
+                  <div key={note.id} style={{
+                    padding: '10px 14px', borderRadius: 10, background: colors.bg,
+                    border: `1px solid ${colors.border}`, position: 'relative',
+                  }}>
+                    {note.pinned && <span style={{ position: 'absolute', top: 6, right: 8, fontSize: 10, color: colors.accent }}>📌</span>}
+                    {isEditing ? (
+                      <div>
+                        <input className="forge-input" value={editForm.title} onChange={e => setEditForm(f => ({...f, title: e.target.value}))} style={{ marginBottom: 6, fontSize: 13 }} />
+                        <textarea className="forge-input" rows={2} value={editForm.content} onChange={e => setEditForm(f => ({...f, content: e.target.value}))} style={{ resize: 'none', marginBottom: 6, fontSize: 12 }} />
+                        <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                          {Object.entries(NOTE_COLORS).map(([key, val]) => (
+                            <button key={key} onClick={() => setEditForm(f => ({...f, color: key}))} style={{
+                              width: 18, height: 18, borderRadius: 4, border: `2px solid ${editForm.color === key ? val.accent : 'var(--border)'}`,
+                              background: val.bg, cursor: 'pointer',
+                            }} />
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <Button variant="ghost" size="sm" onClick={() => setEditNoteId(null)}>取消</Button>
+                          <Button variant="primary" size="sm" onClick={saveEditNote}>保存</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4, paddingRight: 20 }}>{note.title}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{note.content}</div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+                          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{new Date(note.updated_at).toLocaleDateString('zh-CN')}</span>
+                          <button onClick={() => togglePin(note)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2, fontSize: 11 }} title={note.pinned ? '取消置顶' : '置顶'}>
+                            {note.pinned ? '📌' : '📍'}
+                          </button>
+                          <button onClick={() => { setEditNoteId(note.id); setEditForm({ title: note.title, content: note.content, color: note.color }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2 }} title="编辑">
+                            <Icon name="edit" size={12} />
+                          </button>
+                          <button onClick={() => deleteNote(note.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2 }} title="删除">
+                            <Icon name="trash" size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
