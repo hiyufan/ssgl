@@ -108,6 +108,8 @@ func Setup(cfg *config.Config) *gin.Engine {
 	difficultyHandler := handlers.NewDifficultyHandler()
 	studentDashboardHandler := handlers.NewStudentDashboardHandler()
 	competencyHandler := handlers.NewCompetencyHandler()
+	liveDashboardHandler := handlers.NewLiveDashboardHandler()
+	riskAlertHandler := handlers.NewRiskAlertHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -288,6 +290,13 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		// Platform timeline — unified event feed.
 		protected.GET("/timeline", timelineHandler.List)
+
+		// Live competition dashboard — real-time aggregated view.
+		protected.GET("/live-dashboard", liveDashboardHandler.GetDashboard)
+
+		// Competition risk assessment — early warning system.
+		protected.GET("/competitions/:id/risk", riskAlertHandler.AssessCompetitionRisk)
+		protected.GET("/stats/risk-overview", riskAlertHandler.GetPlatformRiskOverview)
 
 		// Student growth profile.
 		protected.GET("/students/:id/growth", growthHandler.GetGrowthProfile)

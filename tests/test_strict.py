@@ -3921,6 +3921,190 @@ def test_registration_trends():
 
 
 # ============================================================
+# Live Dashboard Tests
+# ============================================================
+def test_live_dashboard():
+    """Test the live competition dashboard endpoint."""
+    print("\n📡 赛况直播仪表盘测试")
+
+    # Basic request
+    resp = _api_auth("GET", "/api/v1/live-dashboard")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        required_top = ["summary", "competitions", "recent_events", "top_teams", "hot_competitions", "alerts"]
+        missing = [f for f in required_top if f not in data]
+        if not missing:
+            _log("PASS", "live-dash-structure", f"直播仪表盘结构完整, 6 个顶级字段全部存在")
+        else:
+            _log("FAIL", "live-dash-structure", f"缺少字段: {missing}")
+    else:
+        _log("FAIL", "live-dash-structure", f"直播仪表盘失败 → {resp.status_code if _ok(resp) else 'None'}")
+        return
+
+    # Verify summary fields
+    summary = data.get("summary", {})
+    required_summary = ["total_competitions", "active_competitions", "total_teams", "total_students",
+                        "total_preplans", "total_awards", "ai_review_rate", "team_formation_rate"]
+    missing_s = [f for f in required_summary if f not in summary]
+    if not missing_s:
+        _log("PASS", "live-dash-summary", f"平台总览完整: 赛事={summary['total_competitions']}, "
+             f"活跃={summary['active_competitions']}, 团队={summary['total_teams']}, "
+             f"学生={summary['total_students']}, AI评审率={summary['ai_review_rate']:.1f}%")
+    else:
+        _log("FAIL", "live-dash-summary", f"缺少字段: {missing_s}")
+
+    # Verify competition summaries
+    comps = data.get("competitions", [])
+    if comps:
+        c = comps[0]
+        required_comp = ["id", "title", "type", "status", "team_count", "student_count",
+                         "preplan_count", "award_count", "registration_count", "phase", "days_remaining", "progress"]
+        missing_c = [f for f in required_comp if f not in c]
+        if not missing_c:
+            _log("PASS", "live-dash-comps", f"赛事摘要完整, {len(comps)} 个赛事, 首个={c['title']} (phase={c['phase']}, progress={c['progress']:.1f}%)")
+        else:
+            _log("FAIL", "live-dash-comps", f"赛事摘要缺少字段: {missing_c}")
+    else:
+        _log("PASS", "live-dash-comps", "赛事摘要: 空（无活跃赛事）")
+
+    # Verify recent events
+    events = data.get("recent_events", [])
+    if events:
+        e = events[0]
+        if "type" in e and "summary" in e and "time" in e:
+            _log("PASS", "live-dash-events", f"最近动态完整, {len(events)} 条, 首条=[{e['type']}] {e['summary']}")
+        else:
+            _log("FAIL", "live-dash-events", f"动态缺少字段: {list(e.keys())}")
+    else:
+        _log("PASS", "live-dash-events", "最近动态: 空")
+
+    # Verify top teams
+    top_teams = data.get("top_teams", [])
+    if top_teams:
+        t = top_teams[0]
+        required_team = ["id", "name", "comp_title", "member_count", "award_count", "achievement_points"]
+        missing_t = [f for f in required_team if f not in t]
+        if not missing_t:
+            _log("PASS", "live-dash-top-teams", f"排行榜完整, {len(top_teams)} 支团队, 首名={t['name']} (积分={t['achievement_points']})")
+        else:
+            _log("FAIL", "live-dash-top-teams", f"排行榜缺少字段: {missing_t}")
+    else:
+        _log("PASS", "live-dash-top-teams", "排行榜: 空")
+
+    # Verify hot competitions
+    hot = data.get("hot_competitions", [])
+    if hot:
+        h = hot[0]
+        required_hot = ["id", "title", "team_count", "registration_count", "heat_index", "days_left"]
+        missing_h = [f for f in required_hot if f not in h]
+        if not missing_h:
+            _log("PASS", "live-dash-hot", f"热门赛事完整, {len(hot)} 个, 首个={h['title']} (热度={h['heat_index']:.1f})")
+        else:
+            _log("FAIL", "live-dash-hot", f"热门赛事缺少字段: {missing_h}")
+    else:
+        _log("PASS", "live-dash-hot", "热门赛事: 空")
+
+    # Verify alerts is a list (not null)
+    alerts = data.get("alerts")
+    if isinstance(alerts, list):
+        _log("PASS", "live-dash-alerts", f"预警信息正常, {len(alerts)} 条")
+    else:
+        _log("FAIL", "live-dash-alerts", f"预警信息类型错误: {type(alerts)}")
+
+    # No auth → 401
+    resp = _api("GET", "/api/v1/live-dashboard")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "live-dash-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "live-dash-auth", f"预期 401, 实际 {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
+# Risk Alert System Tests
+# ============================================================
+def test_risk_alerts():
+    """Test the competition risk assessment and early warning system."""
+    print("\n⚠️ 赛事风险预警系统测试")
+
+    # Platform risk overview
+    resp = _api_auth("GET", "/api/v1/stats/risk-overview")
+    if _ok(resp) and resp.status_code == 200:
+        data = resp.json()
+        required = ["total_competitions", "at_risk_count", "critical_count", "high_count",
+                     "medium_count", "low_count", "average_risk_score", "top_risks", "recommendations"]
+        missing = [f for f in required if f not in data]
+        if not missing:
+            _log("PASS", "risk-overview", f"风险总览成功, 赛事={data['total_competitions']}, "
+                 f"风险={data['at_risk_count']}, 平均分={data['average_risk_score']}")
+        else:
+            _log("FAIL", "risk-overview", f"缺少字段: {missing}")
+    else:
+        _log("FAIL", "risk-overview", f"风险总览失败 → {resp.status_code if _ok(resp) else 'None'}")
+
+    # Verify top_risks structure
+    if _ok(resp) and resp.status_code == 200:
+        top_risks = resp.json().get("top_risks", [])
+        if isinstance(top_risks, list):
+            _log("PASS", "risk-top", f"Top 风险赛事正常, {len(top_risks)} 个")
+            if top_risks:
+                r = top_risks[0]
+                risk_fields = ["competition_id", "title", "overall_risk", "risk_score", "alerts"]
+                missing = [f for f in risk_fields if f not in r]
+                if not missing:
+                    _log("PASS", "risk-structure", f"风险报告结构完整, risk_score={r['risk_score']}, alerts={len(r.get('alerts',[]))}")
+                else:
+                    _log("FAIL", "risk-structure", f"风险报告缺少字段: {missing}")
+        else:
+            _log("FAIL", "risk-top", f"top_risks 类型错误: {type(top_risks)}")
+
+    # Verify recommendations
+    if _ok(resp) and resp.status_code == 200:
+        recs = resp.json().get("recommendations", [])
+        if isinstance(recs, list) and len(recs) > 0:
+            _log("PASS", "risk-recs", f"风险建议正常, {len(recs)} 条")
+        else:
+            _log("FAIL", "risk-recs", "缺少风险建议")
+
+    # Single competition risk assessment
+    # Get a competition ID from the list
+    resp_comp = _api_auth("GET", "/api/v1/competitions")
+    comps = []
+    if _ok(resp_comp) and resp_comp.status_code == 200:
+        comps = resp_comp.json().get("competitions", resp_comp.json().get("data", []))
+    if comps:
+        cid = comps[0].get("id")
+        resp = _api_auth("GET", f"/api/v1/competitions/{cid}/risk")
+        if _ok(resp) and resp.status_code == 200:
+            data = resp.json()
+            required = ["competition_id", "title", "overall_risk", "risk_score", "alerts",
+                        "team_count", "student_count", "reg_count"]
+            missing = [f for f in required if f not in data]
+            if not missing:
+                _log("PASS", "risk-single", f"赛事 {cid} 风险评估成功, "
+                     f"risk={data['overall_risk']}, score={data['risk_score']}, alerts={len(data['alerts'])}")
+            else:
+                _log("FAIL", "risk-single", f"缺少字段: {missing}")
+        else:
+            _log("FAIL", "risk-single", f"赛事风险评估失败 → {resp.status_code if _ok(resp) else 'None'}")
+    else:
+        _log("WARN", "risk-single", "无赛事数据，跳过单项风险评估")
+
+    # 404 for non-existent competition
+    resp = _api_auth("GET", "/api/v1/competitions/999999/risk")
+    if resp is not None and resp.status_code == 404:
+        _log("PASS", "risk-404", "不存在的赛事 → 404 ✓")
+    else:
+        _log("FAIL", "risk-404", f"期望 404, 实际 {resp.status_code if resp else 'None'}")
+
+    # No auth → 401
+    resp = _api("GET", "/api/v1/stats/risk-overview")
+    if _ok(resp) and resp.status_code == 401:
+        _log("PASS", "risk-auth", "无 token → 401 ✓")
+    else:
+        _log("FAIL", "risk-auth", f"预期 401, 实际 {resp.status_code if _ok(resp) else 'None'}")
+
+
+# ============================================================
 # Run all tests
 # ============================================================
 def run_all():
@@ -3962,6 +4146,8 @@ def run_all():
     test_roi_calculator()
     test_competency_map()
     test_registration_trends()
+    test_live_dashboard()
+    test_risk_alerts()
 
     elapsed = time.time() - start_time
 
