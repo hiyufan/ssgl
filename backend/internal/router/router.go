@@ -110,6 +110,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 	competencyHandler := handlers.NewCompetencyHandler()
 	liveDashboardHandler := handlers.NewLiveDashboardHandler()
 	riskAlertHandler := handlers.NewRiskAlertHandler()
+	feedbackHandler := handlers.NewCompetitionFeedbackHandler()
+	analyticsHandler := handlers.NewAnalyticsHandler()
+	briefHandler := handlers.NewCompetitionBriefHandler()
 
 	v1 := r.Group("/api/v1")
 
@@ -297,6 +300,20 @@ func Setup(cfg *config.Config) *gin.Engine {
 		// Competition risk assessment — early warning system.
 		protected.GET("/competitions/:id/risk", riskAlertHandler.AssessCompetitionRisk)
 		protected.GET("/stats/risk-overview", riskAlertHandler.GetPlatformRiskOverview)
+
+		// Competition deep analytics — scores, predictions, recommendations.
+		protected.GET("/competitions/:id/analytics", analyticsHandler.GetCompetitionAnalytics)
+		protected.GET("/stats/analytics", analyticsHandler.GetPlatformAnalytics)
+
+		// Competition brief — AI-powered strategic preparation guide.
+		protected.GET("/competitions/:id/brief", briefHandler.GenerateBrief)
+
+		// Competition feedback — student feedback for competitions.
+		protected.POST("/competitions/:id/feedback", feedbackHandler.Create)
+		protected.GET("/competitions/:id/feedback", feedbackHandler.ListByCompetition)
+		protected.GET("/competitions/:id/feedback/summary", feedbackHandler.Summary)
+		protected.GET("/feedback/me", feedbackHandler.MyFeedback)
+		protected.DELETE("/feedback/:id", feedbackHandler.Delete)
 
 		// Student growth profile.
 		protected.GET("/students/:id/growth", growthHandler.GetGrowthProfile)
