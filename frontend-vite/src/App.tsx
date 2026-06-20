@@ -37,6 +37,7 @@ import { AnnualReportPage } from '@/pages/annual-report';
 import { AnalyticsPage } from '@/pages/analytics';
 import { ExecutionMatchPage } from '@/pages/execution-match';
 import { AssistantPage } from '@/pages/assistant';
+import { default as FeedbackPage } from '@/pages/feedback';
 
 /** Restricts a route to one or more roles; otherwise redirects to the dashboard. */
 function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
@@ -56,6 +57,7 @@ function AppRoutes() {
         <Route path="/teams" element={<TeamsPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />
+        <Route path="/feedback" element={<FeedbackPage />} />
         <Route path="/aitools" element={<AIToolsPage />} />
         <Route path="/coach" element={<CoachPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />

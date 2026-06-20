@@ -1196,3 +1196,59 @@ export const notesAPI = {
     api.put(`/notes/${noteId}`, data).then(r => r.data),
   delete: (noteId: number) => api.delete(`/notes/${noteId}`).then(r => r.data),
 };
+
+// Competition Feedback API
+export interface CompetitionFeedback {
+  id: number;
+  competition_id: number;
+  student_id: number;
+  overall_rating: number;
+  content_rating: number;
+  org_rating: number;
+  fairness_rating: number;
+  learning_value: number;
+  comment: string;
+  anonymous: boolean;
+  skills: string;
+  created_at: string;
+  student_name?: string;
+}
+
+export interface FeedbackSummary {
+  competition_id: number;
+  total_feedbacks: number;
+  avg_overall: number;
+  avg_content: number;
+  avg_org: number;
+  avg_fairness: number;
+  avg_learning_value: number;
+  top_skills: Array<{ skill: string; count: number }>;
+  recent_comments: Array<{ rating: number; comment: string; date: string; anonymous: boolean }>;
+  rating_distribution: Record<number, number>;
+}
+
+export const feedbackAPI = {
+  submit: (compId: number, data: {
+    competition_id: number;
+    overall_rating: number;
+    content_rating?: number;
+    org_rating?: number;
+    fairness_rating?: number;
+    learning_value?: number;
+    comment?: string;
+    anonymous?: boolean;
+    skills?: string[];
+  }) => api.post(`/competitions/${compId}/feedback`, data).then(r => r.data),
+
+  listByCompetition: (compId: number, page = 1, pageSize = 20) =>
+    api.get(`/competitions/${compId}/feedback`, { params: { page, page_size: pageSize } }).then(r => r.data),
+
+  summary: (compId: number): Promise<FeedbackSummary> =>
+    api.get(`/competitions/${compId}/feedback/summary`).then(r => r.data),
+
+  myFeedback: () =>
+    api.get('/feedback/me').then(r => r.data),
+
+  delete: (id: number) =>
+    api.delete(`/feedback/${id}`).then(r => r.data),
+};
