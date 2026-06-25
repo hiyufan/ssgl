@@ -41,4 +41,30 @@ func Migrate() {
 	}
 
 	log.Println("database migrations completed")
+
+	// Create indexes for frequently queried columns
+	log.Println("creating performance indexes...")
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_teams_competition_id ON teams(competition_id)",
+		"CREATE INDEX IF NOT EXISTS idx_teams_leader_id ON teams(leader_id)",
+		"CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id)",
+		"CREATE INDEX IF NOT EXISTS idx_awards_competition_id ON awards(competition_id)",
+		"CREATE INDEX IF NOT EXISTS idx_awards_team_id ON awards(team_id)",
+		"CREATE INDEX IF NOT EXISTS idx_awards_status ON awards(status)",
+		"CREATE INDEX IF NOT EXISTS idx_pre_plans_competition_id ON pre_plans(competition_id)",
+		"CREATE INDEX IF NOT EXISTS idx_pre_plans_team_id ON pre_plans(team_id)",
+		"CREATE INDEX IF NOT EXISTS idx_pre_plans_status ON pre_plans(status)",
+		"CREATE INDEX IF NOT EXISTS idx_competition_registrations_competition_id ON competition_registrations(competition_id)",
+		"CREATE INDEX IF NOT EXISTS idx_student_evaluations_teacher_id ON student_evaluations(teacher_id)",
+		"CREATE INDEX IF NOT EXISTS idx_student_evaluations_student_id ON student_evaluations(student_id)",
+		"CREATE INDEX IF NOT EXISTS idx_competitions_status ON competitions(status)",
+		"CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)",
+	}
+	for _, idx := range indexes {
+		if err := db.Exec(idx).Error; err != nil {
+			log.Printf("warning: failed to create index: %v", err)
+		}
+	}
+	log.Println("performance indexes created")
 }

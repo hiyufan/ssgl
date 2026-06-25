@@ -405,7 +405,7 @@ export function StatsPage() {
           <table className="forge-table">
             <thead><tr><th>排名</th><th>教师</th><th>所属院系</th><th>指导数</th><th>获奖率</th><th>学生评分</th></tr></thead>
             <tbody>
-              {teachers.sort((a, b) => b.avg_rating - a.avg_rating).map((t, i) => (
+              {[...teachers].sort((a, b) => b.avg_rating - a.avg_rating).map((t, i) => (
                 <tr key={t.id}>
                   <td><span style={{ width: 24, height: 24, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: i === 0 ? 'var(--amber-bg)' : i === 1 ? 'var(--surface-2)' : 'transparent', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: i === 0 ? 'var(--amber)' : i === 1 ? 'var(--text-2)' : 'var(--text-3)' }}>{i + 1}</span></td>
                   <td><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={t.name} size={26} index={i}/><span style={{ fontWeight: 600 }}>{t.name}</span></div></td>

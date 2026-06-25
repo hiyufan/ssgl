@@ -147,22 +147,40 @@ func (h *LiveDashboardHandler) GetDashboard(c *gin.Context) {
 		TeamFormationRate:  teamFormationRate,
 	}
 
-	// 2. Active competition summaries
-	var comps []models.Competition
-	db.Where("status IN ? AND deleted_at IS NULL", []string{"published", "ongoing", "draft"}).
-		Order("created_at DESC").Limit(20).Find(&comps)
+	// 2. Active competition summaries — single aggregated query
+	type compAggRow struct {
+		ID           uint      `json:"id"`
+		Title        string    `json:"title"`
+		Type         string    `json:"type"`
+		Status       string    `json:"status"`
+		StartDate    time.Time `json:"start_date"`
+		EndDate      time.Time `json:"end_date"`
+		TeamCnt      int64     `json:"team_cnt"`
+		RegCnt       int64     `json:"reg_cnt"`
+		PreplanCnt   int64     `json:"preplan_cnt"`
+		AwardCnt     int64     `json:"award_cnt"`
+		StudentCnt   int64     `json:"student_cnt"`
+		LatestTeam   string    `json:"latest_team"`
+	}
+	var compAggs []compAggRow
+	db.Raw(`SELECT
+		c.id, c.title, c.type, c.status, c.start_date, c.end_date,
+		(SELECT COUNT(*) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) as team_cnt,
+		(SELECT COUNT(*) FROM competition_registrations WHERE competition_id = c.id AND deleted_at IS NULL) as reg_cnt,
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND deleted_at IS NULL) as preplan_cnt,
+		(SELECT COUNT(*) FROM awards WHERE competition_id = c.id AND deleted_at IS NULL) as award_cnt,
+		(SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm
+			JOIN teams t ON t.id = tm.team_id AND t.competition_id = c.id AND t.deleted_at IS NULL) as student_cnt,
+		COALESCE((SELECT name FROM teams WHERE competition_id = c.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1), '') as latest_team
+	FROM competitions c
+	WHERE c.status IN ('published','ongoing','draft') AND c.deleted_at IS NULL
+	ORDER BY c.created_at DESC LIMIT 20`).Scan(&compAggs)
 
-	for _, comp := range comps {
-		var teamCnt, regCnt, preplanCnt, awardCnt int64
-		db.Model(&models.Team{}).Where("competition_id = ? AND deleted_at IS NULL", comp.ID).Count(&teamCnt)
-		db.Model(&models.CompetitionRegistration{}).Where("competition_id = ? AND deleted_at IS NULL", comp.ID).Count(&regCnt)
-		db.Model(&models.PrePlan{}).Where("competition_id = ? AND deleted_at IS NULL", comp.ID).Count(&preplanCnt)
-		db.Model(&models.Award{}).Where("competition_id = ? AND deleted_at IS NULL", comp.ID).Count(&awardCnt)
-
-		// Count unique students in teams
-		var studentCnt int64
-		db.Raw(`SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm 
-			JOIN teams t ON t.id = tm.team_id AND t.competition_id = ? AND t.deleted_at IS NULL`, comp.ID).Scan(&studentCnt)
+	for _, agg := range compAggs {
+		comp := models.Competition{
+			ID: agg.ID, Title: agg.Title, Type: agg.Type, Status: agg.Status,
+			StartDate: agg.StartDate, EndDate: agg.EndDate,
+		}
 
 		// Determine phase and days remaining
 		phase := "draft"
@@ -214,12 +232,10 @@ func (h *LiveDashboardHandler) GetDashboard(c *gin.Context) {
 			daysRemaining = 0
 		}
 
-		// Get most recent activity
+		// Recent activity from pre-fetched data
 		recentAct := ""
-		var latestTeam models.Team
-		if err := db.Where("competition_id = ? AND deleted_at IS NULL", comp.ID).
-			Order("created_at DESC").First(&latestTeam).Error; err == nil {
-			recentAct = "团队「" + latestTeam.Name + "」最近加入"
+		if agg.LatestTeam != "" {
+			recentAct = "团队「" + agg.LatestTeam + "」最近加入"
 		}
 
 		resp.Competitions = append(resp.Competitions, LiveCompSummary{
@@ -227,11 +243,11 @@ func (h *LiveDashboardHandler) GetDashboard(c *gin.Context) {
 			Title:          comp.Title,
 			Type:           comp.Type,
 			Status:         comp.Status,
-			TeamCount:      int(teamCnt),
-			StudentCount:   int(studentCnt),
-			PreplanCount:   int(preplanCnt),
-			AwardCount:     int(awardCnt),
-			RegCount:       int(regCnt),
+			TeamCount:      int(agg.TeamCnt),
+			StudentCount:   int(agg.StudentCnt),
+			PreplanCount:   int(agg.PreplanCnt),
+			AwardCount:     int(agg.AwardCnt),
+			RegCount:       int(agg.RegCnt),
 			Phase:          phase,
 			DaysRemaining:  daysRemaining,
 			Progress:       progress,
@@ -240,52 +256,64 @@ func (h *LiveDashboardHandler) GetDashboard(c *gin.Context) {
 		})
 	}
 
-	// 3. Recent events (last 15)
+	// 3. Recent events (last 15) — bulk fetch competition titles
 	var recentTeams []models.Team
 	db.Order("created_at DESC").Limit(5).Find(&recentTeams)
+
+	var recentPreplans []models.PrePlan
+	db.Order("created_at DESC").Limit(5).Find(&recentPreplans)
+
+	var recentAwards []models.Award
+	db.Order("created_at DESC").Limit(5).Find(&recentAwards)
+
+	// Collect all competition IDs and fetch titles in one query
+	compIDs := make(map[uint]bool)
 	for _, t := range recentTeams {
-		compTitle := ""
-		var comp models.Competition
-		if err := db.First(&comp, t.CompetitionID).Error; err == nil {
-			compTitle = comp.Title
+		compIDs[t.CompetitionID] = true
+	}
+	for _, p := range recentPreplans {
+		compIDs[p.CompetitionID] = true
+	}
+	for _, a := range recentAwards {
+		compIDs[a.CompetitionID] = true
+	}
+	idList := make([]uint, 0, len(compIDs))
+	for id := range compIDs {
+		idList = append(idList, id)
+	}
+	compTitleMap := make(map[uint]string)
+	if len(idList) > 0 {
+		var compsForTitle []models.Competition
+		db.Where("id IN ?", idList).Find(&compsForTitle)
+		for _, ct := range compsForTitle {
+			compTitleMap[ct.ID] = ct.Title
 		}
+	}
+
+	for _, t := range recentTeams {
 		resp.RecentEvents = append(resp.RecentEvents, LiveDashEvent{
 			Type:      "team_create",
 			Summary:   "新团队「" + t.Name + "」组建",
 			Time:      t.CreatedAt.Format(time.RFC3339),
-			CompTitle: compTitle,
+			CompTitle: compTitleMap[t.CompetitionID],
 		})
 	}
 
-	var recentPreplans []models.PrePlan
-	db.Order("created_at DESC").Limit(5).Find(&recentPreplans)
 	for _, p := range recentPreplans {
-		compTitle := ""
-		var comp models.Competition
-		if err := db.First(&comp, p.CompetitionID).Error; err == nil {
-			compTitle = comp.Title
-		}
 		resp.RecentEvents = append(resp.RecentEvents, LiveDashEvent{
 			Type:      "preplan_submit",
 			Summary:   "预案「" + p.Title + "」提交",
 			Time:      p.CreatedAt.Format(time.RFC3339),
-			CompTitle: compTitle,
+			CompTitle: compTitleMap[p.CompetitionID],
 		})
 	}
 
-	var recentAwards []models.Award
-	db.Order("created_at DESC").Limit(5).Find(&recentAwards)
 	for _, a := range recentAwards {
-		compTitle := ""
-		var comp models.Competition
-		if err := db.First(&comp, a.CompetitionID).Error; err == nil {
-			compTitle = comp.Title
-		}
 		resp.RecentEvents = append(resp.RecentEvents, LiveDashEvent{
 			Type:      "award",
 			Summary:   "奖项「" + a.PrizeName + "」颁发",
 			Time:      a.CreatedAt.Format(time.RFC3339),
-			CompTitle: compTitle,
+			CompTitle: compTitleMap[a.CompetitionID],
 		})
 	}
 
@@ -315,16 +343,29 @@ func (h *LiveDashboardHandler) GetDashboard(c *gin.Context) {
 		FROM teams t WHERE t.deleted_at IS NULL 
 		ORDER BY points DESC, awards DESC LIMIT 10`).Scan(&topTeamRows)
 
+	// Bulk fetch competition titles for top teams
+	topCompIDs := make(map[uint]bool)
 	for _, tr := range topTeamRows {
-		compTitle := ""
-		var comp models.Competition
-		if err := db.First(&comp, tr.CompID).Error; err == nil {
-			compTitle = comp.Title
+		topCompIDs[tr.CompID] = true
+	}
+	topIDList := make([]uint, 0, len(topCompIDs))
+	for id := range topCompIDs {
+		topIDList = append(topIDList, id)
+	}
+	topCompTitles := make(map[uint]string)
+	if len(topIDList) > 0 {
+		var topComps []models.Competition
+		db.Where("id IN ?", topIDList).Find(&topComps)
+		for _, tc := range topComps {
+			topCompTitles[tc.ID] = tc.Title
 		}
+	}
+
+	for _, tr := range topTeamRows {
 		resp.TopTeams = append(resp.TopTeams, LiveDashTeam{
 			ID:            tr.ID,
 			Name:          tr.Name,
-			CompTitle:     compTitle,
+			CompTitle:     topCompTitles[tr.CompID],
 			MemberCount:   int(tr.Members),
 			AwardCount:    int(tr.Awards),
 			AchievePoints: int(tr.Points),

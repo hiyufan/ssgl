@@ -1,5 +1,6 @@
 """RAG (Retrieval-Augmented Generation) router with document management."""
 
+import asyncio
 import logging
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import Optional
@@ -20,13 +21,13 @@ router = APIRouter(tags=["rag"])
 @router.post("/query")
 async def query(body: RAGQuery) -> dict:
     """Answer a question using retrieved documents as context."""
-    return rag_service.query(question=body.question, top_k=body.top_k)
+    return await asyncio.to_thread(rag_service.query, question=body.question, top_k=body.top_k)
 
 
 @router.post("/search")
 async def search(body: RAGQuery) -> dict:
     """Search for similar documents without LLM generation."""
-    results = rag_service.search(query=body.question, top_k=body.top_k, threshold=0.3)
+    results = await asyncio.to_thread(rag_service.search, query=body.question, top_k=body.top_k, threshold=0.3)
     return {"results": results}
 
 
@@ -37,7 +38,8 @@ async def search(body: RAGQuery) -> dict:
 @router.post("/ingest")
 async def ingest(body: RAGIngest) -> dict:
     """Ingest a single text document into the vector store."""
-    result = rag_service.ingest_text(
+    result = await asyncio.to_thread(
+        rag_service.ingest_text,
         content=body.content,
         metadata=body.metadata,
         chunk_strategy=body.chunk_strategy or "semantic",
@@ -49,7 +51,7 @@ async def ingest(body: RAGIngest) -> dict:
 async def ingest_batch(body: RAGIngestBatch) -> dict:
     """Batch-ingest multiple text documents into the vector store."""
     docs = [doc.model_dump() for doc in body.documents]
-    results = rag_service.ingest_batch(documents=docs)
+    results = await asyncio.to_thread(rag_service.ingest_batch, documents=docs)
     return {"results": results}
 
 
@@ -89,7 +91,8 @@ async def upload_file(
             raise HTTPException(status_code=400, detail="Invalid metadata JSON")
 
     try:
-        result = rag_service.ingest_file(
+        result = await asyncio.to_thread(
+            rag_service.ingest_file,
             file_content=content,
             filename=file.filename,
             metadata=meta,
@@ -129,7 +132,8 @@ async def upload_batch(
                 })
                 continue
 
-            result = rag_service.ingest_file(
+            result = await asyncio.to_thread(
+                rag_service.ingest_file,
                 file_content=content,
                 filename=file.filename,
                 chunk_strategy=chunk_strategy,
@@ -162,20 +166,20 @@ async def list_documents(
     offset: int = 0,
 ) -> dict:
     """List all documents in the knowledge base."""
-    return rag_service.list_documents(limit=limit, offset=offset)
+    return await asyncio.to_thread(rag_service.list_documents, limit=limit, offset=offset)
 
 
 @router.get("/documents/{filename}/chunks")
 async def get_document_chunks(filename: str) -> dict:
     """Get all chunks for a specific document."""
-    chunks = rag_service.get_document_chunks(filename)
+    chunks = await asyncio.to_thread(rag_service.get_document_chunks, filename)
     return {"filename": filename, "chunks": chunks, "count": len(chunks)}
 
 
 @router.delete("/documents/{filename}")
 async def delete_document(filename: str) -> dict:
     """Delete all chunks for a specific document."""
-    deleted = rag_service.delete_document(filename)
+    deleted = await asyncio.to_thread(rag_service.delete_document, filename)
     if deleted == 0:
         raise HTTPException(status_code=404, detail="Document not found")
     return {
@@ -187,4 +191,4 @@ async def delete_document(filename: str) -> dict:
 @router.get("/stats")
 async def get_stats() -> dict:
     """Get knowledge base statistics."""
-    return rag_service.get_stats()
+    return await asyncio.to_thread(rag_service.get_stats)

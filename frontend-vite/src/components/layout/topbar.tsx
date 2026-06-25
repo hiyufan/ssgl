@@ -6,6 +6,7 @@ import { useRole } from '@/hooks/use-role';
 import { Icon } from '@/components/ui/icon';
 import { ROLE_META } from './sidebar';
 import { notificationsAPI, searchAPI, type Notification, type SearchResult } from '@/services/api';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const PAGE_TITLES: Record<string, string> = {
   dashboard: '概览', competitions: '赛事管理', teams: '团队管理',
@@ -32,23 +33,16 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
   const searchRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const sharedNotifs = useNotifications();
   const [unreadCount, setUnreadCount] = useState(0);
   const meta = ROLE_META[role] || {};
   const pageKey = location.pathname.replace(/^\//, '') || 'dashboard';
   const title = PAGE_TITLES[pageKey] || pageKey;
 
-  // Fetch unread count on mount and periodically
+  // Sync unread count from shared polling hook
   useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const res = await notificationsAPI.getUnreadCount();
-        setUnreadCount(res.unread_count || 0);
-      } catch { /* ignore */ }
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000); // every 30s
-    return () => clearInterval(interval);
-  }, []);
+    setUnreadCount(sharedNotifs.unread);
+  }, [sharedNotifs.unread]);
 
   // Fetch notifications when dropdown opens
   useEffect(() => {

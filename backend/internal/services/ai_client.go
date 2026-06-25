@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -96,7 +97,7 @@ func (c *AIServiceClient) ReviewPrePlan(plan map[string]interface{}) (map[string
 			time.Sleep(time.Duration(attempt) * 3 * time.Second)
 		}
 
-		req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+		req, err := http.NewRequestWithContext(context.TODO(), "POST", url, bytes.NewReader(body))
 		if err != nil {
 			return nil, fmt.Errorf("create request: %w", err)
 		}

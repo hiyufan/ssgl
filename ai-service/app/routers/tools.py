@@ -1,5 +1,6 @@
 """Tools router — ten domain-specific AI generation endpoints with streaming support."""
 
+import asyncio
 import json
 import logging
 
@@ -16,10 +17,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["tools"])
 
 
-def _safe_tool_call(fn, *args, **kwargs) -> dict:
+async def _safe_tool_call(fn, *args, **kwargs) -> dict:
     """Wrap an LLM tool call with error handling — returns structured error on failure."""
     try:
-        result = fn(*args, **kwargs)
+        result = await asyncio.to_thread(fn, *args, **kwargs)
         return {"result": result}
     except Exception as e:
         logger.error("Tool call failed: %s", e)
@@ -29,7 +30,7 @@ def _safe_tool_call(fn, *args, **kwargs) -> dict:
 @router.post("/business-plan")
 async def business_plan(body: ToolRequest) -> dict:
     """Generate a structured business plan."""
-    return _safe_tool_call(tool_service.business_plan, project_info=body.input)
+    return await _safe_tool_call(tool_service.business_plan, project_info=body.input)
 
 
 @router.post("/market-analysis")
@@ -37,13 +38,13 @@ async def market_analysis(body: ToolRequest) -> dict:
     """Generate a market analysis report."""
     industry = body.input
     target_market = body.extra or ""
-    return _safe_tool_call(tool_service.market_analysis, industry=industry, target_market=target_market)
+    return await _safe_tool_call(tool_service.market_analysis, industry=industry, target_market=target_market)
 
 
 @router.post("/improvement")
 async def improvement_suggestions(body: ToolRequest) -> dict:
     """Generate prioritised improvement suggestions."""
-    return _safe_tool_call(tool_service.improvement_suggestions, project_description=body.input)
+    return await _safe_tool_call(tool_service.improvement_suggestions, project_description=body.input)
 
 
 @router.post("/tech-route")
@@ -51,7 +52,7 @@ async def tech_route(body: ToolRequest) -> dict:
     """Generate a technology roadmap and architecture recommendation."""
     requirements = body.input
     team_skills = body.extra or ""
-    return _safe_tool_call(tool_service.tech_route, requirements=requirements, team_skills=team_skills)
+    return await _safe_tool_call(tool_service.tech_route, requirements=requirements, team_skills=team_skills)
 
 
 @router.post("/resource-match")
@@ -59,7 +60,7 @@ async def resource_integration(body: ToolRequest) -> dict:
     """Analyse skill gaps and recommend resource/team strategies."""
     team_info = body.input
     project_needs = body.extra or ""
-    return _safe_tool_call(tool_service.resource_integration, team_info=team_info, project_needs=project_needs)
+    return await _safe_tool_call(tool_service.resource_integration, team_info=team_info, project_needs=project_needs)
 
 
 @router.post("/pitch-deck")
@@ -67,7 +68,7 @@ async def pitch_deck(body: ToolRequest) -> dict:
     """Generate a pitch deck / presentation outline."""
     project_info = body.input
     duration = body.extra or "10分钟"
-    return _safe_tool_call(tool_service.pitch_deck, project_info=project_info, duration=duration)
+    return await _safe_tool_call(tool_service.pitch_deck, project_info=project_info, duration=duration)
 
 
 @router.post("/swot-analysis")
@@ -75,7 +76,7 @@ async def swot_analysis(body: ToolRequest) -> dict:
     """Generate a SWOT analysis for a competition project."""
     project_info = body.input
     competitors = body.extra or ""
-    return _safe_tool_call(tool_service.swot_analysis, project_info=project_info, competitors=competitors)
+    return await _safe_tool_call(tool_service.swot_analysis, project_info=project_info, competitors=competitors)
 
 
 @router.post("/advisor")
@@ -83,13 +84,13 @@ async def competition_advisor(body: ToolRequest) -> dict:
     """Provide strategic competition advice."""
     project_status = body.input
     time_remaining = body.extra or ""
-    return _safe_tool_call(tool_service.competition_advisor, project_status=project_status, time_remaining=time_remaining)
+    return await _safe_tool_call(tool_service.competition_advisor, project_status=project_status, time_remaining=time_remaining)
 
 
 @router.post("/competition-report")
 async def competition_report(body: ToolRequest) -> dict:
     """Generate a comprehensive competition analysis report."""
-    return _safe_tool_call(tool_service.competition_report, competition_info=body.input)
+    return await _safe_tool_call(tool_service.competition_report, competition_info=body.input)
 
 
 @router.post("/study-plan")
@@ -97,7 +98,7 @@ async def study_plan(body: ToolRequest) -> dict:
     """Generate a personalised competition preparation plan (备赛计划)."""
     competition_info = body.input
     team_info = body.extra or ""
-    return _safe_tool_call(tool_service.study_plan, competition_info=competition_info, team_info=team_info)
+    return await _safe_tool_call(tool_service.study_plan, competition_info=competition_info, team_info=team_info)
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +149,7 @@ class ParseCompetitionRequest(BaseModel):
 async def parse_competition(body: ParseCompetitionRequest) -> dict:
     """Parse raw text into structured competition fields using LLM."""
     try:
-        data = parse_competition_text(body.content)
+        data = await asyncio.to_thread(parse_competition_text, body.content)
         return {"success": True, "data": data}
     except Exception as e:
         return {"success": False, "error": str(e)}

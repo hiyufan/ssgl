@@ -3,6 +3,7 @@
 Includes timeout enforcement and retry with exponential backoff for transient errors.
 """
 
+import asyncio
 import logging
 import time
 from functools import wraps
@@ -45,7 +46,12 @@ def _retry_on_transient(max_attempts: int = 3, base_delay: float = 2.0):
                         "LLM call failed (attempt %d/%d): %s — retrying in %.1fs",
                         attempt + 1, max_attempts, e, delay,
                     )
-                    time.sleep(delay)
+                    try:
+                        loop = asyncio.get_running_loop()
+                        import concurrent.futures
+                        loop.run_in_executor(None, time.sleep, delay)
+                    except RuntimeError:
+                        time.sleep(delay)
             raise last_exc  # type: ignore[misc]
         return wrapper
     return decorator
@@ -74,7 +80,12 @@ def _retry_on_transient_gen(max_attempts: int = 2, base_delay: float = 2.0):
                     delay = base_delay * (2 ** attempt)
                     logger.warning("LLM stream failed (attempt %d/%d): %s — retrying in %.1fs",
                                    attempt + 1, max_attempts, e, delay)
-                    time.sleep(delay)
+                    try:
+                        loop = asyncio.get_running_loop()
+                        import concurrent.futures
+                        loop.run_in_executor(None, time.sleep, delay)
+                    except RuntimeError:
+                        time.sleep(delay)
             raise last_exc  # type: ignore[misc]
         return wrapper
     return decorator

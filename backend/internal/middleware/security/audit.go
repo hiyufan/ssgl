@@ -31,8 +31,58 @@ func (AuditLog) TableName() string {
 	return "audit_logs"
 }
 
+// auditPool is a bounded worker pool for audit log writes
+type auditPool struct {
+	ch   chan AuditLog
+	done chan struct{}
+}
+
+func newAuditPool(db *gorm.DB, workers, buffer int) *auditPool {
+	p := &auditPool{
+		ch:   make(chan AuditLog, buffer),
+		done: make(chan struct{}),
+	}
+	for i := 0; i < workers; i++ {
+		go func() {
+			for {
+				select {
+				case log := <-p.ch:
+					db.Create(&log)
+				case <-p.done:
+					return
+				}
+			}
+		}()
+	}
+	return p
+}
+
+func (p *auditPool) submit(log AuditLog) {
+	select {
+	case p.ch <- log:
+	default: // buffer full, drop silently to avoid blocking
+	}
+}
+
+func (p *auditPool) stop() {
+	close(p.done)
+}
+
+// globalAuditPool is the package-level audit worker pool (initialized once)
+var globalAuditPool *auditPool
+
+// InitAuditPool initializes the global audit worker pool. Call once at startup.
+func InitAuditPool(db *gorm.DB) {
+	globalAuditPool = newAuditPool(db, 2, 1000)
+}
+
 // AuditMiddleware returns a middleware that logs audit events
 func AuditMiddleware(db *gorm.DB) gin.HandlerFunc {
+	// Ensure pool is initialized
+	if globalAuditPool == nil {
+		InitAuditPool(db)
+	}
+
 	return func(c *gin.Context) {
 		start := time.Now()
 
@@ -87,10 +137,8 @@ func AuditMiddleware(db *gorm.DB) gin.HandlerFunc {
 			Body:      body,
 		}
 
-		// Save to database (async to not block response)
-		go func() {
-			db.Create(&auditLog)
-		}()
+		// Submit to worker pool (non-blocking, bounded)
+		globalAuditPool.submit(auditLog)
 	}
 }
 

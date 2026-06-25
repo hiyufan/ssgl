@@ -14,6 +14,7 @@ export function useStaggerIn(
   options: gsap.TweenVars & { selector?: string } = {},
 ) {
   const { selector, ...vars } = options;
+  const varsKey = JSON.stringify(vars);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -33,7 +34,7 @@ export function useStaggerIn(
     }, el);
 
     return () => ctx.revert();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selector, varsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /**
@@ -79,7 +80,7 @@ export function useSplitText(
         el.textContent = text;
       },
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [delay, duration, stagger, y]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /**
@@ -133,7 +134,7 @@ export function useMagneticHover(
       el.removeEventListener('mouseleave', handleMouseLeave);
       gsap.killTweensOf(el);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [strength, radius, ease]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /**
@@ -163,7 +164,7 @@ export function useCountUp(
           : Math.round(obj.val).toString();
       },
     });
-  }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target, duration, decimals, delay]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /**
@@ -210,5 +211,5 @@ export function useStaggerTimeline(
     });
 
     return () => { tl.kill(); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [delay]); // eslint-disable-line react-hooks/exhaustive-deps
 }

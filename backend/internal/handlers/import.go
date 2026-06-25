@@ -79,10 +79,11 @@ func (h *ImportHandler) BatchImport(c *gin.Context) {
 	}
 
 	var (
-		created int
-		errs    []ImportError
+		errs       []ImportError
+		validComps []models.Competition
 	)
 
+	// Phase 1: Validate all records
 	for i, req := range reqs {
 		startDate, err := parseTimeField(req.StartDate)
 		if err != nil {
@@ -105,7 +106,7 @@ func (h *ImportHandler) BatchImport(c *gin.Context) {
 			regDeadline = t
 		}
 
-		comp := models.Competition{
+		validComps = append(validComps, models.Competition{
 			Title:               req.Title,
 			Description:         req.Description,
 			Type:                req.Type,
@@ -124,14 +125,17 @@ func (h *ImportHandler) BatchImport(c *gin.Context) {
 			ContactName:         req.ContactName,
 			ContactEmail:        req.ContactEmail,
 			RegistrationDeadline: regDeadline,
-		}
+		})
+	}
 
-		if err := db.Create(&comp).Error; err != nil {
-			errs = append(errs, ImportError{Index: i, Title: req.Title, Message: "database error: " + err.Error()})
-			continue
+	// Phase 2: Batch insert valid records
+	created := 0
+	if len(validComps) > 0 {
+		if err := db.CreateInBatches(&validComps, 100).Error; err != nil {
+			errs = append(errs, ImportError{Index: -1, Title: "", Message: "batch insert error: " + err.Error()})
+		} else {
+			created = len(validComps)
 		}
-
-		created++
 	}
 
 	c.JSON(http.StatusOK, BatchImportResponse{
