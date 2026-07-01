@@ -1,5 +1,6 @@
 """Pitch-coach (模拟答辩) router."""
 
+import asyncio
 import json
 import logging
 
@@ -43,7 +44,8 @@ async def start(body: StartRequest) -> dict:
         raise HTTPException(status_code=400, detail="缺少 pitch_text")
 
     try:
-        return coach_service.start(
+        return await asyncio.to_thread(
+            coach_service.start,
             role=body.role,
             source=body.source,
             pre_plan_id=body.pre_plan_id,
@@ -92,7 +94,7 @@ async def answer(body: AnswerRequest):
 @router.post("/final")
 async def final(body: FinalRequest) -> dict:
     try:
-        return coach_service.final(session_id=body.session_id)
+        return await asyncio.to_thread(coach_service.final, session_id=body.session_id)
     except SessionExpiredError:
         raise HTTPException(status_code=404, detail="答辩会话已过期")
     except Exception as e:

@@ -167,31 +167,36 @@ func (h *AnnualReportHandler) Generate(c *gin.Context) {
 		Year:        time.Now().Year(),
 	}
 
-	// Platform overview
+	// Platform overview — consolidated into 4 queries instead of 14
 	var totalUsers, totalStudents, totalTeachers, totalAdmins int64
-	db.Model(&models.User{}).Count(&totalUsers)
-	db.Model(&models.User{}).Where("role = ?", models.RoleStudent).Count(&totalStudents)
-	db.Model(&models.User{}).Where("role = ?", models.RoleTeacher).Count(&totalTeachers)
-	db.Model(&models.User{}).Where("role = ?", models.RoleAdmin).Count(&totalAdmins)
+	db.Raw(`SELECT
+		COUNT(*),
+		COUNT(*) FILTER (WHERE role = ?),
+		COUNT(*) FILTER (WHERE role = ?),
+		COUNT(*) FILTER (WHERE role = ?)
+		FROM users WHERE deleted_at IS NULL`,
+		models.RoleStudent, models.RoleTeacher, models.RoleAdmin,
+	).Row().Scan(&totalUsers, &totalStudents, &totalTeachers, &totalAdmins)
 
 	var totalComp, totalTeams, totalAwards, totalPrePlans, totalEvals int64
-	db.Model(&models.Competition{}).Count(&totalComp)
-	db.Model(&models.Team{}).Count(&totalTeams)
-	db.Model(&models.Award{}).Count(&totalAwards)
-	db.Model(&models.PrePlan{}).Count(&totalPrePlans)
-	db.Model(&models.StudentEvaluation{}).Count(&totalEvals)
-
 	var activeComp, settledAwards int64
-	db.Model(&models.Competition{}).Where("status IN ?", []string{models.CompStatusPublished, models.CompStatusOngoing}).Count(&activeComp)
-	db.Model(&models.Award{}).Where("status = ?", models.AwardStatusSettled).Count(&settledAwards)
+	db.Raw(`SELECT
+		(SELECT COUNT(*) FROM competitions WHERE deleted_at IS NULL),
+		(SELECT COUNT(*) FROM teams WHERE deleted_at IS NULL),
+		(SELECT COUNT(*) FROM awards WHERE deleted_at IS NULL),
+		(SELECT COUNT(*) FROM pre_plans WHERE deleted_at IS NULL),
+		(SELECT COUNT(*) FROM student_evaluations WHERE deleted_at IS NULL),
+		(SELECT COUNT(*) FROM competitions WHERE deleted_at IS NULL AND status IN (?, ?)),
+		(SELECT COUNT(*) FROM awards WHERE deleted_at IS NULL AND status = ?)`,
+		models.CompStatusPublished, models.CompStatusOngoing, models.AwardStatusSettled,
+	).Row().Scan(&totalComp, &totalTeams, &totalAwards, &totalPrePlans, &totalEvals, &activeComp, &settledAwards)
 
-	// Average team size
+	// Average team size + student participation
 	var avgSize float64
-	db.Raw(`SELECT COALESCE(AVG(member_count), 0) FROM (SELECT COUNT(*) as member_count FROM team_members GROUP BY team_id) sub`).Scan(&avgSize)
-
-	// Student participation rate
 	var studentsWithTeams int64
-	db.Raw(`SELECT COUNT(DISTINCT user_id) FROM team_members`).Scan(&studentsWithTeams)
+	db.Raw(`SELECT COALESCE(AVG(member_count), 0) FROM (SELECT COUNT(*) as member_count FROM team_members GROUP BY team_id) sub`,
+	).Row().Scan(&avgSize)
+	db.Raw(`SELECT COUNT(DISTINCT user_id) FROM team_members`).Row().Scan(&studentsWithTeams)
 	participation := 0.0
 	if totalStudents > 0 {
 		participation = float64(studentsWithTeams) / float64(totalStudents) * 100
@@ -213,12 +218,16 @@ func (h *AnnualReportHandler) Generate(c *gin.Context) {
 		StudentParticipation: participation,
 	}
 
-	// Competition breakdown
+	// Competition breakdown — consolidated into 1 query instead of 5
 	var published, ongoing, completed, draft int64
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusPublished).Count(&published)
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusOngoing).Count(&ongoing)
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusCompleted).Count(&completed)
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusDraft).Count(&draft)
+	db.Raw(`SELECT
+		COUNT(*) FILTER (WHERE status = ?),
+		COUNT(*) FILTER (WHERE status = ?),
+		COUNT(*) FILTER (WHERE status = ?),
+		COUNT(*) FILTER (WHERE status = ?)
+		FROM competitions WHERE deleted_at IS NULL`,
+		models.CompStatusPublished, models.CompStatusOngoing, models.CompStatusCompleted, models.CompStatusDraft,
+	).Row().Scan(&published, &ongoing, &completed, &draft)
 
 	// By type
 	var typeCounts []TypeCount
@@ -240,13 +249,14 @@ func (h *AnnualReportHandler) Generate(c *gin.Context) {
 		AvgTeamsPerComp: avgTeamsPerComp,
 	}
 
-	// Team stats
+	// Team stats — consolidated into 1 query instead of 3
 	var teamsWithMembers, teamsWithPlans int64
-	db.Raw(`SELECT COUNT(DISTINCT team_id) FROM team_members`).Scan(&teamsWithMembers)
-	db.Raw(`SELECT COUNT(DISTINCT t.id) FROM teams t JOIN pre_plans p ON t.competition_id = p.competition_id AND t.leader_id = p.student_id`).Scan(&teamsWithPlans)
-
 	var maxSize int
-	db.Raw(`SELECT COALESCE(MAX(cnt), 0) FROM (SELECT COUNT(*) as cnt FROM team_members GROUP BY team_id) sub`).Scan(&maxSize)
+	db.Raw(`SELECT
+		(SELECT COUNT(DISTINCT team_id) FROM team_members),
+		(SELECT COUNT(DISTINCT t.id) FROM teams t JOIN pre_plans p ON t.competition_id = p.competition_id AND t.leader_id = p.student_id),
+		(SELECT COALESCE(MAX(cnt), 0) FROM (SELECT COUNT(*) as cnt FROM team_members GROUP BY team_id) sub)`,
+	).Row().Scan(&teamsWithMembers, &teamsWithPlans, &maxSize)
 
 	report.Teams = TeamReport{
 		Total:       totalTeams,
@@ -256,10 +266,12 @@ func (h *AnnualReportHandler) Generate(c *gin.Context) {
 		MaxSize:     maxSize,
 	}
 
-	// Student stats
+	// Student stats — consolidated into 1 query instead of 2
 	var studentsWithAwards, studentsWithPlans int64
-	db.Raw(`SELECT COUNT(DISTINCT student_id) FROM awards`).Scan(&studentsWithAwards)
-	db.Raw(`SELECT COUNT(DISTINCT student_id) FROM pre_plans`).Scan(&studentsWithPlans)
+	db.Raw(`SELECT
+		(SELECT COUNT(DISTINCT student_id) FROM awards),
+		(SELECT COUNT(DISTINCT student_id) FROM pre_plans)`,
+	).Row().Scan(&studentsWithAwards, &studentsWithPlans)
 
 	awardRate := 0.0
 	if totalStudents > 0 {
@@ -281,17 +293,20 @@ func (h *AnnualReportHandler) Generate(c *gin.Context) {
 		AvgCompetitions: avgComps,
 	}
 
-	// Award stats
+	// Award stats — consolidated into 1 query instead of 3
 	var totalPrize float64
-	db.Model(&models.Award{}).Select("COALESCE(SUM(prize_amount), 0)").Scan(&totalPrize)
+	var pendingAwards, topRankCount int64
+	db.Raw(`SELECT
+		COALESCE(SUM(prize_amount), 0),
+		COUNT(*) FILTER (WHERE status = ?),
+		COUNT(*) FILTER (WHERE rank <= 3)
+		FROM awards WHERE deleted_at IS NULL`,
+		models.AwardStatusPending,
+	).Row().Scan(&totalPrize, &pendingAwards, &topRankCount)
 	avgPrize := 0.0
 	if totalAwards > 0 {
 		avgPrize = totalPrize / float64(totalAwards)
 	}
-	var pendingAwards int64
-	db.Model(&models.Award{}).Where("status = ?", models.AwardStatusPending).Count(&pendingAwards)
-	var topRankCount int64
-	db.Model(&models.Award{}).Where("rank <= ?", 3).Count(&topRankCount)
 
 	report.Awards = AwardReport{
 		Total:        totalAwards,
@@ -302,26 +317,58 @@ func (h *AnnualReportHandler) Generate(c *gin.Context) {
 		TopRankCount: topRankCount,
 	}
 
-	// Monthly trends (last 12 months)
+	// Monthly trends (last 12 months) — consolidated into 4 queries instead of 48
+	cutoff := time.Now().AddDate(0, -11, 0)
+	cutoff = time.Date(cutoff.Year(), cutoff.Month(), 1, 0, 0, 0, 0, cutoff.Location())
+	monthCounts := make(map[string]*MonthlyTrend)
+	for i := 11; i >= 0; i-- {
+		m := time.Now().AddDate(0, -i, 0).Format("2006-01")
+		monthCounts[m] = &MonthlyTrend{Month: m}
+	}
+
+	type monthCount struct {
+		Month string
+		Count int64
+	}
+	var compMonthly, teamMonthly, awardMonthly, planMonthly []monthCount
+	db.Raw(`SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count
+		FROM competitions WHERE deleted_at IS NULL AND created_at >= ?
+		GROUP BY month ORDER BY month`, cutoff).Scan(&compMonthly)
+	db.Raw(`SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count
+		FROM teams WHERE deleted_at IS NULL AND created_at >= ?
+		GROUP BY month ORDER BY month`, cutoff).Scan(&teamMonthly)
+	db.Raw(`SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count
+		FROM awards WHERE deleted_at IS NULL AND created_at >= ?
+		GROUP BY month ORDER BY month`, cutoff).Scan(&awardMonthly)
+	db.Raw(`SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count
+		FROM pre_plans WHERE deleted_at IS NULL AND created_at >= ?
+		GROUP BY month ORDER BY month`, cutoff).Scan(&planMonthly)
+
+	for _, mc := range compMonthly {
+		if t, ok := monthCounts[mc.Month]; ok {
+			t.Competitions = mc.Count
+		}
+	}
+	for _, mc := range teamMonthly {
+		if t, ok := monthCounts[mc.Month]; ok {
+			t.Teams = mc.Count
+		}
+	}
+	for _, mc := range awardMonthly {
+		if t, ok := monthCounts[mc.Month]; ok {
+			t.Awards = mc.Count
+		}
+	}
+	for _, mc := range planMonthly {
+		if t, ok := monthCounts[mc.Month]; ok {
+			t.PrePlans = mc.Count
+		}
+	}
+
 	var trends []MonthlyTrend
 	for i := 11; i >= 0; i-- {
-		t := time.Now().AddDate(0, -i, 0)
-		monthStart := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
-		monthEnd := monthStart.AddDate(0, 1, 0)
-
-		var compCount, teamCount, awardCount, planCount int64
-		db.Model(&models.Competition{}).Where("created_at >= ? AND created_at < ?", monthStart, monthEnd).Count(&compCount)
-		db.Model(&models.Team{}).Where("created_at >= ? AND created_at < ?", monthStart, monthEnd).Count(&teamCount)
-		db.Model(&models.Award{}).Where("created_at >= ? AND created_at < ?", monthStart, monthEnd).Count(&awardCount)
-		db.Model(&models.PrePlan{}).Where("created_at >= ? AND created_at < ?", monthStart, monthEnd).Count(&planCount)
-
-		trends = append(trends, MonthlyTrend{
-			Month:        monthStart.Format("2006-01"),
-			Competitions: compCount,
-			Teams:        teamCount,
-			Awards:       awardCount,
-			PrePlans:     planCount,
-		})
+		m := time.Now().AddDate(0, -i, 0).Format("2006-01")
+		trends = append(trends, *monthCounts[m])
 	}
 	report.Trends = trends
 

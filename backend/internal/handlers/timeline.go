@@ -43,7 +43,7 @@ func (h *TimelineHandler) List(c *gin.Context) {
 
 	// --- Competitions ---
 	var comps []models.Competition
-	if err := db.Order("created_at DESC").Limit(100).Find(&comps).Error; err == nil {
+	if err := db.Order("created_at DESC").Limit(50).Find(&comps).Error; err == nil {
 		for _, comp := range comps {
 			events = append(events, PlatformEvent{
 				ID:          comp.ID,
@@ -58,7 +58,7 @@ func (h *TimelineHandler) List(c *gin.Context) {
 
 	// --- Teams ---
 	var teams []models.Team
-	if err := db.Order("created_at DESC").Limit(100).Find(&teams).Error; err == nil {
+	if err := db.Order("created_at DESC").Limit(50).Find(&teams).Error; err == nil {
 		for _, team := range teams {
 			events = append(events, PlatformEvent{
 				ID:     team.ID,
@@ -72,7 +72,7 @@ func (h *TimelineHandler) List(c *gin.Context) {
 
 	// --- Pre-plans ---
 	var plans []models.PrePlan
-	if err := db.Order("created_at DESC").Limit(100).Find(&plans).Error; err == nil {
+	if err := db.Order("created_at DESC").Limit(50).Find(&plans).Error; err == nil {
 		for _, plan := range plans {
 			events = append(events, PlatformEvent{
 				ID:     plan.ID,
@@ -86,7 +86,7 @@ func (h *TimelineHandler) List(c *gin.Context) {
 
 	// --- Awards ---
 	var awards []models.Award
-	if err := db.Order("created_at DESC").Limit(100).Find(&awards).Error; err == nil {
+	if err := db.Order("created_at DESC").Limit(50).Find(&awards).Error; err == nil {
 		for _, award := range awards {
 			events = append(events, PlatformEvent{
 				ID:     award.ID,
@@ -100,7 +100,7 @@ func (h *TimelineHandler) List(c *gin.Context) {
 
 	// --- Milestones ---
 	var milestones []models.Milestone
-	if err := db.Order("created_at DESC").Limit(100).Find(&milestones).Error; err == nil {
+	if err := db.Order("created_at DESC").Limit(50).Find(&milestones).Error; err == nil {
 		for _, ms := range milestones {
 			events = append(events, PlatformEvent{
 				ID:     ms.ID,

@@ -1,5 +1,6 @@
 """Review router — pre-plan evaluation and execution-plan matching."""
 
+import asyncio
 import logging
 
 from fastapi import APIRouter
@@ -17,7 +18,7 @@ async def pre_plan_review(body: PrePlanReview) -> dict:
     """Evaluate a project pre-plan for feasibility and innovation."""
     plan = body.model_dump()
     try:
-        return review_service.review_pre_plan(plan=plan)
+        return await asyncio.to_thread(review_service.review_pre_plan, plan=plan)
     except Exception as e:
         logger.error("Pre-plan review failed: %s", e)
         return {
@@ -38,7 +39,7 @@ async def execution_match(body: ExecutionMatch) -> dict:
         "deviations": body.deviations,
     }
     try:
-        return review_service.match_execution(pre_plan=pre_plan, execution=execution)
+        return await asyncio.to_thread(review_service.match_execution, pre_plan=pre_plan, execution=execution)
     except Exception as e:
         logger.error("Execution match failed: %s", e)
         return {

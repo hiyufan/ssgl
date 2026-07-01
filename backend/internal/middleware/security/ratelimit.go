@@ -2,6 +2,7 @@ package security
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -70,7 +71,7 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 
 		count := countCmd.Val()
 		if count >= int64(rl.limit) {
-			c.Header("X-RateLimit-Limit", string(rune(rl.limit)))
+			c.Header("X-RateLimit-Limit", strconv.Itoa(rl.limit))
 			c.Header("X-RateLimit-Remaining", "0")
 			c.Header("Retry-After", rl.window.String())
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
@@ -80,8 +81,8 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Header("X-RateLimit-Limit", string(rune(rl.limit)))
-		c.Header("X-RateLimit-Remaining", string(rune(int64(rl.limit)-count-1)))
+		c.Header("X-RateLimit-Limit", strconv.Itoa(rl.limit))
+		c.Header("X-RateLimit-Remaining", strconv.FormatInt(int64(rl.limit)-count-1, 10))
 		c.Next()
 	}
 }
@@ -100,7 +101,7 @@ func UserRateLimiter(rdb *redis.Client, limit int, window time.Duration) *RateLi
 		if !exists {
 			return ""
 		}
-		return "rate_limit:user:" + string(rune(userID.(uint)))
+		return "rate_limit:user:" + strconv.FormatUint(uint64(userID.(uint)), 10)
 	})
 }
 
@@ -117,6 +118,7 @@ type LocalRateLimiter struct {
 	clients map[string]*clientInfo
 	limit   int
 	window  time.Duration
+	done    chan struct{}
 }
 
 type clientInfo struct {
@@ -130,17 +132,29 @@ func NewLocalRateLimiter(limit int, window time.Duration) *LocalRateLimiter {
 		clients: make(map[string]*clientInfo),
 		limit:   limit,
 		window:  window,
+		done:    make(chan struct{}),
 	}
 
 	// Cleanup expired entries periodically
 	go func() {
+		ticker := time.NewTicker(window)
+		defer ticker.Stop()
 		for {
-			time.Sleep(window)
-			rl.cleanup()
+			select {
+			case <-ticker.C:
+				rl.cleanup()
+			case <-rl.done:
+				return
+			}
 		}
 	}()
 
 	return rl
+}
+
+// Stop gracefully stops the cleanup goroutine
+func (rl *LocalRateLimiter) Stop() {
+	close(rl.done)
 }
 
 func (rl *LocalRateLimiter) cleanup() {

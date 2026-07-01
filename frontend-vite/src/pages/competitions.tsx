@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { competitionsAPI, milestonesAPI, registrationsAPI, subscriptionsAPI, notesAPI } from '@/services/api';
 import { useRole } from '@/hooks/use-role';
 import { StatusBadge, TypeBadge } from '@/components/ui/badge';
@@ -18,6 +18,9 @@ const AI_BASE = import.meta.env.VITE_AI_BASE_URL || '/ai/api/v1';
 
 const TYPE_ICONS: Record<string, string> = { hackathon: 'trophy', innovation: 'zap', research: 'target', business_plan: 'compass', ai_innovation: 'sparkles', data_science: 'chart' };
 const STATUS_ORDER = ['ongoing', 'published', 'completed', 'draft', 'cancelled'];
+
+const TYPE_COLOR_MAP: Record<string, string> = { hackathon: 'var(--amber)', innovation: 'var(--purple)', research: 'var(--teal)', ai_innovation: 'var(--purple)', business_plan: 'var(--amber)', data_science: 'var(--teal)' };
+const TYPE_BG_MAP: Record<string, string> = { hackathon: 'var(--amber-bg)', innovation: 'var(--purple-bg)', research: 'var(--teal-bg)', ai_innovation: 'var(--purple-bg)', business_plan: 'var(--amber-bg)', data_science: 'var(--teal-bg)' };
 
 const TYPE_OPTIONS = [
   { value: 'hackathon', label: 'Hackathon' },
@@ -322,12 +325,15 @@ export function CompetitionsPage() {
     }
   };
 
-  const filtered = competitions.filter(c => {
-    if (filter !== 'all' && c.status !== filter) return false;
-    if (typeFilter !== 'all' && c.type !== typeFilter) return false;
-    if (search && !c.title.includes(search)) return false;
-    return true;
-  }).sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
+  const filtered = useMemo(() =>
+    competitions.filter(c => {
+      if (filter !== 'all' && c.status !== filter) return false;
+      if (typeFilter !== 'all' && c.type !== typeFilter) return false;
+      if (search && !c.title.includes(search)) return false;
+      return true;
+    }).sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)),
+    [competitions, filter, typeFilter, search]
+  );
 
   const daysLeft = (dateStr: string) => Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000));
 
@@ -447,10 +453,8 @@ export function CompetitionsPage() {
           {filtered.map((comp, i) => {
             const regDays = daysLeft(comp.registration_deadline);
             const endDays = daysLeft(comp.end_date);
-            const typeColorMap: Record<string, string> = { hackathon: 'var(--amber)', innovation: 'var(--purple)', research: 'var(--teal)', ai_innovation: 'var(--purple)', business_plan: 'var(--amber)', data_science: 'var(--teal)' };
-            const typeBgMap: Record<string, string> = { hackathon: 'var(--amber-bg)', innovation: 'var(--purple-bg)', research: 'var(--teal-bg)', ai_innovation: 'var(--purple-bg)', business_plan: 'var(--amber-bg)', data_science: 'var(--teal-bg)' };
-            const accent = typeColorMap[comp.type] || 'var(--amber)';
-            const accentBg = typeBgMap[comp.type] || 'var(--amber-bg)';
+            const accent = TYPE_COLOR_MAP[comp.type] || 'var(--amber)';
+            const accentBg = TYPE_BG_MAP[comp.type] || 'var(--amber-bg)';
 
             return (
               <div key={comp.id} className={`card anim-in d${Math.min(i + 1, 8)}`}
@@ -807,7 +811,7 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
             <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-3)', fontSize: 12 }}>暂无里程碑</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {milestones.sort((a, b) => a.sort_order - b.sort_order).map(ms => (
+              {[...milestones].sort((a, b) => a.sort_order - b.sort_order).map(ms => (
                 <div key={ms.id} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                   borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)',
@@ -880,7 +884,7 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
             <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-3)', fontSize: 12 }}>暂无笔记，点击「添加」开始记录</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {notes.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).map(note => {
+              {[...notes].sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).map(note => {
                 const colors = NOTE_COLORS[note.color] || NOTE_COLORS.teal;
                 const isEditing = editNoteId === note.id;
                 return (

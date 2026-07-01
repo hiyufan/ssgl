@@ -16,6 +16,10 @@ export function PageTransition({ page, children }: PageTransitionProps) {
   const [displayChildren, setDisplayChildren] = useState(children);
   const containerRef = useRef<HTMLDivElement>(null);
   const isTransitioning = useRef(false);
+  const childrenRef = useRef(children);
+
+  // Always keep the latest children in the ref
+  childrenRef.current = children;
 
   useEffect(() => {
     // Skip on initial mount
@@ -25,7 +29,7 @@ export function PageTransition({ page, children }: PageTransitionProps) {
     if (!container) {
       // No container yet, just swap immediately
       setDisplayPage(page);
-      setDisplayChildren(children);
+      setDisplayChildren(childrenRef.current);
       return;
     }
 
@@ -43,7 +47,7 @@ export function PageTransition({ page, children }: PageTransitionProps) {
       onComplete: () => {
         // Swap content
         setDisplayPage(page);
-        setDisplayChildren(children);
+        setDisplayChildren(childrenRef.current);
 
         // Animate in on next frame
         requestAnimationFrame(() => {
@@ -60,7 +64,7 @@ export function PageTransition({ page, children }: PageTransitionProps) {
         });
       },
     });
-  }, [page, children]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div

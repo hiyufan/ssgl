@@ -120,8 +120,9 @@ export function ParticleCanvas({
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
-          const d = Math.sqrt(dx * dx + dy * dy);
-          if (d < connectDist) {
+          const d2 = dx * dx + dy * dy;
+          if (d2 < connectDist * connectDist) {
+            const d = Math.sqrt(d2);
             const alpha = (1 - d / connectDist) * 0.15;
             ctx!.beginPath();
             ctx!.moveTo(particles[i].x, particles[i].y);
@@ -148,11 +149,13 @@ export function ParticleCanvas({
       mouseRef.current = { x: -1000, y: -1000 };
     }
 
+    const handleResize = () => { resize(); initParticles(); };
+
     resize();
     initParticles();
     draw();
 
-    window.addEventListener('resize', () => { resize(); initParticles(); });
+    window.addEventListener('resize', handleResize);
     parent.addEventListener('mousemove', handleMouseMove);
     parent.addEventListener('mouseleave', handleMouseLeave);
 
@@ -162,7 +165,7 @@ export function ParticleCanvas({
 
     return () => {
       cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', handleResize);
       parent.removeEventListener('mousemove', handleMouseMove);
       parent.removeEventListener('mouseleave', handleMouseLeave);
       observer.disconnect();

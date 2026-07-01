@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"time"
 
 	"github.com/ssgl/competition-platform/internal/config"
 	"gorm.io/driver/postgres"
@@ -14,7 +15,10 @@ var DB *gorm.DB
 // Connect opens a PostgreSQL connection using GORM and configures the connection pool.
 func Connect(cfg *config.DBConfig) {
 	var err error
-	DB, err = gorm.Open(postgres.Open(cfg.DSN()), &gorm.Config{})
+	DB, err = gorm.Open(postgres.Open(cfg.DSN()), &gorm.Config{
+		SkipDefaultTransaction: true,
+		PrepareStmt:            true,
+	})
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
@@ -26,6 +30,8 @@ func Connect(cfg *config.DBConfig) {
 
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 
 	log.Println("database connection established")
 }

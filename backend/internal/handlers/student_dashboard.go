@@ -96,13 +96,29 @@ func (h *StudentDashboardHandler) GetDashboard(c *gin.Context) {
 		db.Where("id IN ?", teamIDs).Find(&teams)
 	}
 
-	// Build competition entries
+	// Build competition entries — batch fetch competitions
+	compIDs := make(map[uint]bool)
+	for _, team := range teams {
+		compIDs[team.CompetitionID] = true
+	}
+	compIDList := make([]uint, 0, len(compIDs))
+	for id := range compIDs {
+		compIDList = append(compIDList, id)
+	}
+	compLookup := make(map[uint]models.Competition)
+	if len(compIDList) > 0 {
+		var comps []models.Competition
+		db.Where("id IN ?", compIDList).Find(&comps)
+		for _, c := range comps {
+			compLookup[c.ID] = c
+		}
+	}
+
 	compMap := make(map[uint]*StudentCompetitionEntry)
 	for _, team := range teams {
 		if _, exists := compMap[team.CompetitionID]; !exists {
-			// Get competition details
-			var comp models.Competition
-			if err := db.First(&comp, team.CompetitionID).Error; err != nil {
+			comp, ok := compLookup[team.CompetitionID]
+			if !ok {
 				continue
 			}
 
@@ -143,24 +159,47 @@ func (h *StudentDashboardHandler) GetDashboard(c *gin.Context) {
 		entry.TeamRole = teamRoleMap[team.ID]
 	}
 
-	// Enrich with preplan and award info
-	for compID, entry := range compMap {
-		// Check preplan
-		var preplan models.PrePlan
-		if err := db.Where("competition_id = ? AND user_id = ?", compID, userID).Order("id DESC").First(&preplan).Error; err == nil {
-			entry.PrePlanStatus = preplan.Status
-		}
-
-		// Check awards via team
+	// Batch fetch preplans and awards for all competitions
+	teamIDsForAwards := make([]uint, 0)
+	for _, entry := range compMap {
 		if entry.TeamID != nil {
-			var award models.Award
-			if err := db.Where("competition_id = ? AND team_id = ?", compID, *entry.TeamID).Order("id DESC").First(&award).Error; err == nil {
-				entry.AwardStatus = award.Status
-				entry.AwardAmount = award.PrizeAmount
+			teamIDsForAwards = append(teamIDsForAwards, *entry.TeamID)
+		}
+	}
+
+	// Preplans: one query for all
+	if len(compIDList) > 0 {
+		var preplans []models.PrePlan
+		db.Where("competition_id IN ? AND user_id = ?", compIDList, userID).Order("id DESC").Find(&preplans)
+		seen := make(map[uint]bool)
+		for _, pp := range preplans {
+			if !seen[pp.CompetitionID] {
+				if entry, ok := compMap[pp.CompetitionID]; ok {
+					entry.PrePlanStatus = pp.Status
+				}
+				seen[pp.CompetitionID] = true
 			}
 		}
+	}
 
-		// Calculate progress percent
+	// Awards: one query for all
+	if len(teamIDsForAwards) > 0 {
+		var awards []models.Award
+		db.Where("team_id IN ?", teamIDsForAwards).Order("id DESC").Find(&awards)
+		seen := make(map[uint]bool)
+		for _, aw := range awards {
+			if !seen[aw.CompetitionID] {
+				if entry, ok := compMap[aw.CompetitionID]; ok {
+					entry.AwardStatus = aw.Status
+					entry.AwardAmount = aw.PrizeAmount
+				}
+				seen[aw.CompetitionID] = true
+			}
+		}
+	}
+
+	// Calculate progress
+	for _, entry := range compMap {
 		entry.ProgressPercent = calculateStudentProgress(entry)
 	}
 

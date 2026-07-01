@@ -1,5 +1,6 @@
 """AI Assistant router - enhanced with tool calling capabilities."""
 
+import asyncio
 import json
 import logging
 from fastapi import APIRouter, HTTPException
@@ -217,7 +218,8 @@ async def chat(body: ChatRequest) -> dict:
 
     # First AI call - may include tool calls
     try:
-        response = llm_service.chat(
+        response = await asyncio.to_thread(
+            llm_service.chat,
             system_prompt=system_prompt,
             user_message=user_message,
             temperature=0.7,
@@ -238,7 +240,8 @@ async def chat(body: ChatRequest) -> dict:
         follow_up_message = f"{user_message}\n{tool_context}\n\n请基于以上工具返回的数据回答用户的问题。"
 
         try:
-            final_response = llm_service.chat(
+            final_response = await asyncio.to_thread(
+                llm_service.chat,
                 system_prompt=system_prompt,
                 user_message=follow_up_message,
                 temperature=0.7,
@@ -303,15 +306,15 @@ async def quick_action(body: dict) -> dict:
     params = body.get("params", {})
 
     if action == "get_stats":
-        return ai_tools.get_statistics()
+        return await asyncio.to_thread(ai_tools.get_statistics)
     elif action == "get_pending_approvals":
-        return ai_tools.get_pending_approvals()
+        return await asyncio.to_thread(ai_tools.get_pending_approvals)
     elif action == "get_competitions":
-        return ai_tools.get_competitions(**params)
+        return await asyncio.to_thread(ai_tools.get_competitions, **params)
     elif action == "get_teams":
-        return ai_tools.get_teams(**params)
+        return await asyncio.to_thread(ai_tools.get_teams, **params)
     elif action == "generate_report":
-        return ai_tools.generate_report(params.get("type", "competition_summary"))
+        return await asyncio.to_thread(ai_tools.generate_report, params.get("type", "competition_summary"))
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {action}")
 

@@ -341,7 +341,8 @@ class RAGService:
                     "SELECT id, content, metadata, created_at "
                     "FROM documents "
                     "WHERE metadata->>'filename' = :filename "
-                    "ORDER BY id"
+                    "ORDER BY id "
+                    "LIMIT 500"
                 ),
                 {"filename": filename},
             ).mappings().all()

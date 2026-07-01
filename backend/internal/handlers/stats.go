@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -24,51 +25,61 @@ func NewStatsHandler() *StatsHandler {
 func (h *StatsHandler) Overview(c *gin.Context) {
 	db := database.GetDB()
 
-	var totalUsers int64
-	db.Model(&models.User{}).Count(&totalUsers)
+	// Batch user counts into one query
+	type userCounts struct {
+		Total    int64
+		Students int64
+		Teachers int64
+	}
+	var uc userCounts
+	db.Raw(`SELECT
+		COUNT(*) as total,
+		COUNT(*) FILTER (WHERE role = ?) as students,
+		COUNT(*) FILTER (WHERE role = ?) as teachers
+	FROM users WHERE deleted_at IS NULL`, models.RoleStudent, models.RoleTeacher).Scan(&uc)
 
-	var totalStudents int64
-	db.Model(&models.User{}).Where("role = ?", models.RoleStudent).Count(&totalStudents)
+	// Batch competition counts into one query
+	type compCounts struct {
+		Total     int64
+		Ongoing   int64
+		Published int64
+	}
+	var cc compCounts
+	db.Raw(`SELECT
+		COUNT(*) as total,
+		COUNT(*) FILTER (WHERE status = ?) as ongoing,
+		COUNT(*) FILTER (WHERE status = ?) as published
+	FROM competitions WHERE deleted_at IS NULL`, models.CompStatusOngoing, models.CompStatusPublished).Scan(&cc)
 
-	var totalTeachers int64
-	db.Model(&models.User{}).Where("role = ?", models.RoleTeacher).Count(&totalTeachers)
-
-	var totalCompetitions int64
-	db.Model(&models.Competition{}).Count(&totalCompetitions)
-
-	var totalTeams int64
-	db.Model(&models.Team{}).Count(&totalTeams)
-
-	var ongoingCompetitions int64
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusOngoing).Count(&ongoingCompetitions)
-
-	var totalAwards int64
-	db.Model(&models.Award{}).Count(&totalAwards)
-
-	var totalPrePlans int64
-	db.Model(&models.PrePlan{}).Count(&totalPrePlans)
-
-	var totalEvaluations int64
-	db.Model(&models.StudentEvaluation{}).Count(&totalEvaluations)
-
-	var publishedCompetitions int64
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusPublished).Count(&publishedCompetitions)
-
-	var settledAwards int64
-	db.Model(&models.Award{}).Where("status = ?", models.AwardStatusSettled).Count(&settledAwards)
+	// Batch remaining counts into one query
+	type otherCounts struct {
+		Teams        int64
+		Awards       int64
+		PrePlans     int64
+		Evaluations  int64
+		SettledAwards int64
+	}
+	var oc otherCounts
+	db.Raw(`SELECT
+		(SELECT COUNT(*) FROM teams WHERE deleted_at IS NULL) as teams,
+		(SELECT COUNT(*) FROM awards WHERE deleted_at IS NULL) as awards,
+		(SELECT COUNT(*) FROM pre_plans WHERE deleted_at IS NULL) as pre_plans,
+		(SELECT COUNT(*) FROM student_evaluations WHERE deleted_at IS NULL) as evaluations,
+		(SELECT COUNT(*) FROM awards WHERE status = ? AND deleted_at IS NULL) as settled_awards
+	`, models.AwardStatusSettled).Scan(&oc)
 
 	c.JSON(http.StatusOK, gin.H{
-		"total_users":              totalUsers,
-		"total_students":           totalStudents,
-		"total_teachers":           totalTeachers,
-		"total_competitions":       totalCompetitions,
-		"total_teams":              totalTeams,
-		"ongoing_competitions":     ongoingCompetitions,
-		"total_awards":             totalAwards,
-		"total_pre_plans":          totalPrePlans,
-		"total_evaluations":        totalEvaluations,
-		"published_competitions":   publishedCompetitions,
-		"settled_awards":           settledAwards,
+		"total_users":              uc.Total,
+		"total_students":           uc.Students,
+		"total_teachers":           uc.Teachers,
+		"total_competitions":       cc.Total,
+		"total_teams":              oc.Teams,
+		"ongoing_competitions":     cc.Ongoing,
+		"total_awards":             oc.Awards,
+		"total_pre_plans":          oc.PrePlans,
+		"total_evaluations":        oc.Evaluations,
+		"published_competitions":   cc.Published,
+		"settled_awards":           oc.SettledAwards,
 	})
 }
 
@@ -86,31 +97,15 @@ type CompetitionStats struct {
 func (h *StatsHandler) Competitions(c *gin.Context) {
 	db := database.GetDB()
 
-	var competitions []models.Competition
-	if err := db.Find(&competitions).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
+	var stats []CompetitionStats
+	if err := db.Raw(`SELECT
+		c.id, c.title, c.status,
+		(SELECT COUNT(*) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) as team_count,
+		(SELECT COUNT(*) FROM awards WHERE competition_id = c.id AND deleted_at IS NULL) as award_count,
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND deleted_at IS NULL) as pre_plan_count
+	FROM competitions c WHERE c.deleted_at IS NULL ORDER BY c.id`).Scan(&stats).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competition stats"})
 		return
-	}
-
-	stats := make([]CompetitionStats, len(competitions))
-	for i, comp := range competitions {
-		var teamCount int64
-		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
-
-		var awardCount int64
-		db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
-
-		var prePlanCount int64
-		db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&prePlanCount)
-
-		stats[i] = CompetitionStats{
-			ID:           comp.ID,
-			Title:        comp.Title,
-			Status:       comp.Status,
-			TeamCount:    teamCount,
-			AwardCount:   awardCount,
-			PrePlanCount: prePlanCount,
-		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"competitions": stats})
@@ -131,46 +126,32 @@ type TeacherStats struct {
 func (h *StatsHandler) Teachers(c *gin.Context) {
 	db := database.GetDB()
 
-	var teachers []models.User
-	if err := db.Where("role = ?", models.RoleTeacher).Find(&teachers).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch teachers"})
-		return
+	// Single query: get all teachers with their evaluation aggregates
+	type teacherAgg struct {
+		ID               uint    `json:"id"`
+		Name             string  `json:"name"`
+		EvaluationCount  int64   `json:"evaluation_count"`
+		AvgTeaching      float64 `json:"avg_teaching"`
+		AvgCommunication float64 `json:"avg_communication"`
+		AvgAvailability  float64 `json:"avg_availability"`
+		AvgOverall       float64 `json:"avg_overall"`
 	}
 
-	stats := make([]TeacherStats, len(teachers))
-	for i, teacher := range teachers {
-		var count int64
-		db.Model(&models.StudentEvaluation{}).Where("teacher_id = ?", teacher.ID).Count(&count)
-
-		var avgTeaching, avgCommunication, avgAvailability, avgOverall float64
-		if count > 0 {
-			db.Model(&models.StudentEvaluation{}).
-				Where("teacher_id = ?", teacher.ID).
-				Select("COALESCE(AVG(teaching), 0)").
-				Row().Scan(&avgTeaching)
-			db.Model(&models.StudentEvaluation{}).
-				Where("teacher_id = ?", teacher.ID).
-				Select("COALESCE(AVG(communication), 0)").
-				Row().Scan(&avgCommunication)
-			db.Model(&models.StudentEvaluation{}).
-				Where("teacher_id = ?", teacher.ID).
-				Select("COALESCE(AVG(availability), 0)").
-				Row().Scan(&avgAvailability)
-			db.Model(&models.StudentEvaluation{}).
-				Where("teacher_id = ?", teacher.ID).
-				Select("COALESCE(AVG(overall), 0)").
-				Row().Scan(&avgOverall)
-		}
-
-		stats[i] = TeacherStats{
-			ID:               teacher.ID,
-			Name:             teacher.Name,
-			EvaluationCount:  count,
-			AvgTeaching:      avgTeaching,
-			AvgCommunication: avgCommunication,
-			AvgAvailability:  avgAvailability,
-			AvgOverall:       avgOverall,
-		}
+	var stats []teacherAgg
+	if err := db.Raw(`SELECT
+		u.id, u.name,
+		COUNT(se.id) as evaluation_count,
+		COALESCE(AVG(se.teaching), 0) as avg_teaching,
+		COALESCE(AVG(se.communication), 0) as avg_communication,
+		COALESCE(AVG(se.availability), 0) as avg_availability,
+		COALESCE(AVG(se.overall), 0) as avg_overall
+	FROM users u
+	LEFT JOIN student_evaluations se ON se.teacher_id = u.id AND se.deleted_at IS NULL
+	WHERE u.role = ? AND u.deleted_at IS NULL
+	GROUP BY u.id, u.name
+	ORDER BY u.id`, models.RoleTeacher).Scan(&stats).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch teacher stats"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"teachers": stats})
@@ -263,85 +244,79 @@ type CompetitionProgress struct {
 func (h *StatsHandler) Progress(c *gin.Context) {
 	db := database.GetDB()
 
-	var competitions []models.Competition
-	if err := db.Order("id ASC").Find(&competitions).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
+	type progressRow struct {
+		ID            uint    `json:"id"`
+		Title         string  `json:"title"`
+		Status        string  `json:"status"`
+		Type          string  `json:"type"`
+		StartDate     string  `json:"start_date"`
+		EndDate       string  `json:"end_date"`
+		TeamCount     int64   `json:"team_count"`
+		StudentCount  int64   `json:"student_count"`
+		PrePlanCount  int64   `json:"pre_plan_count"`
+		ReviewedCount int64   `json:"reviewed_count"`
+		ApprovedCount int64   `json:"approved_count"`
+		AwardCount    int64   `json:"award_count"`
+		SettledCount  int64   `json:"settled_count"`
+		TotalPrize    float64 `json:"total_prize"`
+	}
+
+	var rows []progressRow
+	if err := db.Raw(`SELECT
+		c.id, c.title, c.status, c.type,
+		COALESCE(TO_CHAR(c.start_date, 'YYYY-MM-DD'), '') as start_date,
+		COALESCE(TO_CHAR(c.end_date, 'YYYY-MM-DD'), '') as end_date,
+		(SELECT COUNT(*) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) as team_count,
+		(SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm
+			JOIN teams t ON t.id = tm.team_id
+			WHERE t.competition_id = c.id) as student_count,
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND deleted_at IS NULL) as pre_plan_count,
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND status IN ('reviewed','approved') AND deleted_at IS NULL) as reviewed_count,
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND status = 'approved' AND deleted_at IS NULL) as approved_count,
+		(SELECT COUNT(*) FROM awards WHERE competition_id = c.id AND deleted_at IS NULL) as award_count,
+		(SELECT COUNT(*) FROM awards WHERE competition_id = c.id AND status = ? AND deleted_at IS NULL) as settled_count,
+		(SELECT COALESCE(SUM(prize_amount), 0) FROM awards WHERE competition_id = c.id AND status = ? AND deleted_at IS NULL) as total_prize
+	FROM competitions c WHERE c.deleted_at IS NULL ORDER BY c.id`,
+		models.AwardStatusSettled, models.AwardStatusSettled).Scan(&rows).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch progress"})
 		return
 	}
 
-	progress := make([]CompetitionProgress, len(competitions))
-	for i, comp := range competitions {
-		var teamCount int64
-		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
-
-		var studentCount int64
-		db.Raw(`SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm
-			INNER JOIN teams t ON t.id = tm.team_id
-			WHERE t.competition_id = ?`, comp.ID).Scan(&studentCount)
-
-		var prePlanCount int64
-		db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&prePlanCount)
-
-		var reviewedCount int64
-		db.Model(&models.PrePlan{}).Where("competition_id = ? AND status IN ?", comp.ID, []string{"reviewed", "approved"}).Count(&reviewedCount)
-
-		var approvedCount int64
-		db.Model(&models.PrePlan{}).Where("competition_id = ? AND status = ?", comp.ID, "approved").Count(&approvedCount)
-
-		var awardCount int64
-		db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
-
-		var settledCount int64
-		db.Model(&models.Award{}).Where("competition_id = ? AND status = ?", comp.ID, models.AwardStatusSettled).Count(&settledCount)
-
-		var totalPrize float64
-		db.Model(&models.Award{}).Where("competition_id = ? AND status = ?", comp.ID, models.AwardStatusSettled).
-			Select("COALESCE(SUM(prize_amount), 0)").Row().Scan(&totalPrize)
-
-		// Calculate lifecycle progress: creation(10%) + teams(20%) + preplans(30%) + review(20%) + awards(20%)
+	progress := make([]CompetitionProgress, len(rows))
+	for i, r := range rows {
 		var progressPct float64
-		if teamCount > 0 {
+		if r.TeamCount > 0 {
 			progressPct += 20
 		}
-		if prePlanCount > 0 {
+		if r.PrePlanCount > 0 {
 			progressPct += 30
 		}
-		if reviewedCount > 0 {
+		if r.ReviewedCount > 0 {
 			progressPct += 20
 		}
-		if awardCount > 0 {
+		if r.AwardCount > 0 {
 			progressPct += 20
 		}
-		// Base progress for existing competition
 		progressPct += 10
 		if progressPct > 100 {
 			progressPct = 100
 		}
 
-		startStr := ""
-		if !comp.StartDate.IsZero() {
-			startStr = comp.StartDate.Format("2006-01-02")
-		}
-		endStr := ""
-		if !comp.EndDate.IsZero() {
-			endStr = comp.EndDate.Format("2006-01-02")
-		}
-
 		progress[i] = CompetitionProgress{
-			ID:            comp.ID,
-			Title:         comp.Title,
-			Status:        comp.Status,
-			Type:          comp.Type,
-			StartDate:     startStr,
-			EndDate:       endStr,
-			TeamCount:     teamCount,
-			StudentCount:  studentCount,
-			PrePlanCount:  prePlanCount,
-			ReviewedCount: reviewedCount,
-			ApprovedCount: approvedCount,
-			AwardCount:    awardCount,
-			SettledCount:  settledCount,
-			TotalPrize:    totalPrize,
+			ID:            r.ID,
+			Title:         r.Title,
+			Status:        r.Status,
+			Type:          r.Type,
+			StartDate:     r.StartDate,
+			EndDate:       r.EndDate,
+			TeamCount:     r.TeamCount,
+			StudentCount:  r.StudentCount,
+			PrePlanCount:  r.PrePlanCount,
+			ReviewedCount: r.ReviewedCount,
+			ApprovedCount: r.ApprovedCount,
+			AwardCount:    r.AwardCount,
+			SettledCount:  r.SettledCount,
+			TotalPrize:    r.TotalPrize,
 			Progress:      progressPct,
 		}
 	}
@@ -353,21 +328,31 @@ func (h *StatsHandler) Progress(c *gin.Context) {
 func (h *StatsHandler) ExportOverview(c *gin.Context) {
 	db := database.GetDB()
 
-	var totalUsers, totalStudents, totalTeachers int64
-	db.Model(&models.User{}).Count(&totalUsers)
-	db.Model(&models.User{}).Where("role = ?", models.RoleStudent).Count(&totalStudents)
-	db.Model(&models.User{}).Where("role = ?", models.RoleTeacher).Count(&totalTeachers)
-
-	var totalCompetitions, ongoingComp, publishedComp int64
-	db.Model(&models.Competition{}).Count(&totalCompetitions)
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusOngoing).Count(&ongoingComp)
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusPublished).Count(&publishedComp)
-
-	var totalTeams, totalAwards, totalPrePlans, totalEvals int64
-	db.Model(&models.Team{}).Count(&totalTeams)
-	db.Model(&models.Award{}).Count(&totalAwards)
-	db.Model(&models.PrePlan{}).Count(&totalPrePlans)
-	db.Model(&models.StudentEvaluation{}).Count(&totalEvals)
+	type overviewCounts struct {
+		TotalUsers    int64
+		Students      int64
+		Teachers      int64
+		TotalComps    int64
+		OngoingComps  int64
+		PublishedComps int64
+		Teams         int64
+		Awards        int64
+		PrePlans      int64
+		Evals         int64
+	}
+	var oc overviewCounts
+	db.Raw(`SELECT
+		(SELECT COUNT(*) FROM users WHERE deleted_at IS NULL) as total_users,
+		(SELECT COUNT(*) FROM users WHERE role = ? AND deleted_at IS NULL) as students,
+		(SELECT COUNT(*) FROM users WHERE role = ? AND deleted_at IS NULL) as teachers,
+		(SELECT COUNT(*) FROM competitions WHERE deleted_at IS NULL) as total_comps,
+		(SELECT COUNT(*) FROM competitions WHERE status = ? AND deleted_at IS NULL) as ongoing_comps,
+		(SELECT COUNT(*) FROM competitions WHERE status = ? AND deleted_at IS NULL) as published_comps,
+		(SELECT COUNT(*) FROM teams WHERE deleted_at IS NULL) as teams,
+		(SELECT COUNT(*) FROM awards WHERE deleted_at IS NULL) as awards,
+		(SELECT COUNT(*) FROM pre_plans WHERE deleted_at IS NULL) as pre_plans,
+		(SELECT COUNT(*) FROM student_evaluations WHERE deleted_at IS NULL) as evals
+	`, models.RoleStudent, models.RoleTeacher, models.CompStatusOngoing, models.CompStatusPublished).Scan(&oc)
 
 	filename := fmt.Sprintf("ssgl_stats_%s.csv", time.Now().Format("20060102_150405"))
 	c.Header("Content-Type", "text/csv; charset=utf-8")
@@ -375,16 +360,16 @@ func (h *StatsHandler) ExportOverview(c *gin.Context) {
 
 	w := csv.NewWriter(c.Writer)
 	w.Write([]string{"指标", "数值"})
-	w.Write([]string{"总用户数", strconv.FormatInt(totalUsers, 10)})
-	w.Write([]string{"学生数", strconv.FormatInt(totalStudents, 10)})
-	w.Write([]string{"教师数", strconv.FormatInt(totalTeachers, 10)})
-	w.Write([]string{"赛事总数", strconv.FormatInt(totalCompetitions, 10)})
-	w.Write([]string{"进行中赛事", strconv.FormatInt(ongoingComp, 10)})
-	w.Write([]string{"已发布赛事", strconv.FormatInt(publishedComp, 10)})
-	w.Write([]string{"团队总数", strconv.FormatInt(totalTeams, 10)})
-	w.Write([]string{"奖项总数", strconv.FormatInt(totalAwards, 10)})
-	w.Write([]string{"预案总数", strconv.FormatInt(totalPrePlans, 10)})
-	w.Write([]string{"评价总数", strconv.FormatInt(totalEvals, 10)})
+	w.Write([]string{"总用户数", strconv.FormatInt(oc.TotalUsers, 10)})
+	w.Write([]string{"学生数", strconv.FormatInt(oc.Students, 10)})
+	w.Write([]string{"教师数", strconv.FormatInt(oc.Teachers, 10)})
+	w.Write([]string{"赛事总数", strconv.FormatInt(oc.TotalComps, 10)})
+	w.Write([]string{"进行中赛事", strconv.FormatInt(oc.OngoingComps, 10)})
+	w.Write([]string{"已发布赛事", strconv.FormatInt(oc.PublishedComps, 10)})
+	w.Write([]string{"团队总数", strconv.FormatInt(oc.Teams, 10)})
+	w.Write([]string{"奖项总数", strconv.FormatInt(oc.Awards, 10)})
+	w.Write([]string{"预案总数", strconv.FormatInt(oc.PrePlans, 10)})
+	w.Write([]string{"评价总数", strconv.FormatInt(oc.Evals, 10)})
 	w.Flush()
 }
 
@@ -404,49 +389,34 @@ type LeaderboardEntry struct {
 func (h *StatsHandler) Leaderboard(c *gin.Context) {
 	db := database.GetDB()
 
-	var teams []models.Team
-	if err := db.Preload("Leader").Find(&teams).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch teams"})
+	type leaderboardRow struct {
+		TeamID           uint    `json:"team_id"`
+		TeamName         string  `json:"team_name"`
+		LeaderName       string  `json:"leader_name"`
+		CompetitionCount int64   `json:"competition_count"`
+		AwardCount       int64   `json:"award_count"`
+		PrePlanCount     int64   `json:"pre_plan_count"`
+		Score            float64 `json:"score"`
+		Rank             int     `json:"rank"`
+	}
+
+	var entries []leaderboardRow
+	if err := db.Raw(`SELECT
+		t.id as team_id,
+		t.name as team_name,
+		COALESCE(u.name, '') as leader_name,
+		(SELECT COUNT(*) FROM teams WHERE name = t.name AND leader_id = t.leader_id AND deleted_at IS NULL) as competition_count,
+		(SELECT COUNT(*) FROM awards WHERE team_id = t.id AND deleted_at IS NULL) as award_count,
+		(SELECT COUNT(*) FROM pre_plans WHERE team_id = t.id AND deleted_at IS NULL) as pre_plan_count,
+		(SELECT COUNT(*) FROM awards WHERE team_id = t.id AND deleted_at IS NULL) * 10.0 +
+		(SELECT COUNT(*) FROM teams WHERE name = t.name AND leader_id = t.leader_id AND deleted_at IS NULL) * 3.0 +
+		(SELECT COUNT(*) FROM pre_plans WHERE team_id = t.id AND deleted_at IS NULL) * 1.0 as score
+	FROM teams t
+	LEFT JOIN users u ON u.id = t.leader_id
+	WHERE t.deleted_at IS NULL
+	ORDER BY score DESC`).Scan(&entries).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch leaderboard"})
 		return
-	}
-
-	entries := make([]LeaderboardEntry, len(teams))
-	for i, team := range teams {
-		var compCount int64
-		db.Model(&models.Team{}).Where("name = ? AND leader_id = ?", team.Name, team.LeaderID).Count(&compCount)
-
-		var awardCount int64
-		db.Model(&models.Award{}).Where("team_id = ?", team.ID).Count(&awardCount)
-
-		var prePlanCount int64
-		db.Model(&models.PrePlan{}).Where("team_id = ?", team.ID).Count(&prePlanCount)
-
-		// Score = awards * 10 + competitions * 3 + preplans * 1
-		score := float64(awardCount)*10 + float64(compCount)*3 + float64(prePlanCount)
-
-		leaderName := ""
-		if team.LeaderID > 0 {
-			leaderName = team.Leader.Name
-		}
-
-		entries[i] = LeaderboardEntry{
-			TeamID:           team.ID,
-			TeamName:         team.Name,
-			LeaderName:       leaderName,
-			CompetitionCount: compCount,
-			AwardCount:       awardCount,
-			PrePlanCount:     prePlanCount,
-			Score:            score,
-		}
-	}
-
-	// Sort by score descending
-	for i := 0; i < len(entries); i++ {
-		for j := i + 1; j < len(entries); j++ {
-			if entries[j].Score > entries[i].Score {
-				entries[i], entries[j] = entries[j], entries[i]
-			}
-		}
 	}
 
 	// Assign ranks
@@ -461,8 +431,27 @@ func (h *StatsHandler) Leaderboard(c *gin.Context) {
 func (h *StatsHandler) ExportCompetitions(c *gin.Context) {
 	db := database.GetDB()
 
-	var competitions []models.Competition
-	if err := db.Order("id ASC").Find(&competitions).Error; err != nil {
+	type exportRow struct {
+		ID           uint   `json:"id"`
+		Title        string `json:"title"`
+		Type         string `json:"type"`
+		Status       string `json:"status"`
+		TeamCount    int64  `json:"team_count"`
+		PrePlanCount int64  `json:"pre_plan_count"`
+		AwardCount   int64  `json:"award_count"`
+		StartDate    string `json:"start_date"`
+		EndDate      string `json:"end_date"`
+	}
+
+	var rows []exportRow
+	if err := db.Raw(`SELECT
+		c.id, c.title, c.type, c.status,
+		(SELECT COUNT(*) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) as team_count,
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND deleted_at IS NULL) as pre_plan_count,
+		(SELECT COUNT(*) FROM awards WHERE competition_id = c.id AND deleted_at IS NULL) as award_count,
+		COALESCE(TO_CHAR(c.start_date, 'YYYY-MM-DD'), '') as start_date,
+		COALESCE(TO_CHAR(c.end_date, 'YYYY-MM-DD'), '') as end_date
+	FROM competitions c WHERE c.deleted_at IS NULL ORDER BY c.id`).Scan(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
 		return
 	}
@@ -474,31 +463,17 @@ func (h *StatsHandler) ExportCompetitions(c *gin.Context) {
 	w := csv.NewWriter(c.Writer)
 	w.Write([]string{"ID", "赛事名称", "类型", "状态", "团队数", "预案数", "奖项数", "开始日期", "结束日期"})
 
-	for _, comp := range competitions {
-		var teamCount, prePlanCount, awardCount int64
-		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
-		db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&prePlanCount)
-		db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
-
-		startStr := ""
-		if !comp.StartDate.IsZero() {
-			startStr = comp.StartDate.Format("2006-01-02")
-		}
-		endStr := ""
-		if !comp.EndDate.IsZero() {
-			endStr = comp.EndDate.Format("2006-01-02")
-		}
-
+	for _, r := range rows {
 		w.Write([]string{
-			strconv.FormatUint(uint64(comp.ID), 10),
-			comp.Title,
-			comp.Type,
-			comp.Status,
-			strconv.FormatInt(teamCount, 10),
-			strconv.FormatInt(prePlanCount, 10),
-			strconv.FormatInt(awardCount, 10),
-			startStr,
-			endStr,
+			strconv.FormatUint(uint64(r.ID), 10),
+			r.Title,
+			r.Type,
+			r.Status,
+			strconv.FormatInt(r.TeamCount, 10),
+			strconv.FormatInt(r.PrePlanCount, 10),
+			strconv.FormatInt(r.AwardCount, 10),
+			r.StartDate,
+			r.EndDate,
 		})
 	}
 	w.Flush()
@@ -508,8 +483,28 @@ func (h *StatsHandler) ExportCompetitions(c *gin.Context) {
 func (h *StatsHandler) ExportTeams(c *gin.Context) {
 	db := database.GetDB()
 
-	var teams []models.Team
-	if err := db.Preload("Competition").Preload("Leader").Order("id ASC").Find(&teams).Error; err != nil {
+	type teamExportRow struct {
+		ID          uint   `json:"id"`
+		Name        string `json:"name"`
+		CompTitle   string `json:"comp_title"`
+		LeaderName  string `json:"leader_name"`
+		MemberCount int64  `json:"member_count"`
+		Status      string `json:"status"`
+		CreatedAt   string `json:"created_at"`
+	}
+
+	var rows []teamExportRow
+	if err := db.Raw(`SELECT
+		t.id, t.name,
+		COALESCE(c.title, '') as comp_title,
+		COALESCE(u.username, '') as leader_name,
+		(SELECT COUNT(*) FROM team_members WHERE team_id = t.id) as member_count,
+		t.status,
+		COALESCE(TO_CHAR(t.created_at, 'YYYY-MM-DD'), '') as created_at
+	FROM teams t
+	LEFT JOIN competitions c ON c.id = t.competition_id
+	LEFT JOIN users u ON u.id = t.leader_id
+	WHERE t.deleted_at IS NULL ORDER BY t.id`).Scan(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch teams"})
 		return
 	}
@@ -521,32 +516,15 @@ func (h *StatsHandler) ExportTeams(c *gin.Context) {
 	w := csv.NewWriter(c.Writer)
 	w.Write([]string{"ID", "团队名称", "所属赛事", "队长", "成员数", "状态", "创建日期"})
 
-	for _, team := range teams {
-		var memberCount int64
-		db.Model(&models.TeamMember{}).Where("team_id = ?", team.ID).Count(&memberCount)
-
-		createdAt := ""
-		if !team.CreatedAt.IsZero() {
-			createdAt = team.CreatedAt.Format("2006-01-02")
-		}
-
-		compTitle := ""
-		if team.Competition.ID > 0 {
-			compTitle = team.Competition.Title
-		}
-		leaderName := ""
-		if team.Leader.ID > 0 {
-			leaderName = team.Leader.Username
-		}
-
+	for _, r := range rows {
 		w.Write([]string{
-			strconv.FormatUint(uint64(team.ID), 10),
-			team.Name,
-			compTitle,
-			leaderName,
-			strconv.FormatInt(memberCount, 10),
-			team.Status,
-			createdAt,
+			strconv.FormatUint(uint64(r.ID), 10),
+			r.Name,
+			r.CompTitle,
+			r.LeaderName,
+			strconv.FormatInt(r.MemberCount, 10),
+			r.Status,
+			r.CreatedAt,
 		})
 	}
 	w.Flush()
@@ -670,14 +648,10 @@ func (h *StatsHandler) RecentActivity(c *gin.Context) {
 		})
 	}
 
-	// Sort all activities by CreatedAt descending (simple bubble sort for small N)
-	for i := 0; i < len(activities); i++ {
-		for j := i + 1; j < len(activities); j++ {
-			if activities[j].CreatedAt > activities[i].CreatedAt {
-				activities[i], activities[j] = activities[j], activities[i]
-			}
-		}
-	}
+	// Sort all activities by CreatedAt descending
+	sort.Slice(activities, func(i, j int) bool {
+		return activities[i].CreatedAt > activities[j].CreatedAt
+	})
 
 	// Trim to limit
 	if len(activities) > limit {
@@ -715,51 +689,69 @@ func (h *StatsHandler) Trends(c *gin.Context) {
 	startDate := time.Now().AddDate(0, -months, 0)
 	startDate = time.Date(startDate.Year(), startDate.Month(), 1, 0, 0, 0, 0, time.UTC)
 
-	// Build list of month labels
-	type monthKey struct{ year, month int }
+	type monthAgg struct {
+		Month       string  `json:"month"`
+		Count       int64   `json:"count"`
+		PrizeAmount float64 `json:"prize_amount"`
+	}
+
+	// 5 queries total (one per table) instead of 5*months
+	var compAggs []monthAgg
+	db.Raw(`SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count, 0 as prize_amount
+		FROM competitions WHERE deleted_at IS NULL AND created_at >= ?
+		GROUP BY month ORDER BY month`, startDate).Scan(&compAggs)
+
+	var teamAggs []monthAgg
+	db.Raw(`SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count, 0 as prize_amount
+		FROM teams WHERE deleted_at IS NULL AND created_at >= ?
+		GROUP BY month ORDER BY month`, startDate).Scan(&teamAggs)
+
+	var awardAggs []monthAgg
+	db.Raw(`SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count,
+		COALESCE(SUM(prize_amount), 0) as prize_amount
+		FROM awards WHERE deleted_at IS NULL AND created_at >= ?
+		GROUP BY month ORDER BY month`, startDate).Scan(&awardAggs)
+
+	var preplanAggs []monthAgg
+	db.Raw(`SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count, 0 as prize_amount
+		FROM pre_plans WHERE deleted_at IS NULL AND created_at >= ?
+		GROUP BY month ORDER BY month`, startDate).Scan(&preplanAggs)
+
+	// Build lookup maps
+	compMap := make(map[string]int64, len(compAggs))
+	for _, a := range compAggs {
+		compMap[a.Month] = a.Count
+	}
+	teamMap := make(map[string]int64, len(teamAggs))
+	for _, a := range teamAggs {
+		teamMap[a.Month] = a.Count
+	}
+	awardMap := make(map[string]int64, len(awardAggs))
+	prizeMap := make(map[string]float64, len(awardAggs))
+	for _, a := range awardAggs {
+		awardMap[a.Month] = a.Count
+		prizeMap[a.Month] = a.PrizeAmount
+	}
+	preplanMap := make(map[string]int64, len(preplanAggs))
+	for _, a := range preplanAggs {
+		preplanMap[a.Month] = a.Count
+	}
+
+	// Build the full month series
 	var points []TrendPoint
 	cursor := startDate
 	now := time.Now()
 	for cursor.Before(now) || cursor.Format("2006-01") == now.Format("2006-01") {
 		label := cursor.Format("2006-01")
-		nextMonth := cursor.AddDate(0, 1, 0)
-
-		var compCount int64
-		db.Model(&models.Competition{}).
-			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
-			Count(&compCount)
-
-		var teamCount int64
-		db.Model(&models.Team{}).
-			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
-			Count(&teamCount)
-
-		var awardCount int64
-		db.Model(&models.Award{}).
-			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
-			Count(&awardCount)
-
-		var prePlanCount int64
-		db.Model(&models.PrePlan{}).
-			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
-			Count(&prePlanCount)
-
-		var prizeAmount float64
-		db.Model(&models.Award{}).
-			Where("created_at >= ? AND created_at < ?", cursor, nextMonth).
-			Select("COALESCE(SUM(prize_amount), 0)").
-			Row().Scan(&prizeAmount)
-
 		points = append(points, TrendPoint{
 			Month:        label,
-			Competitions: compCount,
-			Teams:        teamCount,
-			Awards:       awardCount,
-			PrePlans:     prePlanCount,
-			PrizeAmount:  prizeAmount,
+			Competitions: compMap[label],
+			Teams:        teamMap[label],
+			Awards:       awardMap[label],
+			PrePlans:     preplanMap[label],
+			PrizeAmount:  prizeMap[label],
 		})
-
-		cursor = nextMonth
+		cursor = cursor.AddDate(0, 1, 0)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -789,72 +781,67 @@ type EngagementStats struct {
 func (h *StatsHandler) Engagement(c *gin.Context) {
 	db := database.GetDB()
 
-	var totalStudents int64
-	db.Model(&models.User{}).Where("role = ?", models.RoleStudent).Count(&totalStudents)
+	// Query 1: user & competition counts
+	type engCounts struct {
+		TotalStudents      int64
+		StudentsWithTeams  int64
+		TotalPrePlans      int64
+		ReviewedPrePlans   int64
+		AvgPrePlanScore    float64
+		TotalCompetitions  int64
+		PublishedComps     int64
+		CompletedComps     int64
+		TotalTeams         int64
+		ActiveCompetitions int64
+	}
+	var ec engCounts
+	db.Raw(`SELECT
+		(SELECT COUNT(*) FROM users WHERE role = ? AND deleted_at IS NULL) as total_students,
+		(SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm
+			INNER JOIN users u ON u.id = tm.user_id AND u.role = 'student') as students_with_teams,
+		(SELECT COUNT(*) FROM pre_plans WHERE deleted_at IS NULL) as total_pre_plans,
+		(SELECT COUNT(*) FROM pre_plans WHERE ai_review_score IS NOT NULL AND ai_review_score > 0 AND deleted_at IS NULL) as reviewed_pre_plans,
+		(SELECT COALESCE(AVG(ai_review_score), 0) FROM pre_plans WHERE ai_review_score IS NOT NULL AND ai_review_score > 0 AND deleted_at IS NULL) as avg_pre_plan_score,
+		(SELECT COUNT(*) FROM competitions WHERE deleted_at IS NULL) as total_competitions,
+		(SELECT COUNT(*) FROM competitions WHERE status IN (?, ?, 'completed') AND deleted_at IS NULL) as published_comps,
+		(SELECT COUNT(*) FROM competitions WHERE status = 'completed' AND deleted_at IS NULL) as completed_comps,
+		(SELECT COUNT(*) FROM teams WHERE deleted_at IS NULL) as total_teams,
+		(SELECT COUNT(*) FROM competitions WHERE status = ? AND deleted_at IS NULL) as active_competitions
+	`, models.RoleStudent, models.CompStatusPublished, models.CompStatusOngoing, models.CompStatusOngoing).Scan(&ec)
 
-	var studentsWithTeams int64
-	db.Raw(`SELECT COUNT(DISTINCT user_id) FROM team_members tm
-		INNER JOIN users u ON u.id = tm.user_id AND u.role = 'student'`).Scan(&studentsWithTeams)
-
-	var totalPrePlans int64
-	db.Model(&models.PrePlan{}).Count(&totalPrePlans)
-
-	var reviewedPrePlans int64
-	db.Model(&models.PrePlan{}).Where("ai_review_score IS NOT NULL AND ai_review_score > 0").Count(&reviewedPrePlans)
-
-	var avgScore float64
-	db.Model(&models.PrePlan{}).
-		Where("ai_review_score IS NOT NULL AND ai_review_score > 0").
-		Select("COALESCE(AVG(ai_review_score), 0)").
-		Row().Scan(&avgScore)
-
-	var totalCompetitions int64
-	db.Model(&models.Competition{}).Count(&totalCompetitions)
-
-	var publishedComps int64
-	db.Model(&models.Competition{}).Where("status IN ?", []string{models.CompStatusPublished, models.CompStatusOngoing, "completed"}).Count(&publishedComps)
-
-	var completedComps int64
-	db.Model(&models.Competition{}).Where("status = ?", "completed").Count(&completedComps)
-
-	var totalTeams int64
-	db.Model(&models.Team{}).Count(&totalTeams)
-
+	// Query 2: average team size
 	var avgTeamSize float64
 	db.Raw(`SELECT COALESCE(AVG(cnt), 0) FROM (SELECT COUNT(*) as cnt FROM team_members GROUP BY team_id) sub`).Scan(&avgTeamSize)
 
-	var activeCompetitions int64
-	db.Model(&models.Competition{}).Where("status = ?", models.CompStatusOngoing).Count(&activeCompetitions)
-
 	teamFormationRate := float64(0)
-	if totalStudents > 0 {
-		teamFormationRate = float64(studentsWithTeams) / float64(totalStudents) * 100
+	if ec.TotalStudents > 0 {
+		teamFormationRate = float64(ec.StudentsWithTeams) / float64(ec.TotalStudents) * 100
 	}
 
 	aiReviewRate := float64(0)
-	if totalPrePlans > 0 {
-		aiReviewRate = float64(reviewedPrePlans) / float64(totalPrePlans) * 100
+	if ec.TotalPrePlans > 0 {
+		aiReviewRate = float64(ec.ReviewedPrePlans) / float64(ec.TotalPrePlans) * 100
 	}
 
 	completionRate := float64(0)
-	if publishedComps > 0 {
-		completionRate = float64(completedComps) / float64(publishedComps) * 100
+	if ec.PublishedComps > 0 {
+		completionRate = float64(ec.CompletedComps) / float64(ec.PublishedComps) * 100
 	}
 
 	c.JSON(http.StatusOK, EngagementStats{
-		TotalStudents:      totalStudents,
-		StudentsWithTeams:  studentsWithTeams,
+		TotalStudents:      ec.TotalStudents,
+		StudentsWithTeams:  ec.StudentsWithTeams,
 		TeamFormationRate:  teamFormationRate,
-		TotalPrePlans:      totalPrePlans,
-		ReviewedPrePlans:   reviewedPrePlans,
+		TotalPrePlans:      ec.TotalPrePlans,
+		ReviewedPrePlans:   ec.ReviewedPrePlans,
 		AIReviewRate:       aiReviewRate,
-		AvgPrePlanScore:    avgScore,
-		TotalCompetitions:  totalCompetitions,
-		PublishedComps:     publishedComps,
+		AvgPrePlanScore:    ec.AvgPrePlanScore,
+		TotalCompetitions:  ec.TotalCompetitions,
+		PublishedComps:     ec.PublishedComps,
 		CompletionRate:     completionRate,
-		TotalTeams:         totalTeams,
+		TotalTeams:         ec.TotalTeams,
 		AvgTeamSize:        avgTeamSize,
-		ActiveCompetitions: activeCompetitions,
+		ActiveCompetitions: ec.ActiveCompetitions,
 	})
 }
 
@@ -890,6 +877,31 @@ type KanbanCompetition struct {
 func (h *StatsHandler) KanbanBoard(c *gin.Context) {
 	db := database.GetDB()
 
+	type kanbanRow struct {
+		ID           uint    `json:"id"`
+		Title        string  `json:"title"`
+		Type         string  `json:"type"`
+		Status       string  `json:"status"`
+		TeamCount    int     `json:"team_count"`
+		StudentCount int     `json:"student_count"`
+		PreplanCount int     `json:"preplan_count"`
+		AwardCount   int     `json:"award_count"`
+		StartDate    string  `json:"start_date"`
+		EndDate      string  `json:"end_date"`
+	}
+
+	var rows []kanbanRow
+	db.Raw(`SELECT
+		c.id, c.title, c.type, c.status,
+		(SELECT COUNT(*) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) as team_count,
+		(SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm JOIN teams t ON tm.team_id = t.id WHERE t.competition_id = c.id) as student_count,
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND deleted_at IS NULL) as preplan_count,
+		(SELECT COUNT(*) FROM awards WHERE competition_id = c.id AND deleted_at IS NULL) as award_count,
+		COALESCE(TO_CHAR(c.start_date, 'YYYY-MM-DD'), '') as start_date,
+		COALESCE(TO_CHAR(c.end_date, 'YYYY-MM-DD'), '') as end_date
+	FROM competitions c WHERE c.deleted_at IS NULL ORDER BY c.start_date ASC`).Scan(&rows)
+
+	// Group by status
 	statusOrder := []struct {
 		status string
 		label  string
@@ -900,38 +912,24 @@ func (h *StatsHandler) KanbanBoard(c *gin.Context) {
 		{models.CompStatusCompleted, "已完成"},
 	}
 
-	columns := make([]KanbanColumn, 0, len(statusOrder))
 	now := time.Now()
+	columns := make([]KanbanColumn, 0, len(statusOrder))
 
 	for _, stage := range statusOrder {
-		var competitions []models.Competition
-		db.Where("status = ?", stage.status).Order("start_date ASC").Find(&competitions)
+		cards := make([]KanbanCompetition, 0)
+		for _, r := range rows {
+			if r.Status != stage.status {
+				continue
+			}
 
-		cards := make([]KanbanCompetition, 0, len(competitions))
-		for _, comp := range competitions {
-			// Team count
-			var teamCount int64
-			db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
-
-			// Student count
-			var studentCount int64
-			db.Raw("SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm JOIN teams t ON tm.team_id = t.id WHERE t.competition_id = ?", comp.ID).Scan(&studentCount)
-
-			// Preplan count
-			var preplanCount int64
-			db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&preplanCount)
-
-			// Award count
-			var awardCount int64
-			db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
-
-			// Progress calculation
 			progress := float64(0)
 			if stage.status == models.CompStatusCompleted {
 				progress = 100
-			} else if stage.status == models.CompStatusOngoing && !comp.StartDate.IsZero() && !comp.EndDate.IsZero() {
-				total := comp.EndDate.Sub(comp.StartDate).Hours()
-				elapsed := now.Sub(comp.StartDate).Hours()
+			} else if stage.status == models.CompStatusOngoing && r.StartDate != "" && r.EndDate != "" {
+				start, _ := time.Parse("2006-01-02", r.StartDate)
+				end, _ := time.Parse("2006-01-02", r.EndDate)
+				total := end.Sub(start).Hours()
+				elapsed := now.Sub(start).Hours()
 				if total > 0 {
 					progress = elapsed / total * 100
 					if progress > 100 {
@@ -943,32 +941,25 @@ func (h *StatsHandler) KanbanBoard(c *gin.Context) {
 				}
 			}
 
-			// Days remaining
 			daysRemaining := 0
-			if !comp.EndDate.IsZero() && comp.EndDate.After(now) {
-				daysRemaining = int(comp.EndDate.Sub(now).Hours() / 24)
-			}
-
-			startDate := ""
-			endDate := ""
-			if !comp.StartDate.IsZero() {
-				startDate = comp.StartDate.Format("2006-01-02")
-			}
-			if !comp.EndDate.IsZero() {
-				endDate = comp.EndDate.Format("2006-01-02")
+			if r.EndDate != "" {
+				end, _ := time.Parse("2006-01-02", r.EndDate)
+				if end.After(now) {
+					daysRemaining = int(end.Sub(now).Hours() / 24)
+				}
 			}
 
 			cards = append(cards, KanbanCompetition{
-				ID:            comp.ID,
-				Title:         comp.Title,
-				Type:          comp.Type,
-				TeamCount:     int(teamCount),
-				StudentCount:  int(studentCount),
-				PreplanCount:  int(preplanCount),
-				AwardCount:    int(awardCount),
+				ID:            r.ID,
+				Title:         r.Title,
+				Type:          r.Type,
+				TeamCount:     r.TeamCount,
+				StudentCount:  r.StudentCount,
+				PreplanCount:  r.PreplanCount,
+				AwardCount:    r.AwardCount,
 				Progress:      progress,
-				StartDate:     startDate,
-				EndDate:       endDate,
+				StartDate:     r.StartDate,
+				EndDate:       r.EndDate,
 				DaysRemaining: daysRemaining,
 			})
 		}
@@ -1051,14 +1042,13 @@ func (h *StatsHandler) Countdown(c *gin.Context) {
 	}
 
 	// Sort: ongoing-ending first, then by days_until_start ascending
-	for i := 0; i < len(items); i++ {
-		for j := i + 1; j < len(items); j++ {
-			pi, pj := phasePriority(items[i].Phase), phasePriority(items[j].Phase)
-			if pj < pi || (pj == pi && items[j].DaysUntilStart < items[i].DaysUntilStart) {
-				items[i], items[j] = items[j], items[i]
-			}
+	sort.Slice(items, func(i, j int) bool {
+		pi, pj := phasePriority(items[i].Phase), phasePriority(items[j].Phase)
+		if pi != pj {
+			return pi < pj
 		}
-	}
+		return items[i].DaysUntilStart < items[j].DaysUntilStart
+	})
 
 	// Limit to 10 items
 	limit := 10
@@ -1109,60 +1099,42 @@ func (h *StatsHandler) Popularity(c *gin.Context) {
 		limit = 50
 	}
 
-	var competitions []models.Competition
-	if err := db.Order("id ASC").Find(&competitions).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competitions"})
+	type popRow struct {
+		ID              uint    `json:"id"`
+		Title           string  `json:"title"`
+		Type            string  `json:"type"`
+		Status          string  `json:"status"`
+		TeamCount       int     `json:"team_count"`
+		StudentCount    int     `json:"student_count"`
+		RegistrationCnt int     `json:"registration_count"`
+		PrePlanCount    int     `json:"preplan_count"`
+		AwardCount      int     `json:"award_count"`
+		PopularityScore float64 `json:"popularity_score"`
+		Rank            int     `json:"rank"`
+	}
+
+	var items []popRow
+	if err := db.Raw(`SELECT
+		c.id, c.title, c.type, c.status,
+		(SELECT COUNT(*) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) as team_count,
+		(SELECT COUNT(DISTINCT leader_id) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) as student_count,
+		(SELECT COUNT(*) FROM competition_registrations WHERE competition_id = c.id AND deleted_at IS NULL) as registration_count,
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND deleted_at IS NULL) as preplan_count,
+		(SELECT COUNT(*) FROM awards WHERE competition_id = c.id AND deleted_at IS NULL) as award_count,
+		(SELECT COUNT(*) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) * 3.0 +
+		(SELECT COUNT(DISTINCT leader_id) FROM teams WHERE competition_id = c.id AND deleted_at IS NULL) * 2.0 +
+		(SELECT COUNT(*) FROM competition_registrations WHERE competition_id = c.id AND deleted_at IS NULL) * 1.5 +
+		(SELECT COUNT(*) FROM pre_plans WHERE competition_id = c.id AND deleted_at IS NULL) * 2.0 +
+		(SELECT COUNT(*) FROM awards WHERE competition_id = c.id AND deleted_at IS NULL) * 4.0 as popularity_score
+	FROM competitions c WHERE c.deleted_at IS NULL
+	ORDER BY popularity_score DESC
+	LIMIT ?`, limit).Scan(&items).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch popularity"})
 		return
 	}
 
-	var items []PopularityItem
-	for _, comp := range competitions {
-		var teamCount int64
-		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).Count(&teamCount)
-
-		var studentCount int64
-		db.Model(&models.Team{}).Where("competition_id = ?", comp.ID).
-			Distinct("captain_id").Count(&studentCount)
-
-		var regCount int64
-		db.Model(&models.CompetitionRegistration{}).Where("competition_id = ?", comp.ID).Count(&regCount)
-
-		var preplanCount int64
-		db.Model(&models.PrePlan{}).Where("competition_id = ?", comp.ID).Count(&preplanCount)
-
-		var awardCount int64
-		db.Model(&models.Award{}).Where("competition_id = ?", comp.ID).Count(&awardCount)
-
-		score := float64(teamCount)*3.0 + float64(studentCount)*2.0 +
-			float64(regCount)*1.5 + float64(preplanCount)*2.0 + float64(awardCount)*4.0
-
-		items = append(items, PopularityItem{
-			ID:              comp.ID,
-			Title:           comp.Title,
-			Type:            comp.Type,
-			Status:          comp.Status,
-			TeamCount:       int(teamCount),
-			StudentCount:    int(studentCount),
-			RegistrationCnt: int(regCount),
-			PrePlanCount:    int(preplanCount),
-			AwardCount:      int(awardCount),
-			PopularityScore: score,
-		})
-	}
-
-	// Sort by score descending (simple insertion sort, fine for small N).
-	for i := 1; i < len(items); i++ {
-		for j := i; j > 0 && items[j].PopularityScore > items[j-1].PopularityScore; j-- {
-			items[j], items[j-1] = items[j-1], items[j]
-		}
-	}
-
-	// Assign ranks and limit.
 	for i := range items {
 		items[i].Rank = i + 1
-	}
-	if len(items) > limit {
-		items = items[:limit]
 	}
 
 	c.JSON(http.StatusOK, gin.H{

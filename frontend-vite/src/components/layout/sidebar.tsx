@@ -1,10 +1,10 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
 import { useRole } from '@/hooks/use-role';
 import { Icon } from '@/components/ui/icon';
-import { notificationsAPI, workflowsAPI } from '@/services/api';
+import { useNotifications } from '@/hooks/useNotifications';
 
 /* ─── Nav Config ──────────────────────────────────────── */
 const NAV_CONFIG: Record<string, { id?: string; icon?: string; label?: string; section?: string; badgeKey?: string }[]> = {
@@ -127,29 +127,12 @@ export function Sidebar({ isOpen }: SidebarProps) {
   const nav = NAV_CONFIG[role] || [];
   const meta = ROLE_META[role];
 
-  // Dynamic badges
-  const [badges, setBadges] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    const fetchBadges = async () => {
-      const newBadges: Record<string, number> = {};
-      try {
-        // Fetch pending workflows count
-        const wfRes = await workflowsAPI.list({ tab: 'pending' });
-        const pendingCount = (wfRes.workflows || []).length;
-        if (pendingCount > 0) newBadges['pending'] = pendingCount;
-      } catch { /* ignore */ }
-      try {
-        // Fetch unread notifications count
-        const notifRes = await notificationsAPI.getUnreadCount();
-        if (notifRes.unread_count > 0) newBadges['unread'] = notifRes.unread_count;
-      } catch { /* ignore */ }
-      setBadges(newBadges);
-    };
-    fetchBadges();
-    const interval = setInterval(fetchBadges, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Dynamic badges — shared polling hook
+  const { unread, pending } = useNotifications();
+  const badges: Record<string, number> = {
+    ...(unread > 0 && { unread }),
+    ...(pending > 0 && { pending }),
+  };
 
   // Sliding indicator
   const navRef = useRef<HTMLElement>(null);

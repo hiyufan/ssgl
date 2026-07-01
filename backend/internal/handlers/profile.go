@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -378,13 +379,9 @@ func (h *ProfileHandler) MyActivity(c *gin.Context) {
 	}
 
 	// Sort by CreatedAt descending
-	for i := 0; i < len(activities); i++ {
-		for j := i + 1; j < len(activities); j++ {
-			if activities[j].CreatedAt > activities[i].CreatedAt {
-				activities[i], activities[j] = activities[j], activities[i]
-			}
-		}
-	}
+	sort.Slice(activities, func(i, j int) bool {
+		return activities[i].CreatedAt > activities[j].CreatedAt
+	})
 
 	if len(activities) > limit {
 		activities = activities[:limit]
