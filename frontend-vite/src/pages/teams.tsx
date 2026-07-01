@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { teamsAPI, competitionsAPI, profileAPI } from '@/services/api';
 import { useRole } from '@/hooks/use-role';
 import { useAuthStore } from '@/stores/auth';
@@ -11,7 +11,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormModal, Field, TextInput, Select } from '@/components/ui/form';
 import { toast } from '@/components/ui/toast';
 import { getApiError } from '@/lib/form-utils';
-import type { Team, Competition, MatchResult, TeamInvite, UserSummary } from '@/types';
+import type { Team, Competition, MatchResult, TeamInvite, UserSummary, TeamAnalysis } from '@/types';
 
 /** 建队表单。competitions 页「报名参加」会以 fixedCompetition 复用本组件。 */
 export function TeamForm({ onClose, competitions, fixedCompetition, onCreated }: {
@@ -69,28 +69,34 @@ export function TeamsPage() {
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [matching, setMatching] = useState(false);
   const [myInvites, setMyInvites] = useState<TeamInvite[]>([]);
-  const [invitesLoading, setInvitesLoading] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteTeamId, setInviteTeamId] = useState<number | null>(null);
+
+  const loadTeams = useCallback(async () => {
+    const [t, c] = await Promise.all([teamsAPI.list(), competitionsAPI.list()]);
+    setTeams(t.teams || []);
+    setCompetitions(c.competitions || []);
+  }, []);
 
   useEffect(() => {
-    Promise.all([teamsAPI.list(), competitionsAPI.list()])
-      .then(([t, c]) => { setTeams(t.teams || []); setCompetitions(c.competitions || []); })
+    // This page follows the app's existing client-side fetch-on-mount pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTeams()
       .catch(console.error)
       .finally(() => setLoading(false));
     if (role === 'student') {
-      setInvitesLoading(true);
       teamsAPI.myInvites()
         .then(res => setMyInvites(res.invitations || []))
-        .catch(() => {})
-        .finally(() => setInvitesLoading(false));
+        .catch(() => {});
     }
-  }, [role]);
+  }, [loadTeams, role]);
 
   const onCreated = (team: Team) => setTeams((prev) => [team, ...prev]);
   const onLeft = (teamId: number) => {
     setTeams((prev) => prev.filter((t) => t.id !== teamId));
     setDetailTeam(null);
+  };
+  const onUpdated = (teamId: number, name: string) => {
+    setTeams((prev) => prev.map((t) => t.id === teamId ? { ...t, name } : t));
+    setDetailTeam((prev) => prev?.id === teamId ? { ...prev, name } : prev);
   };
 
   const doMatch = async (compId: string) => {
@@ -166,7 +172,7 @@ export function TeamsPage() {
                     await teamsAPI.acceptInvite(inv.code);
                     toast.success('已接受邀请');
                     setMyInvites(prev => prev.filter(i => i.id !== inv.id));
-                    window.location.reload();
+                    void loadTeams().catch(console.error);
                   } catch (err) { toast.error(getApiError(err, '接受失败')); }
                 }}>接受</Button>
                 <Button variant="outline" size="sm" onClick={async () => {
@@ -230,7 +236,15 @@ export function TeamsPage() {
       )}
 
       {createOpen && <TeamForm onClose={() => setCreateOpen(false)} competitions={competitions} onCreated={onCreated} />}
-      <TeamDetail team={detailTeam} currentUserId={currentUser?.id} onClose={() => setDetailTeam(null)} onLeft={onLeft} />
+      <TeamDetail
+        key={detailTeam?.id ?? 'empty-team-detail'}
+        team={detailTeam}
+        currentUserId={currentUser?.id}
+        onClose={() => setDetailTeam(null)}
+        onLeft={onLeft}
+        onUpdated={onUpdated}
+        onJoined={loadTeams}
+      />
 
       {/* Teammate Matching Modal */}
       <Modal open={matchOpen} onClose={() => setMatchOpen(false)} title="🤝 智能找队友" width={580}>
@@ -289,33 +303,36 @@ export function TeamsPage() {
   );
 }
 
-function TeamDetail({ team, currentUserId, onClose, onLeft }: {
+function TeamDetail({ team, currentUserId, onClose, onLeft, onUpdated, onJoined }: {
   team: Team | null;
   currentUserId?: number;
   onClose: () => void;
   onLeft: (teamId: number) => void;
+  onUpdated: (teamId: number, name: string) => void;
+  onJoined: () => Promise<void>;
 }) {
   const [leaving, setLeaving] = useState(false);
   const [joining, setJoining] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [teamInvites, setTeamInvites] = useState<TeamInvite[]>([]);
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<TeamAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState(team?.name || '');
+  const [deleting, setDeleting] = useState(false);
+
   if (!team) return null;
   const myMembership = team.members?.find((m) => m.user_id === currentUserId);
   const canLeave = !!myMembership && myMembership.role !== 'leader';
   const canJoin = !myMembership && currentUserId;
   const isLeader = myMembership?.role === 'leader';
-  const [editingName, setEditingName] = useState(false);
-  const [newName, setNewName] = useState(team?.name || '');
-  const [deleting, setDeleting] = useState(false);
 
   const saveName = async () => {
     if (!newName.trim()) { toast.error('名称不能为空'); return; }
     try {
       await teamsAPI.update(team.id, { name: newName.trim() });
-      team.name = newName.trim();
+      onUpdated(team.id, newName.trim());
       setEditingName(false);
       toast.success('团队名称已更新');
     } catch (err) { toast.error(getApiError(err, '更新失败')); }
@@ -352,7 +369,8 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
     try {
       await teamsAPI.join(team.id);
       toast.success('已加入团队');
-      window.location.reload();
+      await onJoined().catch(console.error);
+      onClose();
     } catch (err) {
       toast.error(getApiError(err, '加入失败'));
     } finally {
@@ -517,7 +535,7 @@ function TeamDetail({ team, currentUserId, onClose, onLeft }: {
       const res = await teamsAPI.analysis(team.id);
       setAnalysis(res);
       setShowAnalysis(true);
-    } catch (err) {
+    } catch {
       toast.error('分析加载失败');
     } finally {
       setAnalysisLoading(false);

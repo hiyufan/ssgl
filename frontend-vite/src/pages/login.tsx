@@ -6,7 +6,7 @@ import { ParticleCanvas } from '@/components/effects/particle-canvas';
 
 export function LoginPage() {
   const { login } = useAuthStore();
-  const { theme } = useAppStore();
+  const { theme, toggleTheme } = useAppStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -106,12 +106,7 @@ export function LoginPage() {
         <ParticleCanvas count={100} connectDist={140} mouseRadius={180} />
 
         {/* Theme toggle */}
-        <button onClick={() => {
-          const next = isDark ? 'light' : 'dark';
-          document.documentElement.setAttribute('data-theme', next);
-          localStorage.setItem('forge-theme', next);
-          window.location.reload();
-        }} style={{
+        <button onClick={toggleTheme} style={{
           position: 'absolute', top: 32, right: 32, zIndex: 10,
           width: 36, height: 36, borderRadius: 6,
           background: 'transparent', border: '1px solid var(--border)',
