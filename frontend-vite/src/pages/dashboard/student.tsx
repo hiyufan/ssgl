@@ -154,7 +154,7 @@ export function StudentDashboard() {
 
         <div data-bento className="card card-magnetic" style={{ padding: '20px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--teal-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--teal)' }}>◎</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--teal-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--teal)' }}><Icon name="users" size={16} /></div>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', textTransform: 'uppercase' }}>我的团队</span>
           </div>
           <div style={{ fontFamily: myTeam ? 'var(--font-body)' : 'var(--font-mono)', fontSize: myTeam ? 20 : 36, fontWeight: 700, color: 'var(--teal)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -165,11 +165,17 @@ export function StudentDashboard() {
 
         <div data-bento className="card card-magnetic" style={{ padding: '20px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--purple-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--purple)' }}>◇</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--purple-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--purple)' }}><Icon name="file" size={16} /></div>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', textTransform: 'uppercase' }}>预计划</span>
           </div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 36, fontWeight: 700, color: 'var(--purple)', lineHeight: 1 }}>
-            {myPlan ? (myPlan.status === 'approved' ? '✓' : (myPlan.status === 'submitted' || myPlan.status === 'under_review') ? '…' : '✎') : '—'}
+            {myPlan ? (
+              myPlan.status === 'approved'
+                ? <Icon name="check" size={30} />
+                : (myPlan.status === 'submitted' || myPlan.status === 'under_review')
+                  ? <Icon name="hourglass" size={30} />
+                  : <Icon name="edit" size={30} />
+            ) : '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
             {myPlan ? (myPlan.status === 'approved' ? '已通过' : (myPlan.status === 'submitted' || myPlan.status === 'under_review') ? '审核中' : '草稿') : '未创建'}
@@ -178,7 +184,7 @@ export function StudentDashboard() {
 
         <div data-bento className="card card-magnetic" style={{ padding: '20px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--green-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--green)' }}>★</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--green-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green)' }}><Icon name="star" size={16} /></div>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', textTransform: 'uppercase' }}>AI 评分</span>
           </div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 36, fontWeight: 700, color: 'var(--green)', lineHeight: 1 }}>
@@ -206,7 +212,7 @@ export function StudentDashboard() {
                     color: step.done ? 'var(--bg)' : step.active ? 'var(--amber)' : 'var(--text-3)',
                     flexShrink: 0,
                   }}>
-                    {step.done ? '✓' : i + 1}
+                    {step.done ? <Icon name="check" size={13} /> : i + 1}
                   </div>
                   {!isLast && (
                     <div style={{ flex: 1, height: 3, borderRadius: 2, background: step.done ? 'var(--text)' : 'var(--border)' }} />
@@ -229,7 +235,7 @@ export function StudentDashboard() {
             <SectionLabel label="AI 助手" />
           </div>
           <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-            <div style={{ fontSize: 28, marginBottom: 6, color: 'var(--amber)' }}>✦</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6, color: 'var(--amber)' }}><Icon name="sparkles" size={28} /></div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>需要帮助？</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>AI 助手随时为你服务</div>
           </div>
@@ -455,7 +461,7 @@ export function StudentDashboard() {
                   fontSize: 13, color: a.status === 'settled' ? 'var(--amber)' : 'var(--text-3)',
                   flexShrink: 0,
                 }}>
-                  {a.status === 'settled' ? '★' : '☆'}
+                  <Icon name={a.status === 'settled' ? 'star' : 'award'} size={13} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -515,7 +521,7 @@ export function StudentDashboard() {
         <div className="card anim-in" style={{ overflow: 'hidden', marginBottom: 24 }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <SectionLabel label="✨ AI 赛事推荐" />
+              <SectionLabel label="AI 赛事推荐" icon="sparkles" />
               <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 6 }}>基于你的预案智能匹配</span>
             </div>
             <button className="btn btn-outline btn-sm" onClick={() => navigate('/competitions')}>查看全部</button>
@@ -585,7 +591,10 @@ export function StudentDashboard() {
       {/* Loading indicator for recommendations */}
       {loadingRecs && recommendations.length === 0 && (
         <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-3)', fontSize: 12 }}>
-          ✨ AI 正在为你匹配最适合的赛事...
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="sparkles" size={13} />
+            AI 正在为你匹配最适合的赛事...
+          </span>
         </div>
       )}
     </div>

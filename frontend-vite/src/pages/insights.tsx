@@ -43,10 +43,10 @@ interface PlatformInsights {
 }
 
 const categoryConfig: Record<string, { icon: string; color: string; label: string }> = {
-  trend:        { icon: '📈', color: 'var(--teal)',   label: '趋势' },
-  risk:         { icon: '⚠️', color: 'var(--red)',    label: '风险' },
-  opportunity:  { icon: '💡', color: 'var(--amber)',  label: '机会' },
-  recommendation: { icon: '🎯', color: 'var(--purple)', label: '建议' },
+  trend:        { icon: 'trend', color: 'var(--teal)',   label: '趋势' },
+  risk:         { icon: 'alert', color: 'var(--red)',    label: '风险' },
+  opportunity:  { icon: 'lightbulb', color: 'var(--amber)',  label: '机会' },
+  recommendation: { icon: 'target', color: 'var(--purple)', label: '建议' },
 };
 
 const severityConfig: Record<string, { bg: string; border: string }> = {
@@ -56,10 +56,10 @@ const severityConfig: Record<string, { bg: string; border: string }> = {
 };
 
 const healthConfig: Record<string, { label: string; color: string; icon: string }> = {
-  excellent:        { label: '优秀', color: 'var(--teal)', icon: '🟢' },
-  good:             { label: '良好', color: 'var(--green)', icon: '🔵' },
-  fair:             { label: '一般', color: 'var(--amber)', icon: '🟡' },
-  needs_attention:  { label: '需关注', color: 'var(--red)', icon: '🔴' },
+  excellent:        { label: '优秀', color: 'var(--teal)', icon: 'circle' },
+  good:             { label: '良好', color: 'var(--green)', icon: 'circle' },
+  fair:             { label: '一般', color: 'var(--amber)', icon: 'circle' },
+  needs_attention:  { label: '需关注', color: 'var(--red)', icon: 'circle' },
 };
 
 const impactConfig: Record<string, { color: string; label: string }> = {
@@ -92,7 +92,7 @@ export function InsightsPage() {
   if (error || !data) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
-        <p>⚠️ {error || '无法加载洞察数据'}</p>
+        <p style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="alert" size={16} />{error || '无法加载洞察数据'}</p>
       </div>
     );
   }
@@ -104,7 +104,7 @@ export function InsightsPage() {
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <span style={{ fontSize: 28 }}>🧠</span>
+          <Icon name="brain" size={28} />
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>
             AI 数据洞察引擎
           </h1>
@@ -124,7 +124,7 @@ export function InsightsPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>{health.icon}</span>
+            <span style={{ color: health.color }}><Icon name={health.icon} size={20} /></span>
             <span style={{ fontSize: 16, fontWeight: 600, color: health.color }}>
               平台健康状态：{health.label}
             </span>
@@ -146,12 +146,12 @@ export function InsightsPage() {
         marginBottom: 24,
       }}>
         {[
-          { label: '赛事增长', value: data.trend_analysis.competitions_growth, suffix: '%', icon: '📊' },
-          { label: '团队增长', value: data.trend_analysis.teams_growth, suffix: '%', icon: '👥' },
-          { label: '奖项增长', value: data.trend_analysis.awards_growth, suffix: '%', icon: '🏆' },
-          { label: '进行中赛事', value: data.trend_analysis.active_competitions, suffix: '场', icon: '⚡' },
-          { label: '赛事完成率', value: data.trend_analysis.completion_rate, suffix: '%', icon: '✅' },
-          { label: 'AI 评审率', value: data.trend_analysis.ai_audit_rate, suffix: '%', icon: '🤖' },
+          { label: '赛事增长', value: data.trend_analysis.competitions_growth, suffix: '%', icon: 'chart' },
+          { label: '团队增长', value: data.trend_analysis.teams_growth, suffix: '%', icon: 'users' },
+          { label: '奖项增长', value: data.trend_analysis.awards_growth, suffix: '%', icon: 'trophy' },
+          { label: '进行中赛事', value: data.trend_analysis.active_competitions, suffix: '场', icon: 'zap' },
+          { label: '赛事完成率', value: data.trend_analysis.completion_rate, suffix: '%', icon: 'circle-check' },
+          { label: 'AI 评审率', value: data.trend_analysis.ai_audit_rate, suffix: '%', icon: 'bot' },
         ].map((m) => (
           <div key={m.label} style={{
             background: 'var(--surface)',
@@ -160,7 +160,7 @@ export function InsightsPage() {
             padding: '16px 18px',
             textAlign: 'center',
           }}>
-            <span style={{ fontSize: 24 }}>{m.icon}</span>
+            <Icon name={m.icon} size={24} />
             <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: '4px 0' }}>
               {typeof m.value === 'number' ? (m.value % 1 === 0 ? m.value : m.value.toFixed(1)) : m.value}
               <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-secondary)' }}>{m.suffix}</span>
@@ -179,7 +179,7 @@ export function InsightsPage() {
           </h2>
           {data.insights.length === 0 ? (
             <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
-              暂无异常洞察，平台运行正常 ✨
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="sparkles" size={14} />暂无异常洞察，平台运行正常</span>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -194,7 +194,7 @@ export function InsightsPage() {
                     padding: '14px 18px',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span>{cat.icon}</span>
+                      <span style={{ color: cat.color }}><Icon name={cat.icon} size={15} /></span>
                       <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 15 }}>{item.title}</span>
                       <span style={{
                         fontSize: 11,
@@ -210,7 +210,7 @@ export function InsightsPage() {
                     </p>
                     {item.action && (
                       <p style={{ margin: '8px 0 0', color: 'var(--teal)', fontSize: 13, fontStyle: 'italic' }}>
-                        💡 建议：{item.action}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="lightbulb" size={13} />建议：{item.action}</span>
                       </p>
                     )}
                     {item.metric !== undefined && item.metric !== 0 && (
@@ -232,7 +232,7 @@ export function InsightsPage() {
           </h2>
           {data.risk_matrix.length === 0 ? (
             <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
-              未发现显著风险 ✅
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="circle-check" size={14} />未发现显著风险</span>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -261,7 +261,7 @@ export function InsightsPage() {
                       <span>概率：<span style={{ color: likelihood.color, fontWeight: 600 }}>{likelihood.label}</span></span>
                     </div>
                     <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
-                      🛡️ 缓解措施：{risk.mitigation}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="shield-check" size={13} />缓解措施：{risk.mitigation}</span>
                     </p>
                   </div>
                 );
@@ -285,7 +285,7 @@ export function InsightsPage() {
               padding: '14px 18px',
             }}>
               <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 15, marginBottom: 6 }}>
-                🎯 {rec.title}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="target" size={15} />{rec.title}</span>
               </div>
               <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6 }}>
                 {rec.description}
@@ -315,7 +315,7 @@ export function InsightsPage() {
                 padding: '14px 18px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>📅 {burst.period}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="calendar" size={14} />{burst.period}</span>
                   <span style={{
                     fontSize: 13,
                     fontWeight: 700,

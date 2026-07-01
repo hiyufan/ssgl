@@ -38,8 +38,6 @@ export function LeaderboardPage() {
     );
   }
 
-  const medals = ['🥇', '🥈', '🥉'];
-
   return (
     <div className="forge-page">
       <div style={{ marginBottom: 28 }}>
@@ -68,7 +66,7 @@ export function LeaderboardPage() {
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
                 width: 160,
               }}>
-                <span style={{ fontSize: 32 }}>{medals[rank - 1]}</span>
+                <span style={{ color: colors[rank - 1] }}><Icon name="medal" size={32} /></span>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', textAlign: 'center' }}>
                   {entry.team_name}
                 </div>
@@ -120,7 +118,7 @@ export function LeaderboardPage() {
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {entry.rank <= 3 ? (
-                      <span style={{ fontSize: 18 }}>{medals[entry.rank - 1]}</span>
+                      <span style={{ color: entry.rank === 1 ? 'var(--amber)' : entry.rank === 2 ? 'var(--teal)' : 'var(--purple)' }}><Icon name="medal" size={18} /></span>
                     ) : (
                       <span style={{
                         fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700,

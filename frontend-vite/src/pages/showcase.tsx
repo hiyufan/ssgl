@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { statsAPI } from '@/services/api';
 import type { ShowcaseEntry, ShowcaseData } from '@/types';
+import { Icon } from '@/components/ui/icon';
 
 const typeLabels: Record<string, string> = {
   hackathon: '黑客松',
@@ -12,12 +13,7 @@ const typeLabels: Record<string, string> = {
   data_science: '数据科学赛',
 };
 
-const rankEmoji = (rank: number) => {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
-  return `#${rank}`;
-};
+const rankIcon = (rank: number) => (rank <= 3 ? 'medal' : null);
 
 const rankColor = (rank: number) => {
   if (rank === 1) return 'var(--amber)';
@@ -85,7 +81,10 @@ export function ShowcasePage() {
           </span>
         </div>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>
-          🏆 成果展示墙
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="trophy" size={24} />
+            成果展示墙
+          </span>
         </h1>
         <p style={{ color: 'var(--text-3)', fontSize: 14, marginTop: 6 }}>
           赛事获奖团队与优秀成果展示
@@ -95,10 +94,10 @@ export function ShowcasePage() {
       {/* Stats cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
         {[
-          { label: '获奖总数', value: data.total_awards, icon: '🏅', color: 'var(--amber)' },
-          { label: '奖金总额', value: `¥${data.total_prize.toLocaleString()}`, icon: '💰', color: '#10b981' },
-          { label: '获奖团队', value: data.total_teams, icon: '👥', color: '#6366f1' },
-          { label: '覆盖赛事', value: data.comp_count, icon: '🎯', color: '#f59e0b' },
+          { label: '获奖总数', value: data.total_awards, icon: 'award', color: 'var(--amber)' },
+          { label: '奖金总额', value: `¥${data.total_prize.toLocaleString()}`, icon: 'coins', color: '#10b981' },
+          { label: '获奖团队', value: data.total_teams, icon: 'users', color: '#6366f1' },
+          { label: '覆盖赛事', value: data.comp_count, icon: 'target', color: '#f59e0b' },
         ].map((s, i) => (
           <div key={i} style={{
             background: 'var(--surface-1)',
@@ -107,7 +106,7 @@ export function ShowcasePage() {
             padding: '20px 16px',
             textAlign: 'center',
           }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', color: s.color, marginBottom: 8 }}><Icon name={s.icon} size={28} /></div>
             <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{s.label}</div>
           </div>
@@ -211,7 +210,7 @@ export function ShowcasePage() {
                       }}
                     >
                       <span style={{ fontSize: 22, minWidth: 32, textAlign: 'center' }}>
-                        {rankEmoji(award.rank)}
+                        {rankIcon(award.rank) ? <Icon name={rankIcon(award.rank)!} size={22} /> : `#${award.rank}`}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -242,7 +241,7 @@ export function ShowcasePage() {
 
       {filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🏆</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, color: 'var(--amber)' }}><Icon name="trophy" size={48} /></div>
           <div>暂无获奖数据</div>
         </div>
       )}

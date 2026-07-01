@@ -123,12 +123,22 @@ function StatCard({ label, value, icon, color = 'var(--teal)', sub }: { label: s
       position: 'relative',
       overflow: 'hidden',
     }}>
-      <div style={{ position: 'absolute', top: -20, right: -20, fontSize: 80, opacity: 0.05, transform: 'rotate(-15deg)' }}>{icon}</div>
+      <div style={{ position: 'absolute', top: -20, right: -20, opacity: 0.05, transform: 'rotate(-15deg)', color }}>
+        <Icon name={icon} size={80} />
+      </div>
       <div style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 500 }}>{label}</div>
       <div style={{ fontSize: 32, fontWeight: 700, color, letterSpacing: -1 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{sub}</div>}
     </div>
   );
+}
+
+function highlightIcon(h: AnnualReport['highlights'][number]) {
+  if (h.title.includes('规模')) return 'building';
+  if (h.title.includes('参与')) return 'target';
+  if (h.title.includes('奖金')) return 'coins';
+  if (h.title.includes('结算')) return 'circle-check';
+  return h.type === 'award' ? 'award' : 'sparkles';
 }
 
 function ProgressBar({ value, max, color = 'var(--teal)' }: { value: number; max: number; color?: string }) {
@@ -251,7 +261,7 @@ export function AnnualReportPage() {
       {/* Header */}
       <div data-bento style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <span style={{ fontSize: 36 }}>📊</span>
+          <Icon name="chart" size={36} />
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: -0.5 }}>
               {data.year} 平台年度报告
@@ -266,7 +276,7 @@ export function AnnualReportPage() {
       {/* Highlights */}
       {data.highlights.length > 0 && (
         <div data-bento style={{ marginBottom: 24 }}>
-          <SectionLabel>🌟 亮点成就</SectionLabel>
+          <SectionLabel icon="sparkles">亮点成就</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginTop: 12 }}>
             {data.highlights.map((h, i) => (
               <div key={i} style={{
@@ -278,7 +288,7 @@ export function AnnualReportPage() {
                 alignItems: 'center',
                 gap: 12,
               }}>
-                <span style={{ fontSize: 28 }}>{h.icon}</span>
+                <Icon name={highlightIcon(h)} size={28} />
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{h.title}</div>
                   <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>{h.details}</div>
@@ -291,20 +301,20 @@ export function AnnualReportPage() {
 
       {/* Platform Overview */}
       <div data-bento style={{ marginBottom: 24 }}>
-        <SectionLabel>🏗️ 平台概览</SectionLabel>
+        <SectionLabel icon="building">平台概览</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 12 }}>
-          <StatCard label="总用户数" value={p.total_users} icon="👥" color="var(--teal)" sub={`${p.total_students} 学生 / ${p.total_teachers} 教师`} />
-          <StatCard label="赛事总数" value={p.total_competitions} icon="🏆" color="var(--amber)" sub={`${p.active_competitions} 进行中`} />
-          <StatCard label="团队总数" value={p.total_teams} icon="🤝" color="var(--purple)" sub={`平均 ${p.avg_team_size.toFixed(1)} 人/队`} />
-          <StatCard label="奖项总数" value={p.total_awards} icon="🥇" color="var(--green)" sub={`${p.settled_awards} 已结算`} />
-          <StatCard label="预案总数" value={p.total_pre_plans} icon="📋" color="var(--amber)" />
-          <StatCard label="学生参与率" value={`${p.student_participation.toFixed(1)}%`} icon="🎯" color="var(--teal)" />
+          <StatCard label="总用户数" value={p.total_users} icon="users" color="var(--teal)" sub={`${p.total_students} 学生 / ${p.total_teachers} 教师`} />
+          <StatCard label="赛事总数" value={p.total_competitions} icon="trophy" color="var(--amber)" sub={`${p.active_competitions} 进行中`} />
+          <StatCard label="团队总数" value={p.total_teams} icon="handshake" color="var(--purple)" sub={`平均 ${p.avg_team_size.toFixed(1)} 人/队`} />
+          <StatCard label="奖项总数" value={p.total_awards} icon="medal" color="var(--green)" sub={`${p.settled_awards} 已结算`} />
+          <StatCard label="预案总数" value={p.total_pre_plans} icon="clipboard-list" color="var(--amber)" />
+          <StatCard label="学生参与率" value={`${p.student_participation.toFixed(1)}%`} icon="target" color="var(--teal)" />
         </div>
       </div>
 
       {/* Competition Breakdown */}
       <div data-bento style={{ marginBottom: 24 }}>
-        <SectionLabel>🏆 赛事分析</SectionLabel>
+        <SectionLabel icon="trophy">赛事分析</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 12 }}>
           <div>
             <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12 }}>按类型分布</div>
@@ -339,7 +349,7 @@ export function AnnualReportPage() {
 
       {/* Student Stats */}
       <div data-bento style={{ marginBottom: 24 }}>
-        <SectionLabel>🎓 学生数据</SectionLabel>
+        <SectionLabel icon="graduation">学生数据</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginTop: 12 }}>
           <div>
             <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 8 }}>组队率</div>
@@ -366,20 +376,20 @@ export function AnnualReportPage() {
 
       {/* Awards */}
       <div data-bento style={{ marginBottom: 24 }}>
-        <SectionLabel>🥇 奖项统计</SectionLabel>
+        <SectionLabel icon="medal">奖项统计</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginTop: 12 }}>
-          <StatCard label="奖项总数" value={a.total} icon="🏅" />
-          <StatCard label="已结算" value={a.settled} icon="✅" color="var(--green)" />
-          <StatCard label="待确认" value={a.pending} icon="⏳" color="var(--amber)" />
-          <StatCard label="奖金总额" value={`¥${a.total_prize.toLocaleString()}`} icon="💰" color="var(--amber)" />
-          <StatCard label="平均奖金" value={`¥${a.avg_prize.toLocaleString()}`} icon="📊" />
-          <StatCard label="前三名" value={a.top_rank_count} icon="🏆" color="var(--amber)" />
+          <StatCard label="奖项总数" value={a.total} icon="award" />
+          <StatCard label="已结算" value={a.settled} icon="circle-check" color="var(--green)" />
+          <StatCard label="待确认" value={a.pending} icon="hourglass" color="var(--amber)" />
+          <StatCard label="奖金总额" value={`¥${a.total_prize.toLocaleString()}`} icon="coins" color="var(--amber)" />
+          <StatCard label="平均奖金" value={`¥${a.avg_prize.toLocaleString()}`} icon="chart" />
+          <StatCard label="前三名" value={a.top_rank_count} icon="trophy" color="var(--amber)" />
         </div>
       </div>
 
       {/* Monthly Trends */}
       <div data-bento style={{ marginBottom: 24 }}>
-        <SectionLabel>📈 月度趋势</SectionLabel>
+        <SectionLabel icon="trend">月度趋势</SectionLabel>
         <div style={{ marginTop: 12, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', gap: 20, marginBottom: 12 }}>
             {[
@@ -407,7 +417,7 @@ export function AnnualReportPage() {
       {/* Top Competitions */}
       {data.top_competitions.length > 0 && (
         <div data-bento style={{ marginBottom: 24 }}>
-          <SectionLabel>🔥 热门赛事 TOP 10</SectionLabel>
+          <SectionLabel icon="flame">热门赛事 TOP 10</SectionLabel>
           <div style={{ marginTop: 12, overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
@@ -424,7 +434,7 @@ export function AnnualReportPage() {
                 {data.top_competitions.map((comp, i) => (
                   <tr key={comp.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '10px 12px', fontWeight: 700, color: i < 3 ? 'var(--amber)' : 'var(--text-3)' }}>
-                      {i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}
+                      {i < 3 ? <Icon name="medal" size={16} /> : i + 1}
                     </td>
                     <td style={{ padding: '10px 12px', fontWeight: 600 }}>{comp.title}</td>
                     <td style={{ padding: '10px 12px' }}>
@@ -454,7 +464,7 @@ export function AnnualReportPage() {
       {/* Top Teams */}
       {data.top_teams.length > 0 && (
         <div data-bento style={{ marginBottom: 24 }}>
-          <SectionLabel>⭐ 优秀团队 TOP 10</SectionLabel>
+          <SectionLabel icon="star">优秀团队 TOP 10</SectionLabel>
           <div style={{ marginTop: 12, overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
@@ -471,7 +481,7 @@ export function AnnualReportPage() {
                 {data.top_teams.map((team, i) => (
                   <tr key={team.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '10px 12px', fontWeight: 700, color: i < 3 ? 'var(--amber)' : 'var(--text-3)' }}>
-                      {i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}
+                      {i < 3 ? <Icon name="medal" size={16} /> : i + 1}
                     </td>
                     <td style={{ padding: '10px 12px', fontWeight: 600 }}>{team.name}</td>
                     <td style={{ padding: '10px 12px', color: 'var(--text-2)' }}>{team.comp_title}</td>

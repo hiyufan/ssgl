@@ -400,7 +400,10 @@ export function CompetitionsPage() {
             <div style={{ marginTop: 12, padding: 12, background: 'var(--surface-2)', borderRadius: 8, maxHeight: 150, overflow: 'auto' }}>
               {importResult.errors.map((e, i) => (
                 <p key={i} style={{ fontSize: 12, color: 'var(--red)', margin: '0 0 4px' }}>
-                  ❌ #{e.index + 1} {e.title}: {e.message}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Icon name="circle-x" size={12} />
+                    #{e.index + 1} {e.title}: {e.message}
+                  </span>
                 </p>
               ))}
             </div>
@@ -752,7 +755,10 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
             const statusColor: Record<string, string> = { completed: 'var(--green)', in_progress: 'var(--amber)', skipped: 'var(--text-3)', pending: 'var(--border-2)' };
             return (
               <div style={{ marginBottom: 14, padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginBottom: 10, letterSpacing: '0.03em' }}>📊 时间线</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginBottom: 10, letterSpacing: '0.03em', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <Icon name="chart" size={12} />
+                  时间线
+                </div>
                 {/* Time axis */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-3)', marginBottom: 6, padding: '0 2px' }}>
                   <span>{new Date(minDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}</span>
@@ -772,9 +778,9 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
                           position: 'absolute', left: `${left}%`, width: `${width}%`, height: '100%',
                           borderRadius: 4, background: statusColor[ms.status] || 'var(--border-2)',
                           opacity: isDone ? 0.6 : 1, minWidth: 12,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
                         }}>
-                          {isDone && <span style={{ fontSize: 9, color: '#fff' }}>✓</span>}
+                          {isDone && <Icon name="check" size={9} />}
                         </div>
                       </div>
                     </div>
@@ -820,9 +826,9 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
                   <button onClick={() => toggleMsStatus(ms)} style={{
                     width: 20, height: 20, borderRadius: 6, border: `2px solid ${MILESTONE_STATUS_COLORS[ms.status]}`,
                     background: ms.status === 'completed' ? 'var(--green)' : 'transparent',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff',
                   }}>
-                    {ms.status === 'completed' && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+                    {ms.status === 'completed' && <Icon name="check" size={11} />}
                   </button>
                   <Icon name={MILESTONE_TYPE_ICONS[ms.type] || 'star'} size={14} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -892,7 +898,7 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
                     padding: '10px 14px', borderRadius: 10, background: colors.bg,
                     border: `1px solid ${colors.border}`, position: 'relative',
                   }}>
-                    {note.pinned && <span style={{ position: 'absolute', top: 6, right: 8, fontSize: 10, color: colors.accent }}>📌</span>}
+                    {note.pinned && <span style={{ position: 'absolute', top: 6, right: 8, color: colors.accent }}><Icon name="pin" size={10} /></span>}
                     {isEditing ? (
                       <div>
                         <input className="forge-input" value={editForm.title} onChange={e => setEditForm(f => ({...f, title: e.target.value}))} style={{ marginBottom: 6, fontSize: 13 }} />
@@ -917,7 +923,7 @@ function CompetitionDetail({ comp, onClose, canManage }: { comp: Competition | n
                         <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
                           <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{new Date(note.updated_at).toLocaleDateString('zh-CN')}</span>
                           <button onClick={() => togglePin(note)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2, fontSize: 11 }} title={note.pinned ? '取消置顶' : '置顶'}>
-                            {note.pinned ? '📌' : '📍'}
+                            <Icon name={note.pinned ? 'pin' : 'map-pin'} size={12} />
                           </button>
                           <button onClick={() => { setEditNoteId(note.id); setEditForm({ title: note.title, content: note.content, color: note.color }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2 }} title="编辑">
                             <Icon name="edit" size={12} />

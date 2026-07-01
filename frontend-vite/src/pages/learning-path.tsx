@@ -3,22 +3,23 @@ import { useAuthStore } from '@/stores/auth';
 import { learningPathAPI } from '@/services/api';
 import type { LearningPath, PathPhase, SkillDimension } from '@/types';
 import { SectionLabel, Spinner } from '@/components/ui/page-helpers';
+import { Icon } from '@/components/ui/icon';
 
 const LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  beginner:     { label: '入门', color: 'var(--teal)', bg: 'var(--teal-bg)', icon: '🌱' },
-  intermediate: { label: '进阶', color: 'var(--amber)', bg: 'var(--amber-bg)', icon: '🔥' },
-  advanced:     { label: '熟练', color: 'var(--purple)', bg: 'var(--purple-bg)', icon: '⚡' },
-  expert:       { label: '精通', color: 'var(--green)', bg: 'var(--green-bg)', icon: '🏆' },
+  beginner:     { label: '入门', color: 'var(--teal)', bg: 'var(--teal-bg)', icon: 'sprout' },
+  intermediate: { label: '进阶', color: 'var(--amber)', bg: 'var(--amber-bg)', icon: 'flame' },
+  advanced:     { label: '熟练', color: 'var(--purple)', bg: 'var(--purple-bg)', icon: 'zap' },
+  expert:       { label: '精通', color: 'var(--green)', bg: 'var(--green-bg)', icon: 'trophy' },
 };
 
-const PHASE_CONFIG: Record<string, { color: string; bg: string; icon: string }> = {
-  completed: { color: 'var(--green)', bg: 'var(--green-bg)', icon: '✅' },
-  current:   { color: 'var(--amber)', bg: 'var(--amber-bg)', icon: '📍' },
-  upcoming:  { color: 'var(--text-3)', bg: 'var(--surface-2)', icon: '⏳' },
+const PHASE_CONFIG: Record<string, { color: string; bg: string; icon: string; label: string }> = {
+  completed: { color: 'var(--green)', bg: 'var(--green-bg)', icon: 'circle-check', label: '已完成' },
+  current:   { color: 'var(--amber)', bg: 'var(--amber-bg)', icon: 'map-pin', label: '当前' },
+  upcoming:  { color: 'var(--text-3)', bg: 'var(--surface-2)', icon: 'hourglass', label: '待开始' },
 };
 
 const TASK_ICONS: Record<string, string> = {
-  competition: '🏆', skill: '📚', project: '📋', study: '📖',
+  competition: 'trophy', skill: 'book-open', project: 'clipboard-list', study: 'book',
 };
 
 const TASK_STATUS: Record<string, { color: string; label: string }> = {
@@ -32,7 +33,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 const RESOURCE_ICONS: Record<string, string> = {
-  article: '📄', video: '🎬', course: '🎓', tool: '🔧',
+  article: 'file-text', video: 'play', course: 'graduation', tool: 'wrench',
 };
 
 function SkillRadar({ skills }: { skills: SkillDimension[] }) {
@@ -124,7 +125,7 @@ export function LearningPathPage() {
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <span style={{ fontSize: 28 }}>{levelCfg.icon}</span>
+          <span style={{ color: levelCfg.color }}><Icon name={levelCfg.icon} size={28} /></span>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--text-1)' }}>
               {path.student_name}的学习路径
@@ -176,10 +177,10 @@ export function LearningPathPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
                       <div style={{
                         width: 28, height: 28, borderRadius: '50%', background: cfg.bg,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: cfg.color,
                         border: phase.status === 'current' ? `2px solid ${cfg.color}` : 'none',
                       }}>
-                        {cfg.icon}
+                        <Icon name={cfg.icon} size={14} />
                       </div>
                       {idx < path.phases.length - 1 && (
                         <div style={{
@@ -222,7 +223,7 @@ export function LearningPathPage() {
                               display: 'flex', alignItems: 'center', gap: 8, fontSize: 12,
                               padding: '4px 8px', borderRadius: 6, background: task.status === 'done' ? 'var(--green-bg)' : 'transparent',
                             }}>
-                              <span>{TASK_ICONS[task.type]}</span>
+                              <Icon name={TASK_ICONS[task.type] || 'file'} size={13} />
                               <span style={{
                                 flex: 1, color: task.status === 'done' ? 'var(--text-3)' : 'var(--text-1)',
                                 textDecoration: task.status === 'done' ? 'line-through' : 'none',
@@ -257,7 +258,7 @@ export function LearningPathPage() {
                     <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 8, background: 'var(--teal-bg)', color: 'var(--teal)' }}>
                       {goal.category}
                     </span>
-                    {goal.progress >= 100 && <span style={{ color: 'var(--green)', fontSize: 14 }}>✓</span>}
+                    {goal.progress >= 100 && <span style={{ color: 'var(--green)' }}><Icon name="check" size={14} /></span>}
                   </div>
                   <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1)', marginBottom: 4 }}>{goal.title}</div>
                   <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 8px', lineHeight: 1.4 }}>{goal.description}</p>
@@ -290,7 +291,7 @@ export function LearningPathPage() {
                   onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--teal)')}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
                 >
-                  <div style={{ fontSize: 20, marginBottom: 6 }}>{RESOURCE_ICONS[res.type]}</div>
+                  <div style={{ color: 'var(--teal)', marginBottom: 6 }}><Icon name={RESOURCE_ICONS[res.type] || 'file'} size={20} /></div>
                   <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-1)', marginBottom: 4 }}>{res.title}</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)' }}>
                     <span>{res.category}</span>

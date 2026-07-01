@@ -247,7 +247,7 @@ export function TeamsPage() {
       />
 
       {/* Teammate Matching Modal */}
-      <Modal open={matchOpen} onClose={() => setMatchOpen(false)} title="🤝 智能找队友" width={580}>
+      <Modal open={matchOpen} onClose={() => setMatchOpen(false)} title="智能找队友" titleIcon="handshake" width={580}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Select
@@ -278,9 +278,9 @@ export function TeamsPage() {
                       {m.dept && `${m.dept} · `}{m.reason}
                     </div>
                     <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11, color: 'var(--text-3)' }}>
-                      {m.team_count > 0 && <span>🏅 {m.team_count} 次参赛</span>}
-                      {m.award_count > 0 && <span>🏆 {m.award_count} 个奖项</span>}
-                      {m.pre_plan_count > 0 && <span>📋 {m.pre_plan_count} 份预案</span>}
+                      {m.team_count > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="award" size={11} />{m.team_count} 次参赛</span>}
+                      {m.award_count > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="trophy" size={11} />{m.award_count} 个奖项</span>}
+                      {m.pre_plan_count > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="clipboard-list" size={11} />{m.pre_plan_count} 份预案</span>}
                     </div>
                   </div>
                   <div style={{
@@ -453,8 +453,8 @@ function TeamDetail({ team, currentUserId, onClose, onLeft, onUpdated, onJoined 
         {showAnalysis && analysis && (
           <div style={{ padding: 16, background: 'var(--surface-2)', borderRadius: 12, border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>📊 团队能力分析</div>
-              <button onClick={() => setShowAnalysis(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 16 }}>×</button>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="chart" size={15} />团队能力分析</div>
+              <button onClick={() => setShowAnalysis(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', display: 'flex', padding: 2 }}><Icon name="x" size={14} /></button>
             </div>
 
             {/* Overall Score */}
@@ -484,7 +484,7 @@ function TeamDetail({ team, currentUserId, onClose, onLeft, onUpdated, onJoined 
             {/* Strengths */}
             {analysis.strengths?.length > 0 && (
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--green)', marginBottom: 6 }}>✅ 优势</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--green)', marginBottom: 6, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="circle-check" size={12} />优势</div>
                 {analysis.strengths.map((s: string, i: number) => (
                   <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', padding: '4px 0', paddingLeft: 12 }}>{s}</div>
                 ))}
@@ -494,7 +494,7 @@ function TeamDetail({ team, currentUserId, onClose, onLeft, onUpdated, onJoined 
             {/* Gaps */}
             {analysis.gaps?.length > 0 && (
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--amber)', marginBottom: 6 }}>⚠️ 短板</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--amber)', marginBottom: 6, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="alert" size={12} />短板</div>
                 {analysis.gaps.map((g: string, i: number) => (
                   <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', padding: '4px 0', paddingLeft: 12 }}>{g}</div>
                 ))}
@@ -504,7 +504,7 @@ function TeamDetail({ team, currentUserId, onClose, onLeft, onUpdated, onJoined 
             {/* Recommendations */}
             {analysis.recommendations?.length > 0 && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--teal)', marginBottom: 6 }}>💡 建议</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--teal)', marginBottom: 6, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="lightbulb" size={12} />建议</div>
                 {analysis.recommendations.map((r: string, i: number) => (
                   <div key={i} style={{ fontSize: 12, color: 'var(--text-2)', padding: '4px 0', paddingLeft: 12 }}>{r}</div>
                 ))}

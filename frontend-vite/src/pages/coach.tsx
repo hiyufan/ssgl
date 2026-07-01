@@ -121,7 +121,7 @@ export function CoachPage() {
         onExpired: () => { setStreaming(false); toast.error('答辩会话已过期，请重新开始'); resetToSetup(); },
         onError: (msg) => {
           setStreaming(false);
-          setTranscript((t) => [...t, { type: 'reaction', persona: currentQuestion.persona, text: `⚠️ ${msg}` }]);
+          setTranscript((t) => [...t, { type: 'reaction', persona: currentQuestion.persona, text: msg }]);
           setReaction('');
         },
       },
