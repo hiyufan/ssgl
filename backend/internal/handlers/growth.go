@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"sort"
 	"time"
@@ -21,15 +22,35 @@ func NewGrowthHandler() *GrowthHandler {
 
 // GrowthProfile is the top-level response for a student's growth profile.
 type GrowthProfile struct {
-	StudentID      uint               `json:"student_id"`
-	StudentName    string             `json:"student_name"`
-	GeneratedAt    time.Time          `json:"generated_at"`
-	Summary        GrowthSummary      `json:"summary"`
-	Competitions   []GrowthComp       `json:"competitions"`
-	Awards         []GrowthAward      `json:"awards"`
-	Skills         []SkillEntry       `json:"skills"`
-	Timeline       []GrowthEvent      `json:"timeline"`
-	Recommendations []string          `json:"recommendations"`
+	StudentID       uint          `json:"student_id"`
+	StudentName     string        `json:"student_name"`
+	GeneratedAt     time.Time     `json:"generated_at"`
+	Summary         GrowthSummary `json:"summary"`
+	Competitions    []GrowthComp  `json:"competitions"`
+	Awards          []GrowthAward `json:"awards"`
+	Skills          []SkillEntry  `json:"skills"`
+	Timeline        []GrowthEvent `json:"timeline"`
+	Recommendations []string      `json:"recommendations"`
+}
+
+func (p GrowthProfile) MarshalJSON() ([]byte, error) {
+	type Alias GrowthProfile
+	if p.Competitions == nil {
+		p.Competitions = []GrowthComp{}
+	}
+	if p.Awards == nil {
+		p.Awards = []GrowthAward{}
+	}
+	if p.Skills == nil {
+		p.Skills = []SkillEntry{}
+	}
+	if p.Timeline == nil {
+		p.Timeline = []GrowthEvent{}
+	}
+	if p.Recommendations == nil {
+		p.Recommendations = []string{}
+	}
+	return json.Marshal(Alias(p))
 }
 
 // GrowthSummary provides aggregate metrics.
@@ -57,12 +78,12 @@ type GrowthComp struct {
 
 // GrowthAward is an award entry in the growth profile.
 type GrowthAward struct {
-	ID            uint    `json:"id"`
-	CompetitionID uint    `json:"competition_id"`
-	CompTitle     string  `json:"comp_title"`
-	RankName      string  `json:"rank_name"`
-	PrizeAmount   float64 `json:"prize_amount"`
-	Status        string  `json:"status"`
+	ID            uint       `json:"id"`
+	CompetitionID uint       `json:"competition_id"`
+	CompTitle     string     `json:"comp_title"`
+	RankName      string     `json:"rank_name"`
+	PrizeAmount   float64    `json:"prize_amount"`
+	Status        string     `json:"status"`
 	SettledAt     *time.Time `json:"settled_at,omitempty"`
 }
 
@@ -113,9 +134,14 @@ func (h *GrowthHandler) GetGrowthProfile(c *gin.Context) {
 	}
 
 	profile := GrowthProfile{
-		StudentID:   studentID,
-		StudentName: student.Name,
-		GeneratedAt: time.Now(),
+		StudentID:       studentID,
+		StudentName:     student.Name,
+		GeneratedAt:     time.Now(),
+		Competitions:    []GrowthComp{},
+		Awards:          []GrowthAward{},
+		Skills:          []SkillEntry{},
+		Timeline:        []GrowthEvent{},
+		Recommendations: []string{},
 	}
 
 	// ── Competitions via registrations ──────────────────────────────────
@@ -205,12 +231,12 @@ func (h *GrowthHandler) GetGrowthProfile(c *gin.Context) {
 
 	// ── Skills (derived from competition types) ─────────────────────────
 	typeSkillMap := map[string]string{
-		"hackathon":    "创新实践",
-		"programming":  "编程能力",
-		"business":     "商业思维",
-		"design":       "设计能力",
-		"research":     "科研能力",
-		"ai":           "人工智能",
+		"hackathon":   "创新实践",
+		"programming": "编程能力",
+		"business":    "商业思维",
+		"design":      "设计能力",
+		"research":    "科研能力",
+		"ai":          "人工智能",
 	}
 
 	maxCount := 1

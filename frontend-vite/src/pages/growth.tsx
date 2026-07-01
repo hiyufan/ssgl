@@ -19,6 +19,43 @@ const TIMELINE_ICONS: Record<string, string> = {
   competition: '🏆', team: '👥', preplan: '📋', award: '🥇', milestone: '📌',
 };
 
+type GrowthProfilePayload = Partial<Omit<GrowthProfile, 'summary' | 'competitions' | 'awards' | 'skills' | 'timeline' | 'recommendations'>> & {
+  summary?: Partial<GrowthProfile['summary']> | null;
+  competitions?: GrowthProfile['competitions'] | null;
+  awards?: GrowthProfile['awards'] | null;
+  skills?: GrowthProfile['skills'] | null;
+  timeline?: GrowthProfile['timeline'] | null;
+  recommendations?: GrowthProfile['recommendations'] | null;
+};
+
+const EMPTY_SUMMARY: GrowthProfile['summary'] = {
+  total_competitions: 0,
+  total_awards: 0,
+  total_teams: 0,
+  total_pre_plans: 0,
+  award_rate: 0,
+  participation_days: 0,
+  top_competition_type: '',
+};
+
+function asArray<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeGrowthProfile(data: GrowthProfilePayload): GrowthProfile {
+  return {
+    student_id: data.student_id ?? 0,
+    student_name: data.student_name ?? '',
+    generated_at: data.generated_at ?? new Date().toISOString(),
+    summary: { ...EMPTY_SUMMARY, ...(data.summary ?? {}) },
+    competitions: asArray(data.competitions),
+    awards: asArray(data.awards),
+    skills: asArray(data.skills),
+    timeline: asArray(data.timeline),
+    recommendations: asArray(data.recommendations),
+  };
+}
+
 function RadarChart({ skills }: { skills: Array<{ name: string; score: number }> }) {
   const size = 220;
   const cx = size / 2;
@@ -34,13 +71,6 @@ function RadarChart({ skills }: { skills: Array<{ name: string; score: number }>
   };
 
   const rings = [0.25, 0.5, 0.75, 1];
-  const dataPath = skills
-    .map((s, i) => {
-      const r = (s.score / 100) * maxR;
-      const p = getPoint(i, r);
-      return `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`;
-    })
-    .join(' ') + 'Z';
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -86,7 +116,7 @@ export function GrowthPage() {
   useEffect(() => {
     if (!user) return;
     growthAPI.getProfile(user.id)
-      .then(data => setProfile(data))
+      .then(data => setProfile(normalizeGrowthProfile(data)))
       .catch(e => setError(e?.response?.data?.error || '加载失败'))
       .finally(() => setLoading(false));
   }, [user]);

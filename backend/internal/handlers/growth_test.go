@@ -134,6 +134,34 @@ func TestGrowthProfile_JSON(t *testing.T) {
 	}
 }
 
+func TestGrowthProfile_EmptyCollectionsMarshalAsArrays(t *testing.T) {
+	profile := GrowthProfile{
+		StudentID:   5,
+		StudentName: "张明",
+		GeneratedAt: time.Now(),
+	}
+
+	data, err := json.Marshal(profile)
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+
+	for _, field := range []string{"competitions", "awards", "skills", "timeline", "recommendations"} {
+		items, ok := decoded[field].([]any)
+		if !ok {
+			t.Fatalf("expected %s to be an array, got %T (%v)", field, decoded[field], decoded[field])
+		}
+		if len(items) != 0 {
+			t.Fatalf("expected %s to be empty, got %d items", field, len(items))
+		}
+	}
+}
+
 func TestGrowthComp_Fields(t *testing.T) {
 	comp := GrowthComp{
 		ID:        42,
