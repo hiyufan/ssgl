@@ -8,6 +8,8 @@ import type {
   LeaderboardEntry, MatchResult, TeamInvite, Milestone,
   CompetitionRegistration, TeamAnalysis, CompetitionSubscription,
   CompareResponse,
+  CompetitionStat, TrendPoint, TypeDistributionItem, ActivityItem,
+  StudentStats, EngagementStats, CompetitionProgress, KanbanData,
 } from '@/types';
 
 // API Base URLs (configurable via Vite env; sensible dev defaults).
@@ -458,8 +460,8 @@ export const statsAPI = {
     return response.data;
   },
 
-  competitions: async (): Promise<Record<string, unknown>> => {
-    const response = await api.get('/stats/competitions');
+  competitions: async (): Promise<{ competitions: CompetitionStat[] }> => {
+    const response = await api.get<{ competitions: CompetitionStat[] }>('/stats/competitions');
     return response.data;
   },
 
@@ -488,30 +490,30 @@ export const statsAPI = {
     return response.data;
   },
 
-  trends: async (): Promise<Record<string, unknown>> => {
-    const response = await api.get('/stats/trends');
+  trends: async (): Promise<{ trends: TrendPoint[]; total: number }> => {
+    const response = await api.get<{ trends: TrendPoint[]; total: number }>('/stats/trends');
     return response.data;
   },
 
-  students: async (): Promise<Record<string, unknown>> => {
-    const response = await api.get('/stats/students');
+  students: async (): Promise<StudentStats> => {
+    const response = await api.get<StudentStats>('/stats/students');
     return response.data;
   },
 
-  progress: async (): Promise<Record<string, unknown>> => {
-    const response = await api.get('/stats/progress');
+  progress: async (): Promise<{ competitions: CompetitionProgress[] }> => {
+    const response = await api.get<{ competitions: CompetitionProgress[] }>('/stats/progress');
     return response.data;
   },
 
-  typeDistribution: async (): Promise<Record<string, unknown>> => {
-    const response = await api.get('/stats/type-distribution');
+  typeDistribution: async (): Promise<{ types: TypeDistributionItem[] }> => {
+    const response = await api.get<{ types: TypeDistributionItem[] }>('/stats/type-distribution');
     return response.data;
   },
 
-  recentActivity: async (limit?: number): Promise<Record<string, unknown>> => {
+  recentActivity: async (limit?: number): Promise<{ activities: ActivityItem[]; total: number }> => {
     const params: Record<string, string> = {};
     if (limit) params.limit = String(limit);
-    const response = await api.get('/stats/recent-activity', { params });
+    const response = await api.get<{ activities: ActivityItem[]; total: number }>('/stats/recent-activity', { params });
     return response.data;
   },
 
@@ -520,46 +522,13 @@ export const statsAPI = {
     return response.data;
   },
 
-  engagement: async (): Promise<{
-    total_students: number;
-    students_with_teams: number;
-    team_formation_rate: number;
-    total_pre_plans: number;
-    reviewed_pre_plans: number;
-    ai_review_rate: number;
-    avg_pre_plan_score: number;
-    total_competitions: number;
-    published_competitions: number;
-    completion_rate: number;
-    total_teams: number;
-    avg_team_size: number;
-    active_competitions: number;
-  }> => {
-    const response = await api.get('/stats/engagement');
+  engagement: async (): Promise<EngagementStats> => {
+    const response = await api.get<EngagementStats>('/stats/engagement');
     return response.data;
   },
 
-  kanban: async (): Promise<{
-    columns: {
-      status: string;
-      label: string;
-      count: number;
-      competitions: {
-        id: number;
-        title: string;
-        type: string;
-        team_count: number;
-        student_count: number;
-        preplan_count: number;
-        award_count: number;
-        progress: number;
-        start_date: string;
-        end_date: string;
-        days_remaining: number;
-      }[];
-    }[];
-  }> => {
-    const response = await api.get('/stats/kanban');
+  kanban: async (): Promise<KanbanData> => {
+    const response = await api.get<KanbanData>('/stats/kanban');
     return response.data;
   },
 

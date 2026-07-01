@@ -90,7 +90,7 @@ function StatPill({ icon, label, value }: { icon: string; label: string; value: 
   );
 }
 
-function CompetitionCardComponent({ card, index }: { card: CompetitionCard; index: number }) {
+function CompetitionCardComponent({ card, index, status }: { card: CompetitionCard; index: number; status: string }) {
   const daysLabel = card.days_remaining > 0
     ? `剩余 ${card.days_remaining} 天`
     : card.days_remaining === 0
@@ -153,7 +153,7 @@ function CompetitionCardComponent({ card, index }: { card: CompetitionCard; inde
           <span style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>进度</span>
           <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-2)' }}>{card.progress}%</span>
         </div>
-        <ProgressBar value={card.progress} color={STATUS_COLORS[card.status] || 'var(--teal)'} height={3} />
+        <ProgressBar value={card.progress} color={STATUS_COLORS[status] || 'var(--teal)'} height={3} />
       </div>
 
       {/* Dates + days remaining */}
@@ -234,7 +234,7 @@ function KanbanColumnComponent({ column, colIndex }: { column: KanbanColumn; col
           </div>
         ) : (
           column.competitions.map((card, i) => (
-            <CompetitionCardComponent key={card.id} card={card} index={i} />
+            <CompetitionCardComponent key={card.id} card={card} index={i} status={column.status} />
           ))
         )}
       </div>

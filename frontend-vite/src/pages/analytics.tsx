@@ -340,7 +340,7 @@ export function AnalyticsPage() {
                 }))}
                 dataKey="value" nameKey="name"
                 cx="50%" cy="50%" outerRadius={90} strokeWidth={0}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
               >
                 {typeDist.map((_, i) => (
                   <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />

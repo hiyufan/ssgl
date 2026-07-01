@@ -41,7 +41,7 @@ export function TeacherDashboard() {
         setCompetitions(compRes.competitions || []);
         setPreplans(planRes.pre_plans || []);
         // Find current teacher's evaluation data
-        const teacher = (statsRes.teachers || []).find((t: any) => t.teacher_id === user?.id || t.id === user?.id);
+        const teacher = (statsRes.teachers || []).find((t) => t.id === user?.id);
         if (teacher) {
           setEvalData({
             avg_teaching: teacher.avg_teaching || 0,

@@ -4,25 +4,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { DonutChart } from '@/components/ui/charts';
 import { Avatar, Stars, ProgressBar, PageHeader, SectionLabel } from '@/components/ui/page-helpers';
 import { Icon } from '@/components/ui/icon';
-import type { StatsOverview, TeacherStat } from '@/types';
-
-interface CompetitionStat {
-  id: number;
-  title: string;
-  status: string;
-  team_count: number;
-  award_count: number;
-  pre_plan_count: number;
-}
-
-interface TrendPoint {
-  month: string;
-  competitions: number;
-  teams: number;
-  awards: number;
-  pre_plans: number;
-  prize_amount: number;
-}
+import type { StatsOverview, TeacherStat, CompetitionStat, TrendPoint, StudentStats, EngagementStats, ActivityItem } from '@/types';
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -49,9 +31,9 @@ export function StatsPage() {
   const [competitions, setCompetitions] = useState<CompetitionStat[]>([]);
   const [trends, setTrends] = useState<TrendPoint[]>([]);
   const [typeDistribution, setTypeDistribution] = useState<{ types: { type: string; count: number }[] }>({ types: [] });
-  const [recentActivity, setRecentActivity] = useState<{ activities: { action: string; description: string; time: string; icon: string }[] }>({ activities: [] });
-  const [studentStats, setStudentStats] = useState<{ total_students: number; students_with_teams: number; students_with_awards: number; avg_team_size: number; top_students: { id: number; name: string; team_count: number; award_count: number; pre_plan_count: number }[] } | null>(null);
-  const [engagement, setEngagement] = useState<Record<string, number> | null>(null);
+  const [recentActivity, setRecentActivity] = useState<{ activities: ActivityItem[] }>({ activities: [] });
+  const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
+  const [engagement, setEngagement] = useState<EngagementStats | null>(null);
   const [popularity, setPopularity] = useState<{ competitions: { id: number; title: string; type: string; team_count: number; student_count: number; registration_count: number; preplan_count: number; award_count: number; popularity_score: number; rank: number }[]; total: number; formula: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -66,12 +48,12 @@ export function StatsPage() {
       .then(([o, t, c, tr, td, ra, ss, eg, pop]) => {
         setOverview(o);
         setTeachers(t.teachers || []);
-        setCompetitions((c as Record<string, unknown>).competitions as CompetitionStat[] || []);
-        setTrends((tr as Record<string, unknown>).trends as TrendPoint[] || []);
-        setTypeDistribution(td as { types: { type: string; count: number }[] });
-        setRecentActivity(ra as { activities: { action: string; description: string; time: string; icon: string }[] });
-        setStudentStats(ss as typeof studentStats);
-        setEngagement(eg as Record<string, number> | null);
+        setCompetitions(c.competitions || []);
+        setTrends(tr.trends || []);
+        setTypeDistribution(td);
+        setRecentActivity(ra);
+        setStudentStats(ss);
+        setEngagement(eg);
         setPopularity(pop as typeof popularity);
       })
       .catch(console.error)
@@ -355,8 +337,8 @@ export function StatsPage() {
                   background: 'var(--surface)', borderRadius: 8, fontSize: 12,
                 }}>
                   <Icon name="activity" size={14} />
-                  <span style={{ flex: 1, color: 'var(--text)', fontWeight: 500 }}>{a.description}</span>
-                  <span style={{ color: 'var(--text-3)', fontSize: 11, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>{a.time}</span>
+                  <span style={{ flex: 1, color: 'var(--text)', fontWeight: 500 }}>{a.detail}</span>
+                  <span style={{ color: 'var(--text-3)', fontSize: 11, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>{a.created_at}</span>
                 </div>
               ))}
             </div>
@@ -400,19 +382,20 @@ export function StatsPage() {
       {teachers.length > 0 && (
         <div className="card anim-in d6" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-            <SectionLabel label="教师指导排行"/>
+            <SectionLabel label="教师评价排行"/>
           </div>
           <table className="forge-table">
-            <thead><tr><th>排名</th><th>教师</th><th>所属院系</th><th>指导数</th><th>获奖率</th><th>学生评分</th></tr></thead>
+            <thead><tr><th>排名</th><th>教师</th><th>评价数</th><th>教学质量</th><th>沟通交流</th><th>可及性</th><th>综合评分</th></tr></thead>
             <tbody>
-              {[...teachers].sort((a, b) => b.avg_rating - a.avg_rating).map((t, i) => (
+              {[...teachers].sort((a, b) => b.avg_overall - a.avg_overall).map((t, i) => (
                 <tr key={t.id}>
                   <td><span style={{ width: 24, height: 24, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: i === 0 ? 'var(--amber-bg)' : i === 1 ? 'var(--surface-2)' : 'transparent', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: i === 0 ? 'var(--amber)' : i === 1 ? 'var(--text-2)' : 'var(--text-3)' }}>{i + 1}</span></td>
                   <td><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={t.name} size={26} index={i}/><span style={{ fontWeight: 600 }}>{t.name}</span></div></td>
-                  <td style={{ color: 'var(--text-3)' }}>{t.dept}</td>
-                  <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--teal)' }}>{t.guided}</span><span style={{ fontSize: 11, color: 'var(--text-3)' }}> 队</span></td>
-                  <td><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ProgressBar value={t.win_rate * 100} max={100} color="var(--green)" height={5}/><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--green)', whiteSpace: 'nowrap' }}>{(t.win_rate * 100).toFixed(0)}%</span></div></td>
-                  <td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Stars value={t.avg_rating}/><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--amber)' }}>{t.avg_rating}</span></div></td>
+                  <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--teal)' }}>{t.evaluation_count}</span><span style={{ fontSize: 11, color: 'var(--text-3)' }}> 条</span></td>
+                  <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{t.avg_teaching.toFixed(1)}</span></td>
+                  <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{t.avg_communication.toFixed(1)}</span></td>
+                  <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{t.avg_availability.toFixed(1)}</span></td>
+                  <td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Stars value={t.avg_overall}/><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--amber)' }}>{t.avg_overall.toFixed(1)}</span></div></td>
                 </tr>
               ))}
             </tbody>

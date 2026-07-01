@@ -26,9 +26,10 @@ function startPolling() {
 export function useNotifications() {
   const [state, setState] = useState({ unread: globalUnreadCount, pending: globalPendingCount });
   useEffect(() => {
-    listeners.add(setState);
+    const listener = (unread: number, pending: number) => setState({ unread, pending });
+    listeners.add(listener);
     startPolling();
-    return () => { listeners.delete(setState); };
+    return () => { listeners.delete(listener); };
   }, []);
   return state;
 }

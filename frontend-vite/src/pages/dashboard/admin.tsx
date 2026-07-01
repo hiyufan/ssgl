@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { SectionLabel } from '@/components/ui/page-helpers';
 import { BarChart, DonutChart, AreaChart, ScoreGauge } from '@/components/ui/charts';
-import type { StatsOverview, ApprovalWorkflow } from '@/types';
+import type { StatsOverview, ApprovalWorkflow, EngagementStats, TypeDistributionItem, TrendPoint, CompetitionProgress } from '@/types';
 
 const TYPE_LABELS: Record<string, string> = {
   hackathon: '黑客松',
@@ -32,10 +32,10 @@ export function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<StatsOverview | null>(null);
   const [pending, setPending] = useState<ApprovalWorkflow[]>([]);
-  const [engagement, setEngagement] = useState<Record<string, number> | null>(null);
-  const [typeDist, setTypeDist] = useState<Array<{ type: string; count: number }>>([]);
-  const [trends, setTrends] = useState<Array<{ month: string; competitions: number; teams: number; awards: number }>>([]);
-  const [progress, setProgress] = useState<Array<{ id: number; title: string; status: string; type: string; team_count: number; student_count: number; pre_plan_count: number; reviewed_count: number; approved_count: number; award_count: number; progress: number }>>([]);
+  const [engagement, setEngagement] = useState<EngagementStats | null>(null);
+  const [typeDist, setTypeDist] = useState<TypeDistributionItem[]>([]);
+  const [trends, setTrends] = useState<TrendPoint[]>([]);
+  const [progress, setProgress] = useState<CompetitionProgress[]>([]);
   const [healthScore, setHealthScore] = useState<{ overall_score: number; level: string; dimensions: Array<{ name: string; score: number; weight: number; details: string }>; summary: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -47,9 +47,9 @@ export function AdminDashboard() {
           statsAPI.overview(),
           workflowsAPI.list({ tab: 'pending' }),
           statsAPI.engagement().catch(() => null),
-          statsAPI.typeDistribution().catch((): { types: Array<{ type: string; count: number }> } => ({ types: [] })),
-          statsAPI.trends().catch((): { trends: Array<{ month: string; competitions: number; teams: number; awards: number }> } => ({ trends: [] })),
-          statsAPI.progress().catch((): { competitions: Array<{ id: number; title: string; status: string; type: string; team_count: number; student_count: number; pre_plan_count: number; reviewed_count: number; approved_count: number; award_count: number; progress: number }> } => ({ competitions: [] })),
+          statsAPI.typeDistribution().catch(() => ({ types: [] })),
+          statsAPI.trends().catch(() => ({ trends: [], total: 0 })),
+          statsAPI.progress().catch(() => ({ competitions: [] })),
           statsAPI.healthScore().catch(() => null),
         ]);
         setStats(statsRes);

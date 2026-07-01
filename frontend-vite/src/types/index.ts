@@ -183,15 +183,118 @@ export interface StatsOverview {
 
 export interface TeacherStat {
   id: number;
-  teacher_id?: number;
   name: string;
-  dept: string;
-  guided: number;
-  win_rate: number;
-  avg_rating: number;
-  avg_overall?: number;
-  avg_score?: number;
-  eval_count: number;
+  evaluation_count: number;
+  avg_teaching: number;
+  avg_communication: number;
+  avg_availability: number;
+  avg_overall: number;
+}
+
+export interface CompetitionStat {
+  id: number;
+  title: string;
+  status: string;
+  team_count: number;
+  award_count: number;
+  pre_plan_count: number;
+}
+
+export interface TrendPoint {
+  month: string;
+  competitions: number;
+  teams: number;
+  awards: number;
+  pre_plans: number;
+  prize_amount: number;
+}
+
+export interface TypeDistributionItem {
+  type: string;
+  count: number;
+}
+
+export interface ActivityItem {
+  id: number;
+  type: string;
+  title: string;
+  detail: string;
+  user_id?: number;
+  user_name?: string;
+  created_at: string;
+}
+
+export interface StudentStats {
+  total_students: number;
+  students_with_teams: number;
+  students_with_awards: number;
+  avg_team_size: number;
+  top_students?: Array<{
+    id: number;
+    name: string;
+    team_count: number;
+    award_count: number;
+    pre_plan_count: number;
+  }>;
+}
+
+export interface EngagementStats {
+  total_students: number;
+  students_with_teams: number;
+  team_formation_rate: number;
+  total_pre_plans: number;
+  reviewed_pre_plans: number;
+  ai_review_rate: number;
+  avg_pre_plan_score: number;
+  total_competitions: number;
+  published_competitions: number;
+  completion_rate: number;
+  total_teams: number;
+  avg_team_size: number;
+  active_competitions: number;
+}
+
+export interface CompetitionProgress {
+  id: number;
+  title: string;
+  status: string;
+  type: string;
+  start_date: string;
+  end_date: string;
+  team_count: number;
+  student_count: number;
+  pre_plan_count: number;
+  reviewed_count: number;
+  approved_count: number;
+  award_count: number;
+  settled_count: number;
+  total_prize: number;
+  progress: number;
+}
+
+export interface KanbanCompetition {
+  id: number;
+  title: string;
+  type: string;
+  team_count: number;
+  student_count: number;
+  preplan_count: number;
+  award_count: number;
+  progress: number;
+  start_date: string;
+  end_date: string;
+  days_remaining: number;
+}
+
+export interface KanbanColumn {
+  status: string;
+  label: string;
+  count: number;
+  competitions: KanbanCompetition[];
+}
+
+export interface KanbanData {
+  columns: KanbanColumn[];
 }
 
 export interface LeaderboardEntry {
