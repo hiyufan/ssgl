@@ -27,13 +27,13 @@ export function PointsPage() {
 
   useEffect(() => {
     Promise.all([
-      pointsAPI.me().catch(() => null),
+      pointsAPI.me().catch(() => ({ total_points: 0, rank: 0, breakdown: [] })),
       pointsAPI.list().catch(() => ({ points: [], total: 0, count: 0 })),
       pointsAPI.leaderboard(20).catch(() => ({ leaderboard: [], count: 0 })),
     ]).then(([sumRes, histRes, lbRes]) => {
       setSummary(sumRes);
-      setHistory(histRes.points);
-      setLeaderboard(lbRes.leaderboard);
+      setHistory(histRes.points || []);
+      setLeaderboard(lbRes.leaderboard || []);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -72,13 +72,13 @@ export function PointsPage() {
           </div>
           <div className="card anim-in d3" style={{ padding: 20, textAlign: 'center' }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.05em' }}>积分来源</div>
-            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--teal)' }}>{summary.breakdown.length}</div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--teal)' }}>{summary.breakdown?.length ?? 0}</div>
           </div>
         </div>
       )}
 
       {/* Breakdown */}
-      {summary && summary.breakdown.length > 0 && (
+      {summary && summary.breakdown && summary.breakdown.length > 0 && (
         <div className="card anim-in d4" style={{ padding: 20, marginBottom: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>积分构成</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
