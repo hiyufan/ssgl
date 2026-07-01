@@ -58,7 +58,7 @@ function AIReviewPanel({ plan, onRefresh }: { plan: PrePlan; onRefresh?: () => v
           variant="primary"
           style={{ marginTop: 8 }}
         >
-          {reviewing ? '评审中…' : '✨ 请求 AI 评审'}
+          {reviewing ? '评审中…' : <><Icon name="sparkles" size={14} /> 请求 AI 评审</>}
         </Button>
       </div>
     );

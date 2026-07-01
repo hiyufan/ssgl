@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import gsap from 'gsap';
 import { statsAPI, awardsAPI } from '@/services/api';
 import type { ShowcaseEntry, ShowcaseData, Award } from '@/types';
+import { Icon } from '@/components/ui/icon';
 
 /* ─── Labels & Helpers ─────────────────────────────────── */
 const typeLabels: Record<string, string> = {
@@ -22,12 +23,7 @@ const typeColors: Record<string, string> = {
   data_science: '#f59e0b',
 };
 
-const rankEmoji = (rank: number) => {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
-  return `#${rank}`;
-};
+const rankIcon = (rank: number) => (rank <= 3 ? 'medal' : null);
 
 const rankColor = (rank: number) => {
   if (rank === 1) return 'var(--amber)';
@@ -44,11 +40,11 @@ const rankBg = (rank: number) => {
 };
 
 const rankFilterOptions = [
-  { key: 'all', label: '全部名次', icon: '🏅' },
-  { key: '1', label: '🥇 冠军', icon: '' },
-  { key: '2', label: '🥈 亚军', icon: '' },
-  { key: '3', label: '🥉 季军', icon: '' },
-  { key: '4+', label: '其他名次', icon: '' },
+  { key: 'all', label: '全部名次', icon: 'award' },
+  { key: '1', label: '冠军', icon: 'medal' },
+  { key: '2', label: '亚军', icon: 'medal' },
+  { key: '3', label: '季军', icon: 'medal' },
+  { key: '4+', label: '其他名次', icon: 'award' },
 ];
 
 const typeFilterOptions = [
@@ -220,7 +216,10 @@ export function AchievementGalleryPage() {
           </span>
         </div>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 6px' }}>
-          🏆 成就展示墙
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="trophy" size={26} />
+            成就展示墙
+          </span>
         </h1>
         <p style={{ color: 'var(--text-3)', fontSize: 14, margin: 0 }}>
           浏览所有赛事获奖成就，搜索和筛选优秀团队与个人
@@ -232,11 +231,11 @@ export function AchievementGalleryPage() {
         display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 32,
       }}>
         {[
-          { label: '获奖总数', value: data.total_awards, icon: '🏅', color: 'var(--amber)', gradient: 'rgba(245,158,11,0.08)' },
-          { label: '奖金总额', value: `¥${data.total_prize.toLocaleString()}`, icon: '💰', color: '#10b981', gradient: 'rgba(16,185,129,0.08)' },
-          { label: '获奖团队', value: data.total_teams, icon: '👥', color: 'var(--purple)', gradient: 'rgba(139,92,246,0.08)' },
-          { label: '覆盖赛事', value: data.comp_count, icon: '🎯', color: 'var(--teal)', gradient: 'rgba(20,184,166,0.08)' },
-          { label: '平均奖金', value: `¥${data.total_teams > 0 ? Math.round(data.total_prize / data.total_awards).toLocaleString() : 0}`, icon: '📊', color: '#f59e0b', gradient: 'rgba(245,158,11,0.06)' },
+          { label: '获奖总数', value: data.total_awards, icon: 'award', color: 'var(--amber)', gradient: 'rgba(245,158,11,0.08)' },
+          { label: '奖金总额', value: `¥${data.total_prize.toLocaleString()}`, icon: 'coins', color: '#10b981', gradient: 'rgba(16,185,129,0.08)' },
+          { label: '获奖团队', value: data.total_teams, icon: 'users', color: 'var(--purple)', gradient: 'rgba(139,92,246,0.08)' },
+          { label: '覆盖赛事', value: data.comp_count, icon: 'target', color: 'var(--teal)', gradient: 'rgba(20,184,166,0.08)' },
+          { label: '平均奖金', value: `¥${data.total_teams > 0 ? Math.round(data.total_prize / data.total_awards).toLocaleString() : 0}`, icon: 'chart', color: '#f59e0b', gradient: 'rgba(245,158,11,0.06)' },
         ].map((s, i) => (
           <div key={i} data-stat style={{
             background: `linear-gradient(135deg, ${s.gradient}, transparent)`,
@@ -252,7 +251,7 @@ export function AchievementGalleryPage() {
               background: `radial-gradient(circle, ${s.gradient}, transparent)`,
               borderRadius: '50%', pointerEvents: 'none',
             }} />
-            <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', color: s.color, marginBottom: 8 }}><Icon name={s.icon} size={28} /></div>
             <div style={{ fontSize: 22, fontWeight: 700, color: s.color, lineHeight: 1.2 }}>{s.value}</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6, fontWeight: 500 }}>{s.label}</div>
           </div>
@@ -265,7 +264,7 @@ export function AchievementGalleryPage() {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
           }}>
-            <span style={{ fontSize: 18 }}>⭐</span>
+            <Icon name="star" size={18} />
             <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>
               明星团队
             </h2>
@@ -310,7 +309,7 @@ export function AchievementGalleryPage() {
                   color: idx < 3 ? '#000' : 'var(--text-3)',
                   fontWeight: 700,
                 }}>
-                  {rankEmoji(idx + 1)}
+                  {rankIcon(idx + 1) ? <Icon name={rankIcon(idx + 1)!} size={20} /> : `#${idx + 1}`}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
@@ -350,7 +349,7 @@ export function AchievementGalleryPage() {
             position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
             fontSize: 16, color: 'var(--text-3)', pointerEvents: 'none',
           }}>
-            🔍
+            <Icon name="search" size={16} />
           </span>
           <input
             type="text"
@@ -415,7 +414,10 @@ export function AchievementGalleryPage() {
                 fontWeight: rankFilter === r.key ? 600 : 400,
               }}
             >
-              {r.label}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name={r.icon} size={13} />
+                {r.label}
+              </span>
             </button>
           ))}
           {/* Active filter count */}
@@ -433,7 +435,10 @@ export function AchievementGalleryPage() {
                 fontWeight: 500,
               }}
             >
-              ✕ 清除筛选
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="x" size={12} />
+                清除筛选
+              </span>
             </button>
           )}
         </div>
@@ -536,7 +541,10 @@ export function AchievementGalleryPage() {
                   <div style={{
                     fontSize: 12, color: '#10b981', marginTop: 6, fontWeight: 600,
                   }}>
-                    💰 合计奖金 ¥{totalPrize.toLocaleString()}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <Icon name="coins" size={13} />
+                      合计奖金 ¥{totalPrize.toLocaleString()}
+                    </span>
                   </div>
                 )}
               </div>
@@ -566,7 +574,7 @@ export function AchievementGalleryPage() {
                         textAlign: 'center',
                         lineHeight: 1,
                       }}>
-                        {rankEmoji(award.rank)}
+                        {rankIcon(award.rank) ? <Icon name={rankIcon(award.rank)!} size={22} /> : `#${award.rank}`}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
@@ -580,12 +588,12 @@ export function AchievementGalleryPage() {
                           display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
                         }}>
                           {award.leader_name && (
-                            <span>👤 {award.leader_name}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="user" size={12} />{award.leader_name}</span>
                           )}
                           {award.prize_name && (
                             <>
                               {award.leader_name && <span style={{ opacity: 0.3 }}>·</span>}
-                              <span>🎁 {award.prize_name}</span>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="gift" size={12} />{award.prize_name}</span>
                             </>
                           )}
                         </div>
@@ -618,7 +626,7 @@ export function AchievementGalleryPage() {
         <div style={{
           textAlign: 'center', padding: '80px 0', color: 'var(--text-3)',
         }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🏆</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, color: 'var(--amber)' }}><Icon name="trophy" size={56} /></div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
             {searchQuery || typeFilter !== 'all' || rankFilter !== 'all'
               ? '没有匹配的获奖记录'

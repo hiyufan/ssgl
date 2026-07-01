@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { competitionsAPI, comparisonAPI } from '@/services/api';
 import type { Competition, CompetitionComparison, ComparisonSummary } from '@/types';
 import { SectionLabel, Spinner } from '@/components/ui/page-helpers';
+import { Icon } from '@/components/ui/icon';
 
 const COMPARE_METRICS: { key: keyof CompetitionComparison; label: string; format?: (v: number) => string }[] = [
   { key: 'team_count', label: '团队数' },
@@ -145,7 +146,7 @@ export function ComparePage() {
           <div ref={gridRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
             <div data-bento className="card" style={{ padding: '20px 22px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                🔥 最受欢迎
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="flame" size={12} />最受欢迎</span>
               </div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--amber)' }}>
                 {compareData.summary.most_popular || '—'}
@@ -156,7 +157,7 @@ export function ComparePage() {
             </div>
             <div data-bento className="card" style={{ padding: '20px 22px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                👥 最佳团队规模
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="users" size={12} />最佳团队规模</span>
               </div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--teal)' }}>
                 {compareData.summary.best_team_size || '—'}
@@ -167,7 +168,7 @@ export function ComparePage() {
             </div>
             <div data-bento className="card" style={{ padding: '20px 22px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                📊 参与总人数
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="chart" size={12} />参与总人数</span>
               </div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--purple)' }}>
                 {compareData.summary.total_students}
@@ -285,7 +286,7 @@ export function ComparePage() {
 
       {!compareData && !comparing && (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>⚖️</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, opacity: 0.3 }}><Icon name="scale" size={48} /></div>
           <div style={{ fontSize: 14 }}>选择赛事后点击对比，查看多维度分析</div>
         </div>
       )}

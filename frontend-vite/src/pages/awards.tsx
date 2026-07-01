@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { FormModal, Field, NumberInput, TextInput, Select } from '@/components/ui/form';
 import { toast } from '@/components/ui/toast';
 import { getApiError } from '@/lib/form-utils';
+import { Icon } from '@/components/ui/icon';
 
 function SettleAwardModal({ award, onClose, onSettled }: {
   award: Award;
@@ -150,6 +151,7 @@ export function AwardsPage() {
     <div className="forge-page">
       <PageHeader
         title="获奖管理"
+        icon="award"
         subtitle={`${awards.length} 个获奖记录，其中 ${awards.filter(a => a.status === 'settled').length} 个已结算`}
         actions={
           (role === 'admin' || role === 'teacher') ? (
@@ -162,7 +164,7 @@ export function AwardsPage() {
       {podiumOrder.length > 0 && (
         <div className="card anim-in" style={{ padding: 32, marginBottom: 20, overflow: 'hidden', position: 'relative' }}>
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, var(--amber-bg) 0%, transparent 60%)', pointerEvents: 'none' }}/>
-          <SectionLabel label="颁奖台"/>
+          <SectionLabel label="颁奖台" icon="trophy"/>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 24, marginTop: 16, height: 220 }}>
             {podiumOrder.map((award, i) => {
               if (!award) return null;
@@ -171,7 +173,7 @@ export function AwardsPage() {
               const label = podiumLabels[i];
               return (
                 <div key={award.id} className={`anim-in d${i + 1}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-                  {label === '1st' && <div style={{ fontSize: 32, marginBottom: 8 }}>🏆</div>}
+                  {label === '1st' && <div style={{ color: 'var(--amber)', marginBottom: 8 }}><Icon name="trophy" size={32} /></div>}
                   <div style={{ textAlign: 'center', marginBottom: 10, padding: '8px 16px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{award.team?.name || '—'}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{award.prize_name || award.rank_name}</div>

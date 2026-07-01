@@ -36,7 +36,7 @@ function RatingDistribution({ dist }: { dist: Record<number, number> }) {
         const pct = total > 0 ? (count / total) * 100 : 0;
         return (
           <div key={r} className="flex items-center gap-2 text-sm">
-            <span className="text-yellow-400 w-12">{r} ★</span>
+            <span className="text-yellow-400 w-12 inline-flex items-center gap-1">{r} <Icon name="star" size={13} /></span>
             <div className="flex-1 h-4 bg-gray-800 rounded-full overflow-hidden">
               <div
                 className="h-full bg-yellow-500 rounded-full transition-all"
@@ -81,7 +81,7 @@ function StarInput({ value, onChange, label }: { value: number; onChange: (v: nu
             className="text-xl transition-transform hover:scale-125"
             style={{ color: star <= value ? '#f59e0b' : '#4b5563' }}
           >
-            ★
+            <Icon name="star" size={20} />
           </button>
         ))}
       </div>
@@ -168,7 +168,7 @@ export default function FeedbackPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <PageHeader title="赛事反馈评价" subtitle="查看和提交赛事评价反馈" icon="📝" />
+      <PageHeader title="赛事反馈评价" subtitle="查看和提交赛事评价反馈" icon="edit" />
 
       {/* Competition Selector */}
       <div className="flex items-center gap-4">
@@ -188,7 +188,7 @@ export default function FeedbackPage() {
             onClick={() => setShowForm(!showForm)}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white text-sm transition"
           >
-            {showForm ? '取消' : '✨ 提交反馈'}
+            {showForm ? '取消' : <span className="inline-flex items-center gap-1"><Icon name="sparkles" size={14} />提交反馈</span>}
           </button>
         )}
       </div>
@@ -196,7 +196,7 @@ export default function FeedbackPage() {
       {/* Feedback Form */}
       {showForm && selectedComp && (
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-white">📝 提交赛事反馈</h3>
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2"><Icon name="edit" size={18} />提交赛事反馈</h3>
           <StarInput label="综合评分*" value={overall} onChange={setOverall} />
           <StarInput label="赛事内容" value={content} onChange={setContent} />
           <StarInput label="组织安排" value={org} onChange={setOrg} />
@@ -276,18 +276,18 @@ export default function FeedbackPage() {
           {/* Rating Distribution + Skills */}
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-4">⭐ 评分分布</h3>
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><Icon name="star" size={18} />评分分布</h3>
               <RatingDistribution dist={summary.rating_distribution || {}} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">🎯 热门技能</h3>
+              <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2"><Icon name="target" size={18} />热门技能</h3>
               <SkillTags skills={summary.top_skills || []} />
             </div>
           </div>
 
           {/* Recent Comments */}
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 lg:col-span-2">
-            <h3 className="text-lg font-semibold text-white mb-4">💬 最近评语</h3>
+            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><Icon name="message" size={18} />最近评语</h3>
             {(!summary.recent_comments || summary.recent_comments.length === 0) ? (
               <p className="text-gray-500">暂无评语</p>
             ) : (
@@ -311,7 +311,7 @@ export default function FeedbackPage() {
       {/* Feedback List */}
       {selectedComp && feedbacks.length > 0 && (
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">📋 全部反馈 ({feedbacks.length})</h3>
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><Icon name="clipboard-list" size={18} />全部反馈 ({feedbacks.length})</h3>
           <div className="space-y-3">
             {feedbacks.map((fb) => (
               <div key={fb.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700/50 flex items-start gap-4">
@@ -328,10 +328,10 @@ export default function FeedbackPage() {
                   </div>
                   {fb.comment && <p className="text-gray-300 text-sm">{fb.comment}</p>}
                   <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                    {fb.content_rating > 0 && <span>内容 {fb.content_rating}★</span>}
-                    {fb.org_rating > 0 && <span>组织 {fb.org_rating}★</span>}
-                    {fb.fairness_rating > 0 && <span>公平 {fb.fairness_rating}★</span>}
-                    {fb.learning_value > 0 && <span>学习 {fb.learning_value}★</span>}
+                    {fb.content_rating > 0 && <span className="inline-flex items-center gap-1">内容 {fb.content_rating}<Icon name="star" size={11} /></span>}
+                    {fb.org_rating > 0 && <span className="inline-flex items-center gap-1">组织 {fb.org_rating}<Icon name="star" size={11} /></span>}
+                    {fb.fairness_rating > 0 && <span className="inline-flex items-center gap-1">公平 {fb.fairness_rating}<Icon name="star" size={11} /></span>}
+                    {fb.learning_value > 0 && <span className="inline-flex items-center gap-1">学习 {fb.learning_value}<Icon name="star" size={11} /></span>}
                   </div>
                 </div>
               </div>
@@ -342,7 +342,7 @@ export default function FeedbackPage() {
 
       {selectedComp && !loading && feedbacks.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          <p className="text-4xl mb-4">📭</p>
+          <p className="mb-4 flex justify-center"><Icon name="inbox" size={48} /></p>
           <p>暂无反馈数据，成为第一个提交反馈的人吧！</p>
         </div>
       )}

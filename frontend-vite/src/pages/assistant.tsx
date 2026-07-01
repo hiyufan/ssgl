@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { assistantAPI, type AssistantReply } from '@/services/api';
+import { Icon } from '@/components/ui/icon';
 
 /* ─── Types ─── */
 interface Message {
@@ -13,12 +14,12 @@ interface Message {
 
 /* ─── Quick Actions ─── */
 const QUICK_ACTIONS = [
-  { id: 'get_stats', icon: '📊', label: '平台统计', desc: '查看平台整体数据概览' },
-  { id: 'get_pending_approvals', icon: '📋', label: '待审批', desc: '查看待处理的审批事项' },
-  { id: 'get_my_teams', icon: '👥', label: '我的团队', desc: '查看我的团队列表' },
-  { id: 'get_competitions', icon: '🏆', label: '赛事列表', desc: '查看近期赛事' },
-  { id: 'get_notifications', icon: '🔔', label: '通知', desc: '查看未读通知' },
-  { id: 'get_awards', icon: '🎁', label: '获奖情况', desc: '查看获奖记录' },
+  { id: 'get_stats', icon: 'chart', label: '平台统计', desc: '查看平台整体数据概览' },
+  { id: 'get_pending_approvals', icon: 'clipboard-list', label: '待审批', desc: '查看待处理的审批事项' },
+  { id: 'get_my_teams', icon: 'users', label: '我的团队', desc: '查看我的团队列表' },
+  { id: 'get_competitions', icon: 'trophy', label: '赛事列表', desc: '查看近期赛事' },
+  { id: 'get_notifications', icon: 'bell', label: '通知', desc: '查看未读通知' },
+  { id: 'get_awards', icon: 'gift', label: '获奖情况', desc: '查看获奖记录' },
 ];
 
 /* ─── Styles ─── */
@@ -85,7 +86,7 @@ export function AssistantPage() {
   const handleQuickAction = async (actionId: string) => {
     if (streaming) return;
     const action = QUICK_ACTIONS.find(a => a.id === actionId);
-    addMessage('user', `${action?.icon} ${action?.label || actionId}`);
+    addMessage('user', action?.label || actionId);
     setStreaming(true);
     setError('');
     try {
@@ -107,7 +108,10 @@ export function AssistantPage() {
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
-          🤖 AI 智能助手
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="bot" size={28} />
+            AI 智能助手
+          </span>
         </h1>
         <p style={{ color: 'var(--text-3)', marginTop: 6, fontSize: 14 }}>
           对话式 AI 助手 — 查询数据、执行操作、获取建议
@@ -132,7 +136,7 @@ export function AssistantPage() {
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--amber)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
               >
-                <span style={{ fontSize: 20 }}>{action.icon}</span>
+                <Icon name={action.icon} size={20} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{action.label}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{action.desc}</div>
@@ -169,8 +173,9 @@ export function AssistantPage() {
               )}
               {/* Tool calls */}
               {msg.tool_calls && msg.tool_calls.length > 0 && (
-                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)' }}>
-                  🔧 调用了: {msg.tool_calls.map(tc => tc.call).join(', ')}
+                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="wrench" size={11} />
+                  调用了: {msg.tool_calls.map(tc => tc.call).join(', ')}
                 </div>
               )}
             </div>

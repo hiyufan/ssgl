@@ -5,16 +5,16 @@ import { Spinner } from '@/components/ui/spinner';
 import { useRole } from '@/hooks/use-role';
 
 const reasonLabels: Record<string, { label: string; icon: string; color: string }> = {
-  competition_register: { label: '赛事报名', icon: '📝', color: 'var(--teal)' },
-  team_join: { label: '加入团队', icon: '👥', color: 'var(--purple)' },
-  preplan_submit: { label: '提交预案', icon: '📄', color: 'var(--amber)' },
-  award_received: { label: '获得奖项', icon: '🏆', color: '#f59e0b' },
-  evaluation_given: { label: '评价导师', icon: '⭐', color: 'var(--green)' },
-  ai_review: { label: 'AI 评审', icon: '🤖', color: '#6366f1' },
-  milestone_complete: { label: '里程碑完成', icon: '🎯', color: 'var(--teal)' },
-  manual_award: { label: '管理员奖励', icon: '🎁', color: 'var(--amber)' },
-  competition_win: { label: '赛事获奖', icon: '🏅', color: '#f59e0b' },
-  test: { label: '测试', icon: '🧪', color: 'var(--text-3)' },
+  competition_register: { label: '赛事报名', icon: 'edit', color: 'var(--teal)' },
+  team_join: { label: '加入团队', icon: 'users', color: 'var(--purple)' },
+  preplan_submit: { label: '提交预案', icon: 'file-text', color: 'var(--amber)' },
+  award_received: { label: '获得奖项', icon: 'trophy', color: '#f59e0b' },
+  evaluation_given: { label: '评价导师', icon: 'star', color: 'var(--green)' },
+  ai_review: { label: 'AI 评审', icon: 'bot', color: '#6366f1' },
+  milestone_complete: { label: '里程碑完成', icon: 'target', color: 'var(--teal)' },
+  manual_award: { label: '管理员奖励', icon: 'gift', color: 'var(--amber)' },
+  competition_win: { label: '赛事获奖', icon: 'award', color: '#f59e0b' },
+  test: { label: '测试', icon: 'test', color: 'var(--text-3)' },
 };
 
 export function PointsPage() {
@@ -83,13 +83,13 @@ export function PointsPage() {
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>积分构成</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
             {summary.breakdown.map((b, i) => {
-              const meta = reasonLabels[b.reason] || { label: b.reason, icon: '📌', color: 'var(--text-3)' };
+              const meta = reasonLabels[b.reason] || { label: b.reason, icon: 'pin', color: 'var(--text-3)' };
               const maxTotal = Math.max(...summary.breakdown.map(x => x.total), 1);
               const pct = (b.total / maxTotal) * 100;
               return (
                 <div key={i} style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 16 }}>{meta.icon}</span>
+                    <span style={{ color: meta.color }}><Icon name={meta.icon} size={16} /></span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{meta.label}</span>
                     <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 700, color: meta.color }}>+{b.total}</span>
                   </div>
@@ -119,15 +119,15 @@ export function PointsPage() {
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>积分规则</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
             {[
-              { action: '赛事报名', points: 25, icon: '📝' },
-              { action: '加入团队', points: 10, icon: '👥' },
-              { action: '提交预案', points: 30, icon: '📄' },
-              { action: 'AI 评审通过', points: 20, icon: '🤖' },
-              { action: '获得奖项', points: 50, icon: '🏆' },
-              { action: '评价导师', points: 5, icon: '⭐' },
+              { action: '赛事报名', points: 25, icon: 'edit' },
+              { action: '加入团队', points: 10, icon: 'users' },
+              { action: '提交预案', points: 30, icon: 'file-text' },
+              { action: 'AI 评审通过', points: 20, icon: 'bot' },
+              { action: '获得奖项', points: 50, icon: 'trophy' },
+              { action: '评价导师', points: 5, icon: 'star' },
             ].map((r, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: 20 }}>{r.icon}</span>
+                <Icon name={r.icon} size={20} />
                 <span style={{ fontSize: 13, color: 'var(--text)', flex: 1 }}>{r.action}</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--amber)' }}>+{r.points}</span>
               </div>
@@ -140,16 +140,16 @@ export function PointsPage() {
         <div className="card" style={{ padding: 20 }}>
           {history.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><Icon name="chart" size={32} /></div>
               <div>暂无积分记录</div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {history.map((p) => {
-                const meta = reasonLabels[p.reason] || { label: p.reason, icon: '📌', color: 'var(--text-3)' };
+                const meta = reasonLabels[p.reason] || { label: p.reason, icon: 'pin', color: 'var(--text-3)' };
                 return (
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 20 }}>{meta.icon}</span>
+                    <span style={{ color: meta.color }}><Icon name={meta.icon} size={20} /></span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{meta.label}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{new Date(p.created_at).toLocaleString('zh-CN')}</div>
@@ -167,14 +167,13 @@ export function PointsPage() {
         <div className="card" style={{ padding: 20 }}>
           {leaderboard.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>🏆</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><Icon name="trophy" size={32} /></div>
               <div>暂无排行数据</div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {leaderboard.map((entry, idx) => {
                 const isTop3 = idx < 3;
-                const medals = ['🥇', '🥈', '🥉'];
                 return (
                   <div key={entry.user_id} style={{
                     display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10,
@@ -188,7 +187,7 @@ export function PointsPage() {
                       fontSize: isTop3 ? 18 : 13, fontWeight: 700,
                       color: isTop3 ? 'var(--amber)' : 'var(--text-3)',
                     }}>
-                      {isTop3 ? medals[idx] : `#${idx + 1}`}
+                      {isTop3 ? <Icon name="medal" size={18} /> : `#${idx + 1}`}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{entry.name}</div>

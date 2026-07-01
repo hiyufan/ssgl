@@ -354,7 +354,7 @@ export function StatsPage() {
                   display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
                   background: 'var(--surface)', borderRadius: 8, fontSize: 12,
                 }}>
-                  <span style={{ fontSize: 14 }}>{a.icon || '📌'}</span>
+                  <Icon name="activity" size={14} />
                   <span style={{ flex: 1, color: 'var(--text)', fontWeight: 500 }}>{a.description}</span>
                   <span style={{ color: 'var(--text-3)', fontSize: 11, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>{a.time}</span>
                 </div>

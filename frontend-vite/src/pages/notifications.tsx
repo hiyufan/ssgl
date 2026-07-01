@@ -202,7 +202,10 @@ export function NotificationsPage() {
                 </div>
               )}
               {createForm.user_id > 0 && (
-                <p style={{ fontSize: 12, color: 'var(--green)', margin: '4px 0 0' }}>✓ 已选择用户 ID: {createForm.user_id}</p>
+                <p style={{ fontSize: 12, color: 'var(--green)', margin: '4px 0 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="check" size={12} />
+                  已选择用户 ID: {createForm.user_id}
+                </p>
               )}
             </div>
             {/* Type */}
@@ -287,11 +290,11 @@ export function NotificationsPage() {
       {/* Notification List */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>加载中...
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><Icon name="hourglass" size={24} /></div>加载中...
         </div>
       ) : notifications.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🔔</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><Icon name="bell" size={48} /></div>
           <p style={{ fontSize: 16, fontWeight: 500 }}>暂无{filter === 'unread' ? '未读' : ''}通知</p>
         </div>
       ) : (

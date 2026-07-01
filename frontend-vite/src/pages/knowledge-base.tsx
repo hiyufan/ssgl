@@ -150,6 +150,7 @@ export function KnowledgeBasePage() {
 
       <PageHeader
         title="知识库管理"
+        icon="db"
         subtitle="RAG 检索知识库 · 为 AI 工具提供上下文"
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
@@ -167,7 +168,10 @@ export function KnowledgeBasePage() {
       {showTextIngest && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }} onClick={() => setShowTextIngest(false)}>
           <div className="card" style={{ width: 560, maxHeight: '80vh', padding: 24, overflow: 'auto' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>📝 文本录入知识库</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="edit" size={17} />
+              文本录入知识库
+            </h3>
             <input
               placeholder="文档名称（选填，如：竞赛经验分享）"
               value={textFilename}
@@ -196,8 +200,11 @@ export function KnowledgeBasePage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }} onClick={() => setViewingChunks(null)}>
           <div className="card" style={{ width: 700, maxHeight: '80vh', padding: 24, overflow: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>📦 文档分块详情</h3>
-              <button className="btn btn-ghost" onClick={() => setViewingChunks(null)} style={{ fontSize: 18, padding: '4px 8px' }}>✕</button>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Icon name="package" size={17} />
+                文档分块详情
+              </h3>
+              <button className="btn btn-ghost" onClick={() => setViewingChunks(null)} style={{ padding: '4px 8px' }}><Icon name="x" size={16} /></button>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
               文档: <strong style={{ color: 'var(--text)' }}>{viewingChunks.filename}</strong> · 共 {viewingChunks.total} 个分块
@@ -241,7 +248,7 @@ export function KnowledgeBasePage() {
 
       {/* RAG Query Section */}
       <div className="card anim-in d2" style={{ padding: 20, marginBottom: 20 }}>
-        <SectionLabel label="🔍 智能问答" />
+        <SectionLabel label="智能问答" icon="search" />
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>基于知识库的 RAG 检索问答，输入问题获取 AI 回答</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <input
@@ -302,7 +309,7 @@ export function KnowledgeBasePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
           {filtered.map((doc, i) => {
             const ext = doc.filename.split('.').pop()?.toLowerCase() || '';
-            const typeIcons: Record<string, string> = { pdf: '📄', doc: '📝', docx: '📝', md: '📋', txt: '📄' };
+            const typeIcons: Record<string, string> = { pdf: 'file-text', doc: 'edit', docx: 'edit', md: 'clipboard-list', txt: 'file-text' };
             const typeColors: Record<string, string> = { pdf: 'var(--red)', doc: 'var(--teal)', docx: 'var(--teal)', md: 'var(--purple)', txt: 'var(--text-3)' };
             return (
               <div key={doc.filename} className={`card anim-in d${Math.min(i + 1, 8)}`}
@@ -311,8 +318,8 @@ export function KnowledgeBasePage() {
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, border: '1px solid var(--border)' }}>
-                    {typeIcons[ext] || '📄'}
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeColors[ext] || 'var(--text-3)', flexShrink: 0, border: '1px solid var(--border)' }}>
+                    <Icon name={typeIcons[ext] || 'file-text'} size={20} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, marginBottom: 4, wordBreak: 'break-all' }}>{doc.filename}</div>

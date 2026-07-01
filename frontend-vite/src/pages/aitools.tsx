@@ -83,7 +83,11 @@ export function AIToolsPage() {
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>AI 工具箱</h1>
           <span className="badge badge-teal">RAG + LLM</span>
-          {streaming && <span className="badge badge-green" style={{ animation: 'forge-spin 1.5s ease-in-out infinite' }}>⚡ 流式输出中</span>}
+          {streaming && (
+            <span className="badge badge-green" style={{ animation: 'forge-spin 1.5s ease-in-out infinite' }}>
+              <Icon name="zap" size={11} /> 流式输出中
+            </span>
+          )}
         </div>
         <p style={{ fontSize: 13, color: 'var(--text-3)' }}>{TOOLS.length} 个智能助手 · 基于往届项目知识库 · 实时流式生成</p>
       </div>
@@ -150,7 +154,11 @@ export function AIToolsPage() {
                       style={{ background: generating ? 'var(--surface-3)' : activeColors.accent, color: generating ? 'var(--text-3)' : '#0F1523', borderColor: 'transparent' }}>
                       {generating ? <><Spinner size={14} color="var(--text-3)"/> 生成中…</> : <><Icon name="sparkles" size={14}/> 立即生成</>}
                     </button>
-                    {streaming && <span style={{ fontSize: 11, color: activeColors.accent, fontFamily: 'var(--font-mono)' }}>⚡ SSE 流式响应</span>}
+                    {streaming && (
+                      <span style={{ fontSize: 11, color: activeColors.accent, fontFamily: 'var(--font-mono)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="zap" size={11} /> SSE 流式响应
+                      </span>
+                    )}
                     {!streaming && <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>{activeTool.tags.join(' · ')}</span>}
                   </div>
                 </div>

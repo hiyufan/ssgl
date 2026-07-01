@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Icon } from './icon';
 export { Spinner } from './spinner';
 
 /* ─── Avatar ──────────────────────────────────────────── */
@@ -37,10 +38,11 @@ export function ProgressBar({ value, max = 100, color = 'var(--amber)', height =
 }
 
 /* ─── PageHeader — Editorial serif style ───────────────── */
-export function PageHeader({ title, subtitle, actions }: {
+export function PageHeader({ title, subtitle, actions, icon }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
+  icon?: string;
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 32, gap: 16 }}>
@@ -51,7 +53,13 @@ export function PageHeader({ title, subtitle, actions }: {
           color: 'var(--text)',
           letterSpacing: '-0.02em',
           lineHeight: 1.1,
-        }}>{title}</h1>
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}>
+          {icon && <Icon name={icon} size={24} />}
+          <span>{title}</span>
+        </h1>
         {subtitle && <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6, fontWeight: 400 }}>{subtitle}</p>}
       </div>
       {actions && <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>{actions}</div>}
@@ -60,14 +68,22 @@ export function PageHeader({ title, subtitle, actions }: {
 }
 
 /* ─── SectionLabel — Editorial uppercase label ────────── */
-export function SectionLabel({ label, count }: { label: string; count?: number }) {
+export function SectionLabel({ label, value, count, icon, children }: {
+  label?: string;
+  value?: string;
+  count?: number;
+  icon?: string;
+  children?: ReactNode;
+}) {
+  const text = label ?? value ?? children;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+      {icon && <Icon name={icon} size={13} />}
       <span style={{
         fontSize: 10, fontWeight: 700,
         letterSpacing: '0.15em', textTransform: 'uppercase',
         color: 'var(--text-3)',
-      }}>{label}</span>
+      }}>{text}</span>
       {count !== undefined && (
         <span style={{
           fontFamily: 'var(--font-mono)', fontSize: 10,

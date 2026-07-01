@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth';
 import { growthAPI } from '@/services/api';
 import type { GrowthProfile } from '@/types';
 import { SectionLabel, Spinner } from '@/components/ui/page-helpers';
+import { Icon } from '@/components/ui/icon';
 
 const STATUS_LABELS: Record<string, string> = {
   published: '已发布', ongoing: '进行中', completed: '已结束', draft: '草稿', cancelled: '已取消',
@@ -16,7 +17,7 @@ const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
   cancelled: { bg: 'rgba(239,68,68,0.1)', fg: 'var(--red)' },
 };
 const TIMELINE_ICONS: Record<string, string> = {
-  competition: '🏆', team: '👥', preplan: '📋', award: '🥇', milestone: '📌',
+  competition: 'trophy', team: 'users', preplan: 'clipboard-list', award: 'medal', milestone: 'pin',
 };
 
 type GrowthProfilePayload = Partial<Omit<GrowthProfile, 'summary' | 'competitions' | 'awards' | 'skills' | 'timeline' | 'recommendations'>> & {
@@ -162,14 +163,14 @@ export function GrowthPage() {
       {/* Stat cards */}
       <div ref={gridRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: '参赛次数', value: summary.total_competitions, icon: '🏆', color: 'var(--amber)', bg: 'var(--amber-bg)' },
-          { label: '获奖次数', value: summary.total_awards, icon: '🥇', color: 'var(--green)', bg: 'var(--green-bg)' },
-          { label: '组队次数', value: summary.total_teams, icon: '👥', color: 'var(--teal)', bg: 'var(--teal-bg)' },
-          { label: '获奖率', value: `${summary.award_rate.toFixed(0)}%`, icon: '📊', color: 'var(--purple)', bg: 'var(--purple-bg)' },
+          { label: '参赛次数', value: summary.total_competitions, icon: 'trophy', color: 'var(--amber)', bg: 'var(--amber-bg)' },
+          { label: '获奖次数', value: summary.total_awards, icon: 'medal', color: 'var(--green)', bg: 'var(--green-bg)' },
+          { label: '组队次数', value: summary.total_teams, icon: 'users', color: 'var(--teal)', bg: 'var(--teal-bg)' },
+          { label: '获奖率', value: `${summary.award_rate.toFixed(0)}%`, icon: 'chart', color: 'var(--purple)', bg: 'var(--purple-bg)' },
         ].map((s, i) => (
           <div key={i} data-bento className="card card-magnetic" style={{ padding: '20px 22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>{s.icon}</div>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><Icon name={s.icon} size={16} /></div>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', textTransform: 'uppercase' }}>{s.label}</span>
             </div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 36, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
@@ -229,7 +230,7 @@ export function GrowthPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {c.award_rank && <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>🏅 {c.award_rank}</span>}
+                    {c.award_rank && <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="award" size={12} />{c.award_rank}</span>}
                     <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: sc.bg, color: sc.fg }}>
                       {STATUS_LABELS[c.status] || c.status}
                     </span>
@@ -275,7 +276,10 @@ export function GrowthPage() {
                 {new Date(e.date).toLocaleDateString('zh-CN')}
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginTop: 2 }}>
-                {TIMELINE_ICONS[e.type] || '📌'} {e.title}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name={TIMELINE_ICONS[e.type] || 'pin'} size={13} />
+                  {e.title}
+                </span>
               </div>
               {e.detail && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{e.detail}</div>}
             </div>

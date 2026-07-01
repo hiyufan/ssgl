@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { executionMatchAPI, prePlansAPI } from '@/services/api';
+import { Icon } from '@/components/ui/icon';
 
 /* ─── Types ─── */
 interface MatchResult {
@@ -55,9 +56,11 @@ export function ExecutionMatchPage() {
 
   useEffect(() => {
     prePlansAPI.list().then(r => {
-      const items = (r.pre_plans || r.data || []).map((p: Record<string, unknown>) => ({
-        id: p.id, title: p.title || p.name || `预案 #${p.id}`,
-        competition_title: p.competition_title, status: p.status,
+      const items = (r.pre_plans || []).map((p) => ({
+        id: p.id,
+        title: p.title || `预案 #${p.id}`,
+        competition_title: p.competition?.title,
+        status: p.status,
       }));
       setPlans(items);
     }).catch(() => {});
@@ -94,7 +97,10 @@ export function ExecutionMatchPage() {
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
-          📊 执行匹配分析
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="chart" size={28} />
+            执行匹配分析
+          </span>
         </h1>
         <p style={{ color: 'var(--text-3)', marginTop: 8, fontSize: 14 }}>
           AI 对比预案计划与实际执行情况，识别偏差并给出改进建议
@@ -175,7 +181,10 @@ export function ExecutionMatchPage() {
               transition: 'all 0.2s',
             }}
           >
-            {loading ? '⏳ AI 分析中...' : '🔍 开始匹配分析'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name={loading ? 'hourglass' : 'search'} size={14} />
+              {loading ? 'AI 分析中...' : '开始匹配分析'}
+            </span>
           </button>
         </div>
       </div>
@@ -223,7 +232,10 @@ export function ExecutionMatchPage() {
             {result.gaps.length > 0 && (
               <div style={card}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>
-                  ⚠️ 偏差识别 ({result.gaps.length})
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="alert" size={14} />
+                    偏差识别 ({result.gaps.length})
+                  </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {result.gaps.map((gap, i) => (
@@ -248,7 +260,10 @@ export function ExecutionMatchPage() {
             {/* Recommendations */}
             <div style={card}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>
-                💡 改进建议 ({result.recommendations.length})
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="lightbulb" size={14} />
+                  改进建议 ({result.recommendations.length})
+                </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {result.recommendations.map((rec, i) => (

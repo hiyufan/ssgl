@@ -1,3 +1,5 @@
+import { Icon } from './icon';
+
 /* ─── Status Badge ────────────────────────────────────── */
 const BADGE_MAP: Record<string, { cls: string; label: string }> = {
   ongoing:        { cls: 'badge-teal',   label: '进行中' },
@@ -34,16 +36,21 @@ export function TypeBadge({ type }: { type: string }) {
 }
 
 /* ─── Difficulty Badge ─────────────────────────────────── */
-const DIFFICULTY_MAP: Record<string, { cls: string; label: string; stars: string }> = {
-  '入门': { cls: 'badge-green',  label: '入门', stars: '★' },
-  '进阶': { cls: 'badge-teal',   label: '进阶', stars: '★★' },
-  '挑战': { cls: 'badge-amber',  label: '挑战', stars: '★★★' },
-  '精英': { cls: 'badge-purple', label: '精英', stars: '★★★★' },
-  '极限': { cls: 'badge-red',    label: '极限', stars: '★★★★★' },
+const DIFFICULTY_MAP: Record<string, { cls: string; label: string; stars: number }> = {
+  '入门': { cls: 'badge-green',  label: '入门', stars: 1 },
+  '进阶': { cls: 'badge-teal',   label: '进阶', stars: 2 },
+  '挑战': { cls: 'badge-amber',  label: '挑战', stars: 3 },
+  '精英': { cls: 'badge-purple', label: '精英', stars: 4 },
+  '极限': { cls: 'badge-red',    label: '极限', stars: 5 },
 };
 
 export function DifficultyBadge({ level }: { level: string }) {
   const m = DIFFICULTY_MAP[level];
   if (!m) return null;
-  return <span className={`badge ${m.cls}`} title={m.label}>{m.stars} {m.label}</span>;
+  return (
+    <span className={`badge ${m.cls}`} title={m.label}>
+      {Array.from({ length: m.stars }).map((_, i) => <Icon key={i} name="star" size={10} />)}
+      {m.label}
+    </span>
+  );
 }

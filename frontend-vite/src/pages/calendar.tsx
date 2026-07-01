@@ -360,9 +360,9 @@ export function CalendarPage() {
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-3)' }}>
-                      <span>📅 {new Date(evt.start_date).toLocaleDateString('zh-CN')} — {new Date(evt.end_date).toLocaleDateString('zh-CN')}</span>
-                      {evt.location && <span>📍 {evt.location}</span>}
-                      {evt.tags && <span>🏷 {evt.tags}</span>}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="calendar" size={12} />{new Date(evt.start_date).toLocaleDateString('zh-CN')} — {new Date(evt.end_date).toLocaleDateString('zh-CN')}</span>
+                      {evt.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="map-pin" size={12} />{evt.location}</span>}
+                      {evt.tags && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="tag" size={12} />{evt.tags}</span>}
                     </div>
                   </div>
                 </div>

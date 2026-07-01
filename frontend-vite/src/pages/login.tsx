@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
 import { useAppStore } from '@/stores/app';
 import { ParticleCanvas } from '@/components/effects/particle-canvas';
+import { Icon } from '@/components/ui/icon';
 
 export function LoginPage() {
   const { login } = useAuthStore();
@@ -113,7 +114,7 @@ export function LoginPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: 'var(--text-3)', cursor: 'pointer', fontSize: 14,
         }} title={isDark ? '切换亮色' : '切换暗色'}>
-          {isDark ? '☀' : '☾'}
+          <Icon name={isDark ? 'sun' : 'moon'} size={15} />
         </button>
 
         {/* Hero content */}

@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { useAuthStore } from '@/stores/auth';
 import { profileAPI, type UserProfile } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '@/components/ui/icon';
 
 const roleLabels: Record<string, string> = {
   student: '学生',
@@ -25,6 +26,7 @@ export function ProfilePage() {
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', dept: '' });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [saveStatus, setSaveStatus] = useState<'success' | 'error' | ''>('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,15 +58,18 @@ export function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     setSaveMsg('');
+    setSaveStatus('');
     try {
       const res = await profileAPI.updateProfile(editForm);
-      setSaveMsg('✅ 保存成功');
+      setSaveMsg('保存成功');
+      setSaveStatus('success');
       // Refresh profile
       const refreshed = await profileAPI.getMyProfile();
       setProfile(refreshed.profile);
       setEditing(false);
     } catch (e: any) {
-      setSaveMsg('❌ ' + (e.response?.data?.error || '保存失败'));
+      setSaveMsg(e.response?.data?.error || '保存失败');
+      setSaveStatus('error');
     } finally {
       setSaving(false);
     }
@@ -90,10 +95,10 @@ export function ProfilePage() {
   }
 
   const stats = [
-    { label: '参与赛事', value: profile.competition_count, icon: '🏆', color: 'var(--amber)' },
-    { label: '加入团队', value: profile.team_count, icon: '👥', color: 'var(--blue, #4a9eff)' },
-    { label: '提交预案', value: profile.pre_plan_count, icon: '📋', color: 'var(--green, #4ade80)' },
-    { label: '获得奖项', value: profile.award_count, icon: '🎖️', color: 'var(--purple, #a78bfa)' },
+    { label: '参与赛事', value: profile.competition_count, icon: 'trophy', color: 'var(--amber)' },
+    { label: '加入团队', value: profile.team_count, icon: 'users', color: 'var(--blue, #4a9eff)' },
+    { label: '提交预案', value: profile.pre_plan_count, icon: 'clipboard-list', color: 'var(--green, #4ade80)' },
+    { label: '获得奖项', value: profile.award_count, icon: 'award', color: 'var(--purple, #a78bfa)' },
   ];
 
   return (
@@ -115,16 +120,16 @@ export function ProfilePage() {
         <div style={styles.info}>
           <h1 style={styles.name}>{profile.name || profile.username}</h1>
           <p style={styles.username}>@{profile.username}</p>
-          {profile.dept && <p style={styles.detail}>🏫 {profile.dept}</p>}
-          {profile.student_id && <p style={styles.detail}>📝 学号: {profile.student_id}</p>}
-          {profile.email && <p style={styles.detail}>📧 {profile.email}</p>}
-          {profile.phone && <p style={styles.detail}>📱 {profile.phone}</p>}
-          <p style={styles.detail}>📅 注册于 {profile.created_at}</p>
+          {profile.dept && <p style={styles.detail}><Icon name="school" size={14} />{profile.dept}</p>}
+          {profile.student_id && <p style={styles.detail}><Icon name="edit" size={14} />学号: {profile.student_id}</p>}
+          {profile.email && <p style={styles.detail}><Icon name="mail" size={14} />{profile.email}</p>}
+          {profile.phone && <p style={styles.detail}><Icon name="phone" size={14} />{profile.phone}</p>}
+          <p style={styles.detail}><Icon name="calendar" size={14} />注册于 {profile.created_at}</p>
           <button
             onClick={() => setEditing(!editing)}
             style={styles.editBtn}
           >
-            {editing ? '取消' : '✏️ 编辑资料'}
+            {editing ? '取消' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="edit" size={14} />编辑资料</span>}
           </button>
         </div>
       </div>
@@ -170,20 +175,25 @@ export function ProfilePage() {
           </div>
           <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
             <button onClick={handleSave} disabled={saving} style={styles.saveBtn}>
-              {saving ? '保存中...' : '💾 保存'}
+              {saving ? '保存中...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="save" size={14} />保存</span>}
             </button>
-            {saveMsg && <span style={{ alignSelf: 'center', fontSize: 14 }}>{saveMsg}</span>}
+            {saveMsg && (
+              <span style={{ alignSelf: 'center', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 5, color: saveStatus === 'success' ? 'var(--green)' : 'var(--red)' }}>
+                <Icon name={saveStatus === 'success' ? 'circle-check' : 'circle-x'} size={14} />
+                {saveMsg}
+              </span>
+            )}
           </div>
         </div>
       )}
 
       {/* Stats Grid */}
       <div data-card style={styles.statsSection}>
-        <h3 style={styles.sectionTitle}>📊 我的数据</h3>
+        <h3 style={styles.sectionTitle}><Icon name="chart" size={18} />我的数据</h3>
         <div style={styles.statsGrid}>
           {stats.map((s, i) => (
             <div key={i} style={{ ...styles.statCard, borderTopColor: s.color }}>
-              <span style={styles.statIcon}>{s.icon}</span>
+              <span style={{ ...styles.statIcon, color: s.color }}><Icon name={s.icon} size={28} /></span>
               <span style={{ ...styles.statValue, color: s.color }}>{s.value}</span>
               <span style={styles.statLabel}>{s.label}</span>
             </div>
@@ -193,19 +203,19 @@ export function ProfilePage() {
 
       {/* Quick Actions */}
       <div data-card style={styles.actionsCard}>
-        <h3 style={styles.sectionTitle}>🚀 快捷操作</h3>
+        <h3 style={styles.sectionTitle}><Icon name="rocket" size={18} />快捷操作</h3>
         <div style={styles.actionsGrid}>
           {profile.role === 'student' && (
             <>
-              <button onClick={() => navigate('/teams')} style={styles.actionBtn}>👥 我的团队</button>
-              <button onClick={() => navigate('/preplans')} style={styles.actionBtn}>📋 我的预案</button>
-              <button onClick={() => navigate('/coach')} style={styles.actionBtn}>🎤 答辩教练</button>
+              <button onClick={() => navigate('/teams')} style={styles.actionBtn}><Icon name="users" size={14} />我的团队</button>
+              <button onClick={() => navigate('/preplans')} style={styles.actionBtn}><Icon name="clipboard-list" size={14} />我的预案</button>
+              <button onClick={() => navigate('/coach')} style={styles.actionBtn}><Icon name="mic" size={14} />答辩教练</button>
             </>
           )}
-          <button onClick={() => navigate('/competitions')} style={styles.actionBtn}>🏆 赛事列表</button>
-          <button onClick={() => navigate('/aitools')} style={styles.actionBtn}>🤖 AI 工具箱</button>
-          <button onClick={() => navigate('/leaderboard')} style={styles.actionBtn}>🏅 排行榜</button>
-          <button onClick={() => navigate('/showcase')} style={styles.actionBtn}>🎯 成果展示</button>
+          <button onClick={() => navigate('/competitions')} style={styles.actionBtn}><Icon name="trophy" size={14} />赛事列表</button>
+          <button onClick={() => navigate('/aitools')} style={styles.actionBtn}><Icon name="bot" size={14} />AI 工具箱</button>
+          <button onClick={() => navigate('/leaderboard')} style={styles.actionBtn}><Icon name="award" size={14} />排行榜</button>
+          <button onClick={() => navigate('/showcase')} style={styles.actionBtn}><Icon name="target" size={14} />成果展示</button>
         </div>
       </div>
     </div>
@@ -278,6 +288,9 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 14,
     color: 'var(--text-2)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
   },
   editBtn: {
     alignSelf: 'flex-start',
@@ -302,6 +315,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 18,
     fontWeight: 600,
     color: 'var(--text-1)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
   },
   formGrid: {
     display: 'grid',
@@ -357,7 +373,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderTop: '3px solid',
   },
   statIcon: {
-    fontSize: 28,
+    display: 'flex',
   },
   statValue: {
     fontSize: 32,
@@ -388,5 +404,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 500,
     transition: 'all 0.2s',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
   },
 };
