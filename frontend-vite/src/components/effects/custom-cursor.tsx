@@ -20,8 +20,13 @@ export function CustomCursor() {
     document.body.classList.add('custom-cursor-active');
 
     let isHovering = false;
+    let mouseInWindow = true;
 
     const onMove = (e: MouseEvent) => {
+      mouseInWindow = true;
+      // Always ensure visible on move
+      if (outer.style.opacity !== '1') gsap.set(outer, { opacity: 1 });
+      if (dot.style.opacity !== '1') gsap.set(dot, { opacity: 1 });
       // Dot: instant
       gsap.set(dot, { x: e.clientX, y: e.clientY });
       // Outer: fast follow
@@ -66,13 +71,29 @@ export function CustomCursor() {
       else onLeaveInteractive();
     };
 
-    const onLeaveWindow = () => gsap.to([outer, dot], { opacity: 0, duration: 0.15 });
-    const onEnterWindow = () => gsap.to([outer, dot], { opacity: 1, duration: 0.15 });
+    const onLeaveWindow = () => {
+      mouseInWindow = false;
+      gsap.to([outer, dot], { opacity: 0, duration: 0.15 });
+    };
+
+    const onEnterWindow = () => {
+      mouseInWindow = true;
+      gsap.to([outer, dot], { opacity: 1, duration: 0.15 });
+    };
+
+    // Safety: if any click/focus happens, ensure cursor is visible
+    const ensureVisible = () => {
+      if (!mouseInWindow) return;
+      gsap.set(outer, { opacity: 1 });
+      gsap.set(dot, { opacity: 1 });
+    };
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseover', checkHover);
     document.addEventListener('mouseleave', onLeaveWindow);
     document.addEventListener('mouseenter', onEnterWindow);
+    document.addEventListener('pointerdown', ensureVisible);
+    document.addEventListener('focusin', ensureVisible);
 
     return () => {
       document.body.style.cursor = '';
@@ -81,6 +102,8 @@ export function CustomCursor() {
       document.removeEventListener('mouseover', checkHover);
       document.removeEventListener('mouseleave', onLeaveWindow);
       document.removeEventListener('mouseenter', onEnterWindow);
+      document.removeEventListener('pointerdown', ensureVisible);
+      document.removeEventListener('focusin', ensureVisible);
       gsap.killTweensOf([outer, dot]);
     };
   }, []);
