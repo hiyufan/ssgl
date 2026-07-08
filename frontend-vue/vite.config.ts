@@ -1,8 +1,8 @@
+/// <reference types="vitest" />
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import vueDevTools from 'vite-plugin-vue-devtools'
 import viteCompression from 'vite-plugin-compression'
 import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -74,7 +74,13 @@ export default ({ mode }: { mode: string }) => {
       tailwindcss(),
       // 自动按需导入 API
       AutoImport({
-        imports: ['vue', 'vue-router', 'pinia', '@vueuse/core'],
+        imports: [
+          'vue',
+          'vue-router',
+          'pinia',
+          '@vueuse/core',
+          { 'element-plus': ['ElMessage', 'ElLoading', 'ElMessageBox', 'ElNotification'] }
+        ],
         dts: 'src/types/import/auto-imports.d.ts',
         resolvers: [ElementPlusResolver()],
         eslintrc: {
@@ -101,7 +107,6 @@ export default ({ mode }: { mode: string }) => {
         threshold: 10240, // 只有大小大于该值的资源会被处理 10240B = 10KB
         deleteOriginFile: false // 压缩后是否删除原文件
       }),
-      vueDevTools()
       // 打包分析
       // visualizer({
       //   open: true,
@@ -127,12 +132,17 @@ export default ({ mode }: { mode: string }) => {
         'element-plus/es/components/*/style/index'
       ]
     },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.ts'],
+      globals: true
+    },
     css: {
       preprocessorOptions: {
         // sass variable and mixin
         scss: {
           additionalData: `
-            @use "@styles/core/el-light.scss" as *; 
+            @use "@styles/core/el-light.scss" as *;
             @use "@styles/core/mixin.scss" as *;
           `
         }
