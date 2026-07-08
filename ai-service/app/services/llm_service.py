@@ -111,10 +111,10 @@ class LLMService:
         elif provider == "anthropic":
             import anthropic
 
-            self._client = anthropic.Anthropic(
-                api_key=settings.ANTHROPIC_API_KEY,
-                timeout=self.TIMEOUT,
-            )
+            kwargs = {"api_key": settings.ANTHROPIC_API_KEY, "timeout": self.TIMEOUT}
+            if settings.ANTHROPIC_BASE_URL:
+                kwargs["base_url"] = settings.ANTHROPIC_BASE_URL
+            self._client = anthropic.Anthropic(**kwargs)
             self._model = settings.ANTHROPIC_MODEL
         else:
             raise ValueError(f"Unsupported LLM_PROVIDER: {provider}")

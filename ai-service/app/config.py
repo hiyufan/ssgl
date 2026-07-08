@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     # Anthropic
     ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_BASE_URL: str = ""
     ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
 
     # Embedding (local BGE-M3 model - no API key needed)
