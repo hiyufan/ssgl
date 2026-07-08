@@ -148,14 +148,14 @@
     {
       key: 'admin',
       label: t('login.roles.admin'),
-      userName: 'teacher1',
+      userName: 'wangjg',
       password: 'admin123',
       roles: ['teacher']
     },
     {
       key: 'user',
       label: t('login.roles.user'),
-      userName: 'student1',
+      userName: 'zhangm',
       password: 'admin123',
       roles: ['student']
     }
