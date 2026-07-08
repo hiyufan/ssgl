@@ -89,8 +89,11 @@
       </ElTableColumn>
       <ElTableColumn prop="location" label="地点" width="120" show-overflow-tooltip />
       <ElTableColumn prop="prize" label="奖金" width="100" show-overflow-tooltip />
-      <ElTableColumn label="操作" width="200" fixed="right">
+      <ElTableColumn label="操作" width="240" fixed="right">
         <template #default="{ row }">
+          <ElButton v-if="!canManage && row.status === 'published'" type="success" link size="small" @click="handleRegister(row)">
+            报名参赛
+          </ElButton>
           <ElButton v-if="canManage && row.status === 'draft'" type="success" link size="small" @click="handlePublish(row)">
             发布
           </ElButton>
@@ -182,7 +185,7 @@
   import { ref, reactive, computed, onMounted } from 'vue'
   import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
   import { Plus, Download, Search } from '@element-plus/icons-vue'
-  import { competitionsAPI } from '@/api/ssgl'
+  import { competitionsAPI, registrationsAPI } from '@/api/ssgl'
   import SSGLPageHeader from '@/components/ssgl/SSGLPageHeader.vue'
   import SSGLStatusTag from '@/components/ssgl/SSGLStatusTag.vue'
   import { useUserStore } from '@/store/modules/user'
@@ -373,6 +376,19 @@
     } catch (err: any) {
       if (err !== 'cancel') {
         ElMessage.error(err?.response?.data?.error || '删除失败')
+      }
+    }
+  }
+
+  async function handleRegister(comp: Competition) {
+    try {
+      await ElMessageBox.confirm(`确定要报名「${comp.title}」吗？`, '确认报名', { type: 'info' })
+      await registrationsAPI.register(comp.id)
+      ElMessage.success('报名成功！请等待审核')
+      await loadData()
+    } catch (err: any) {
+      if (err !== 'cancel') {
+        ElMessage.error(err?.response?.data?.error || '报名失败')
       }
     }
   }
