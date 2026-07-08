@@ -38,6 +38,7 @@ yarn-error.log*
 .codegraph/
 .cursor/
 .worktrees/
+.superpowers/
 
 # Python
 __pycache__/

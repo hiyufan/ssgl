@@ -7,8 +7,9 @@
 ```
 ┌─────────────┐    ┌─────────────┐    ┌──────────────┐
 │   Frontend   │───→│  Go Backend │───→│  PostgreSQL  │
-│  React+Vite  │    │   Gin+GORM  │    │   ssgl DB    │
-│  :5174       │    │   :8080     │    │              │
+│ Vue3+Vite+   │    │   Gin+GORM  │    │   ssgl DB    │
+│ Element Plus │    │   :8080     │    │              │
+│  :5174       │    │             │    │              │
 └──────┬───────┘    └─────────────┘    └──────────────┘
        │
        ▼
@@ -44,7 +45,7 @@
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | React 19 + Vite 8 + TypeScript + Tailwind CSS + Zustand + GSAP |
+| 前端 | Vue 3 + Vite + TypeScript + Element Plus + Pinia + Art Design Pro |
 | 后端 | Go + Gin + GORM + JWT |
 | AI | FastAPI + pgvector + BGE-M3 嵌入 + OpenAI/Anthropic LLM |
 | 数据库 | PostgreSQL 17 |
@@ -82,10 +83,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ### 4. 前端
 ```bash
-cd frontend-vite
+cd frontend-vue
 pnpm install
 pnpm dev --port 5174
 ```
+
+> 注：`frontend-vite` 为旧版 React 前端，保留作为过渡期参考。
 
 ## 👤 默认账号
 
@@ -122,12 +125,14 @@ ssgl/
 │       ├── routers/    # API 路由
 │       ├── services/   # AI/嵌入/RAG 服务
 │       └── models/     # 数据模型
-├── frontend-vite/      # React 前端
+├── frontend-vue/       # Vue 3 前端 (主)
 │   └── src/
+│       ├── api/        # API 客户端
 │       ├── components/ # UI 组件
-│       ├── pages/      # 页面
-│       ├── services/   # API 调用
-│       └── stores/     # Zustand 状态
+│       ├── views/      # 页面
+│       ├── store/      # Pinia 状态
+│       └── router/     # 路由配置
+├── frontend-vite/      # React 前端 (旧，保留参考)
 └── tests/              # 自动化测试
 ```
 

@@ -1,6 +1,7 @@
-#!/bin/bash
-set -e
-cd /tmp/ssgl/frontend-vite
-node node_modules/.bin/tsc -b 2>&1
-node node_modules/.bin/vite build 2>&1
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/frontend-vue"
+pnpm install
+pnpm build
 echo "BUILD DONE"
