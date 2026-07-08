@@ -88,8 +88,6 @@ pnpm install
 pnpm dev --port 5174
 ```
 
-> 注：`frontend-vite` 为旧版 React 前端，保留作为过渡期参考。
-
 ## 👤 默认账号
 
 | 角色 | 用户名 | 密码 |
@@ -132,7 +130,6 @@ ssgl/
 │       ├── views/      # 页面
 │       ├── store/      # Pinia 状态
 │       └── router/     # 路由配置
-├── frontend-vite/      # React 前端 (旧，保留参考)
 └── tests/              # 自动化测试
 ```
 

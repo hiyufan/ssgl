@@ -33,12 +33,18 @@ yarn-error.log*
 *.log
 .cache/
 *.exe
+token.json
+package-lock.json
 
 # Tooling
 .codegraph/
 .cursor/
 .worktrees/
 .superpowers/
+.claude/
+
+# Old frontend (removed)
+frontend-vite/
 
 # Python
 __pycache__/
