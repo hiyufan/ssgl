@@ -118,7 +118,7 @@ const userOptions = ref<UserSummary[]>([])
 const growthData = ref<any>(null)
 
 function eventType(type: string) {
-  const map: Record<string, string> = { award: 'success', team: 'primary', competition: 'warning', preplan: 'info' }
+  const map: Record<string, '' | 'success' | 'warning' | 'info' | 'danger'> = { award: 'success', team: '', competition: 'warning', preplan: 'info' }
   return map[type] || 'info'
 }
 

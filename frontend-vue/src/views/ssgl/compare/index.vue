@@ -33,35 +33,27 @@
 
     <!-- Comparison Result -->
     <div v-if="loading" class="ssgl-loading">
-      <ElIcon class="is-loading" :size="32"><Loading /></ElIcon>
+      <ElSpin />
     </div>
 
     <template v-else-if="compareResult">
-      <ElRow :gutter="16" class="ssgl-mb-16">
-        <ElCol v-for="comp in compareResult.competitions" :key="comp.id" :span="Math.floor(24 / compareResult.competitions.length)">
-          <ElCard shadow="never">
-            <template #header><span class="card-title">{{ comp.title }}</span></template>
-            <ElDescriptions :column="1" border size="small">
-              <ElDescriptionsItem label="状态">
-                <ElTag :type="statusTagType(comp.status)" size="small">{{ statusLabel(comp.status) }}</ElTag>
-              </ElDescriptionsItem>
-              <ElDescriptionsItem label="类型">{{ comp.type }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="团队数">{{ comp.team_count }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="学生数">{{ comp.student_count }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="报名数">{{ comp.registration_count }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="预案数">{{ comp.pre_plan_count }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="奖项数">{{ comp.award_count }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="热度分">{{ comp.popularity_score }}</ElDescriptionsItem>
-            </ElDescriptions>
-          </ElCard>
-        </ElCol>
-      </ElRow>
+      <!-- Summary -->
+      <ElCard shadow="never" class="ssgl-mb-16">
+        <template #header><span class="card-title">对比摘要</span></template>
+        <ElDescriptions :column="3" border size="small">
+          <ElDescriptionsItem label="最受欢迎">{{ compareResult.summary.most_popular }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="最佳团队规模">{{ compareResult.summary.best_team_size }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="平均团队数">{{ compareResult.summary.avg_teams_overall?.toFixed(1) }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="总团队数">{{ compareResult.summary.total_teams }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="总学生数">{{ compareResult.summary.total_students }}</ElDescriptionsItem>
+        </ElDescriptions>
+      </ElCard>
 
       <!-- Comparison Table -->
-      <ElCard v-if="compareResult.metrics" shadow="never">
+      <ElCard shadow="never">
         <template #header><span class="card-title">指标对比</span></template>
         <ElTable :data="comparisonRows" stripe size="small">
-          <ElTableColumn prop="metric" label="指标" width="120" />
+          <ElTableColumn prop="label" label="指标" width="120" />
           <ElTableColumn
             v-for="comp in compareResult.competitions"
             :key="comp.id"
@@ -69,7 +61,7 @@
             align="center"
           >
             <template #default="{ row }">
-              <span :class="{ 'best-value': row.best === comp.id }">{{ row.values[comp.id] ?? '—' }}</span>
+              <span :class="{ 'best-value': row.bestId === comp.id }">{{ row.values[comp.id] ?? '—' }}</span>
             </template>
           </ElTableColumn>
         </ElTable>
@@ -86,7 +78,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { competitionsAPI, comparisonAPI } from '@/api/ssgl'
 import SSGLPageHeader from '@/components/ssgl/SSGLPageHeader.vue'
-import type { Competition, CompareResponse } from '@/types/ssgl'
+import type { Competition, CompareResponse, CompetitionComparison } from '@/types/ssgl'
 
 defineOptions({ name: 'SSGL_Compare' })
 
@@ -97,24 +89,32 @@ const allCompetitions = ref<Competition[]>([])
 const selectedIds = ref<number[]>([])
 const compareResult = ref<CompareResponse | null>(null)
 
-const comparisonRows = computed(() => {
-  if (!compareResult.value?.metrics) return []
-  return compareResult.value.metrics.map((m: any) => ({
-    metric: m.label || m.name,
-    values: m.values || {},
-    best: m.best,
-  }))
+type MetricRow = { label: string; values: Record<number, string | number>; bestId?: number }
+
+const comparisonRows = computed<MetricRow[]>(() => {
+  if (!compareResult.value) return []
+  const comps = compareResult.value.competitions
+  const metrics: Array<{ label: string; key: keyof CompetitionComparison; higher?: boolean }> = [
+    { label: '团队数', key: 'team_count', higher: true },
+    { label: '学生数', key: 'student_count', higher: true },
+    { label: '预案数', key: 'preplan_count', higher: true },
+    { label: '奖项数', key: 'award_count', higher: true },
+    { label: '平均团队规模', key: 'avg_team_size', higher: true },
+    { label: '报名率', key: 'registration_pct', higher: true },
+    { label: '持续天数', key: 'duration_days' },
+  ]
+  return metrics.map((m) => {
+    const values: Record<number, string | number> = {}
+    let bestId: number | undefined
+    let bestVal = m.higher ? -Infinity : Infinity
+    for (const c of comps) {
+      const v = (c as any)[m.key] ?? 0
+      values[c.id] = typeof v === 'number' && m.key === 'registration_pct' ? `${v}%` : v
+      if (m.higher && v > bestVal) { bestVal = v; bestId = c.id }
+    }
+    return { label: m.label, values, bestId }
+  })
 })
-
-function statusLabel(status: string) {
-  const map: Record<string, string> = { draft: '草稿', published: '已发布', ongoing: '进行中', ended: '已结束' }
-  return map[status] || status
-}
-
-function statusTagType(status: string) {
-  const map: Record<string, string> = { ongoing: 'success', published: 'warning', ended: 'info', draft: 'info' }
-  return map[status] || 'info'
-}
 
 async function doCompare() {
   if (selectedIds.value.length < 2) return

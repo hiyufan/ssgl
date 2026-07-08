@@ -254,7 +254,7 @@ function statusLabel(status: string) {
 }
 
 function statusTagType(status: string) {
-  const map: Record<string, string> = { ongoing: 'success', published: 'warning', ended: 'info', cancelled: 'danger', draft: 'info' }
+  const map: Record<string, '' | 'success' | 'warning' | 'info' | 'danger'> = { ongoing: 'success', published: 'warning', ended: 'info', cancelled: 'danger', draft: 'info' }
   return map[status] || 'info'
 }
 

@@ -139,12 +139,12 @@ const trendItems = computed(() => {
 })
 
 function severityType(severity: string) {
-  const map: Record<string, string> = { high: 'danger', medium: 'warning', low: 'success', critical: 'danger' }
+  const map: Record<string, '' | 'success' | 'warning' | 'info' | 'danger'> = { high: 'danger', medium: 'warning', low: 'success', critical: 'danger' }
   return map[severity] || 'info'
 }
 
 function impactType(impact: string) {
-  const map: Record<string, string> = { high: 'danger', medium: 'warning', low: 'success' }
+  const map: Record<string, '' | 'success' | 'warning' | 'info' | 'danger'> = { high: 'danger', medium: 'warning', low: 'success' }
   return map[impact] || 'info'
 }
 
