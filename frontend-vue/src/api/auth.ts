@@ -1,29 +1,36 @@
-import request from '@/utils/http'
+import type { LoginRequest, LoginResponse, TokenPair, User } from '@/types/ssgl'
+import { api, clearTokens, setTokens } from './http'
 
-/**
- * 登录
- * @param params 登录参数
- * @returns 登录响应
- */
-export function fetchLogin(params: Api.Auth.LoginParams) {
-  return request.post<Api.Auth.LoginResponse>({
-    url: '/api/auth/login',
-    params
-    // showSuccessMessage: true // 显示成功消息
-    // showErrorMessage: false // 不显示错误消息
-  })
+export const authAPI = {
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    const response = await api.post<LoginResponse>('/auth/login', credentials)
+    if (response.data.tokens) {
+      setTokens(response.data.tokens)
+    }
+    return response.data
+  },
+
+  async refresh(refreshToken: string): Promise<TokenPair> {
+    const response = await api.post<TokenPair>('/auth/refresh', { refresh_token: refreshToken })
+    setTokens(response.data)
+    return response.data
+  },
+
+  async getMe(): Promise<{ user: User }> {
+    const response = await api.get<{ user: User }>('/users/me')
+    return response.data
+  },
+
+  logout(): void {
+    clearTokens()
+  }
 }
 
-/**
- * 获取用户信息
- * @returns 用户信息
- */
-export function fetchGetUserInfo() {
-  return request.get<Api.Auth.UserInfo>({
-    url: '/api/user/info'
-    // 自定义请求头
-    // headers: {
-    //   'X-Custom-Header': 'your-custom-value'
-    // }
-  })
+// Backward-compatible aliases for template code
+export async function fetchLogin(params: { username: string; password: string }) {
+  return authAPI.login(params)
+}
+
+export async function fetchGetUserInfo() {
+  return authAPI.getMe()
 }

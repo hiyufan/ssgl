@@ -135,7 +135,12 @@ export default ({ mode }: { mode: string }) => {
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
-      globals: true
+      globals: true,
+      server: {
+        deps: {
+          inline: ['element-plus']
+        }
+      }
     },
     css: {
       preprocessorOptions: {
