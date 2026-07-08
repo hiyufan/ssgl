@@ -50,7 +50,8 @@
               :style="getEventStyle(evt)"
               :title="evt.title"
             >
-              {{ evt.title }}
+              <span class="event-chip-text">{{ evt.title }}</span>
+              <span v-if="(evt as any)._label" class="event-chip-badge">{{ (evt as any)._label === '开始' ? '🟢' : '🔴' }}</span>
             </div>
             <div v-if="(eventsByDate[date] || []).length > 3" class="event-more">
               +{{ eventsByDate[date].length - 3 }} 更多
@@ -170,14 +171,14 @@
   const eventsByDate = computed(() => {
     const map: Record<string, CalendarEvent[]> = {}
     for (const evt of events.value) {
-      const start = new Date(evt.start_date)
-      const end = new Date(evt.end_date)
-      const cursor = new Date(start)
-      while (cursor <= end) {
-        const key = cursor.toISOString().slice(0, 10)
-        if (!map[key]) map[key] = []
-        map[key].push(evt)
-        cursor.setDate(cursor.getDate() + 1)
+      // 只在开始日期和结束日期显示，不铺满整段时间
+      const startKey = new Date(evt.start_date).toISOString().slice(0, 10)
+      const endKey = new Date(evt.end_date).toISOString().slice(0, 10)
+      if (!map[startKey]) map[startKey] = []
+      map[startKey].push({ ...evt, _label: '开始' })
+      if (startKey !== endKey) {
+        if (!map[endKey]) map[endKey] = []
+        map[endKey].push({ ...evt, _label: '截止' })
       }
     }
     return map
