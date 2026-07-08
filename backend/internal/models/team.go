@@ -20,19 +20,21 @@ const (
 
 // Team represents a competition team.
 type Team struct {
-	ID            uint           `json:"id" gorm:"primaryKey"`
-	Name          string         `json:"name" gorm:"size:128;not null"`
-	CompetitionID uint           `json:"competition_id" gorm:"not null;index"`
-	LeaderID      uint           `json:"leader_id" gorm:"not null;index"`
-	Status        string         `json:"status" gorm:"size:16;not null;default:active"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
+	ID              uint           `json:"id" gorm:"primaryKey"`
+	Name            string         `json:"name" gorm:"size:128;not null"`
+	CompetitionID   uint           `json:"competition_id" gorm:"not null;index"`
+	LeaderID        uint           `json:"leader_id" gorm:"not null;index"`
+	GuideTeacherID  *uint          `json:"guide_teacher_id" gorm:"index"`
+	Status          string         `json:"status" gorm:"size:16;not null;default:active"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
 
 	// Relations
-	Competition Competition  `json:"competition" gorm:"foreignKey:CompetitionID"`
-	Leader      User         `json:"leader" gorm:"foreignKey:LeaderID"`
-	Members     []TeamMember `json:"members" gorm:"foreignKey:TeamID"`
+	Competition  Competition  `json:"competition" gorm:"foreignKey:CompetitionID"`
+	Leader       User         `json:"leader" gorm:"foreignKey:LeaderID"`
+	GuideTeacher *User        `json:"guide_teacher,omitempty" gorm:"foreignKey:GuideTeacherID"`
+	Members      []TeamMember `json:"members" gorm:"foreignKey:TeamID"`
 }
 
 // TeamMember represents a user's membership in a team.

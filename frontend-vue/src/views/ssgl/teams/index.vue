@@ -49,6 +49,11 @@
           </div>
         </template>
       </ElTableColumn>
+      <ElTableColumn label="指导老师" width="120">
+        <template #default="{ row }">
+          {{ row.guide_teacher?.name || '—' }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <ElButton type="primary" link size="small" @click="openDetail(row)">详情</ElButton>
@@ -74,6 +79,16 @@
             />
           </ElSelect>
         </ElFormItem>
+        <ElFormItem label="指导老师">
+          <ElSelect v-model="createForm.guide_teacher_id" placeholder="选择指导老师（可选）" clearable style="width: 100%">
+            <ElOption
+              v-for="t in teachers"
+              :key="t.id"
+              :value="t.id"
+              :label="t.name || t.username"
+            />
+          </ElSelect>
+        </ElFormItem>
       </ElForm>
       <template #footer>
         <ElButton @click="createVisible = false">取消</ElButton>
@@ -87,6 +102,11 @@
         <div class="detail-header">
           <SSGLStatusTag :status="detailTeam.status" />
           <span class="comp-label">{{ getCompetitionTitle(detailTeam.competition_id) }}</span>
+        </div>
+
+        <div v-if="detailTeam.guide_teacher" class="mb-3 p-2 rounded bg-blue-50 dark:bg-blue-900/20 text-sm">
+          <span class="text-gray-400">指导老师：</span>
+          <span class="font-semibold">{{ detailTeam.guide_teacher.name }}</span>
         </div>
 
         <h4 class="section-title">成员 ({{ (detailTeam.members || []).length }})</h4>
@@ -153,7 +173,7 @@
   import { ref, reactive, computed, onMounted } from 'vue'
   import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
   import { Plus, DataAnalysis } from '@element-plus/icons-vue'
-  import { teamsAPI, competitionsAPI } from '@/api/ssgl'
+  import { teamsAPI, competitionsAPI, profileAPI } from '@/api/ssgl'
   import SSGLPageHeader from '@/components/ssgl/SSGLPageHeader.vue'
   import SSGLStatusTag from '@/components/ssgl/SSGLStatusTag.vue'
   import { useUserStore } from '@/store/modules/user'
@@ -169,13 +189,14 @@
   const loading = ref(false)
   const teams = ref<Team[]>([])
   const competitions = ref<Competition[]>([])
+  const teachers = ref<any[]>([])
   const selectedComp = ref('all')
 
   // Create dialog
   const createVisible = ref(false)
   const createSubmitting = ref(false)
   const createFormRef = ref<FormInstance>()
-  const createForm = reactive({ name: '', competition_id: null as number | null })
+  const createForm = reactive({ name: '', competition_id: null as number | null, guide_teacher_id: null as number | null })
   const createFormRules: FormRules = {
     name: [{ required: true, message: '请填写团队名称', trigger: 'blur' }],
     competition_id: [{ required: true, message: '请选择参赛赛事', trigger: 'change' }],
@@ -220,9 +241,10 @@
   async function loadData() {
     loading.value = true
     try {
-      const [tRes, cRes] = await Promise.all([teamsAPI.list(), competitionsAPI.list()])
+      const [tRes, cRes, teaRes] = await Promise.all([teamsAPI.list(), competitionsAPI.list(), profileAPI.searchUsers('', 'teacher').catch(() => ({ users: [], total: 0 }))])
       teams.value = tRes.teams || []
       competitions.value = cRes.competitions || []
+      teachers.value = (teaRes as any).users || []
     } catch {
       ElMessage.error('加载数据失败')
     } finally {
@@ -233,6 +255,7 @@
   function openCreate() {
     createForm.name = ''
     createForm.competition_id = null
+    createForm.guide_teacher_id = null
     createVisible.value = true
   }
 
@@ -244,7 +267,7 @@
     }
     createSubmitting.value = true
     try {
-      const res = await teamsAPI.create({ name: createForm.name.trim(), competition_id: createForm.competition_id! })
+      const res = await teamsAPI.create({ name: createForm.name.trim(), competition_id: createForm.competition_id!, guide_teacher_id: createForm.guide_teacher_id || undefined })
       teams.value.unshift(res.team)
       ElMessage.success('团队已创建')
       createVisible.value = false

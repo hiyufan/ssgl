@@ -21,8 +21,9 @@ func NewTeamHandler() *TeamHandler {
 
 // CreateTeamRequest is the payload for creating a team.
 type CreateTeamRequest struct {
-	Name          string `json:"name" binding:"required,max=128"`
-	CompetitionID uint   `json:"competition_id" binding:"required"`
+	Name           string `json:"name" binding:"required,max=128"`
+	CompetitionID  uint   `json:"competition_id" binding:"required"`
+	GuideTeacherID *uint  `json:"guide_teacher_id"`
 }
 
 // List handles GET /teams — filtered by role and optional competition_id.
@@ -97,7 +98,7 @@ func (h *TeamHandler) Get(c *gin.Context) {
 	}
 
 	var team models.Team
-	if err := db.Preload("Competition").Preload("Leader").Preload("Members.User").First(&team, id).Error; err != nil {
+	if err := db.Preload("Competition").Preload("Leader").Preload("GuideTeacher").Preload("Members.User").First(&team, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "team not found"})
 			return
@@ -146,10 +147,11 @@ func (h *TeamHandler) Create(c *gin.Context) {
 
 	// Create team and add leader as member in a transaction.
 	team := models.Team{
-		Name:          req.Name,
-		CompetitionID: req.CompetitionID,
-		LeaderID:      uid,
-		Status:        models.TeamStatusActive,
+		Name:            req.Name,
+		CompetitionID:   req.CompetitionID,
+		LeaderID:        uid,
+		GuideTeacherID:  req.GuideTeacherID,
+		Status:          models.TeamStatusActive,
 	}
 
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -176,7 +178,7 @@ func (h *TeamHandler) Create(c *gin.Context) {
 	}
 
 	// Reload with all relations.
-	db.Preload("Competition").Preload("Leader").Preload("Members.User").First(&team, team.ID)
+	db.Preload("Competition").Preload("Leader").Preload("GuideTeacher").Preload("Members.User").First(&team, team.ID)
 
 	c.JSON(http.StatusCreated, gin.H{"team": team})
 }
@@ -235,7 +237,7 @@ func (h *TeamHandler) Join(c *gin.Context) {
 	}
 
 	// Reload team with relations.
-	db.Preload("Competition").Preload("Leader").Preload("Members.User").First(&team, team.ID)
+	db.Preload("Competition").Preload("Leader").Preload("GuideTeacher").Preload("Members.User").First(&team, team.ID)
 
 	c.JSON(http.StatusOK, gin.H{"team": team})
 }
@@ -280,7 +282,7 @@ func (h *TeamHandler) Leave(c *gin.Context) {
 	}
 
 	// Reload team with relations.
-	db.Preload("Competition").Preload("Leader").Preload("Members.User").First(&team, team.ID)
+	db.Preload("Competition").Preload("Leader").Preload("GuideTeacher").Preload("Members.User").First(&team, team.ID)
 
 	c.JSON(http.StatusOK, gin.H{"team": team})
 }
@@ -328,7 +330,7 @@ func (h *TeamHandler) Update(c *gin.Context) {
 		}
 	}
 
-	db.Preload("Competition").Preload("Leader").Preload("Members.User").First(&team, team.ID)
+	db.Preload("Competition").Preload("Leader").Preload("GuideTeacher").Preload("Members.User").First(&team, team.ID)
 	c.JSON(http.StatusOK, gin.H{"team": team})
 }
 

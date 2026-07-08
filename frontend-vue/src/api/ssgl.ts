@@ -175,7 +175,7 @@ export const teamsAPI = {
     const response = await api.get<{ team: Team }>(`/teams/${id}`)
     return response.data
   },
-  create: async (data: { name: string; competition_id: number }): Promise<{ team: Team }> => {
+  create: async (data: { name: string; competition_id: number; guide_teacher_id?: number | null }): Promise<{ team: Team }> => {
     const response = await api.post<{ team: Team }>('/teams', data)
     return response.data
   },

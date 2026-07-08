@@ -55,3 +55,4 @@ venv/
 ssgl-server
 backend/ssgl-server
 test_reports/
+backend/server

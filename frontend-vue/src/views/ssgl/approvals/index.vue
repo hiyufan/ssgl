@@ -7,7 +7,7 @@
       <ElCol :span="10" style="height: 100%">
         <ElCard shadow="never" v-loading="loading" style="height: 100%; display: flex; flex-direction: column">
           <template #header>
-            <div class="flex gap-1">
+            <div class="flex gap-1 items-center flex-wrap">
               <ElButton
                 v-for="tab in filterTabs"
                 :key="tab.key"
@@ -24,6 +24,19 @@
                   type="danger"
                 />
               </ElButton>
+              <ElSelect
+                v-model="typeFilter"
+                size="small"
+                placeholder="类型筛选"
+                clearable
+                style="width: 130px"
+                class="ml-auto"
+              >
+                <ElOption label="全部类型" value="all" />
+                <ElOption label="报名申请" value="registration" />
+                <ElOption label="预计划审批" value="pre_plan" />
+                <ElOption label="获奖确认" value="reward" />
+              </ElSelect>
             </div>
           </template>
 
@@ -48,7 +61,7 @@
                     <SSGLStatusTag :status="a.status" />
                     <span class="text-xs text-gray-400">by {{ a.submitter?.name || '' }}</span>
                     <span class="ml-auto text-xs text-gray-400 font-mono">
-                      步骤 {{ a.current_step + 1 }}/{{ a.total_steps + 1 }}
+                      步骤 {{ a.current_step }}/{{ a.total_steps }}
                     </span>
                   </div>
                 </div>
@@ -181,6 +194,7 @@
   const loading = ref(false)
   const approvals = ref<ApprovalWorkflow[]>([])
   const filter = ref('pending')
+  const typeFilter = ref('all')
   const selectedId = ref<number | null>(null)
   const comment = ref('')
   const acting = ref(false)
@@ -219,8 +233,14 @@
   ])
 
   const filteredApprovals = computed(() => {
-    if (filter.value === 'all') return approvals.value
-    return approvals.value.filter(a => a.status === filter.value)
+    let list = approvals.value
+    if (filter.value !== 'all') {
+      list = list.filter(a => a.status === filter.value)
+    }
+    if (typeFilter.value !== 'all') {
+      list = list.filter(a => a.type === typeFilter.value)
+    }
+    return list
   })
 
   const detail = computed(() => {

@@ -183,7 +183,6 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.PUT("/pre-plans/:id", preplanHandler.Update)
 		protected.POST("/pre-plans/:id/review", preplanHandler.AIReview)
 		protected.POST("/pre-plans/:id/execution-match", preplanHandler.ExecutionMatch)
-		protected.POST("/pre-plans/:id/teacher-review", preplanHandler.TeacherReview)
 		protected.DELETE("/pre-plans/:id", preplanHandler.Delete)
 
 		// Awards (read — any authenticated user).
@@ -386,7 +385,10 @@ func Setup(cfg *config.Config) *gin.Engine {
 		staff.POST("/competitions/batch-publish", batchHandler.BatchPublish)
 		staff.POST("/competitions/batch-close", batchHandler.BatchClose)
 		staff.POST("/competitions/batch-delete", batchHandler.BatchDelete)
-	}
+
+		// Pre-plan teacher review — teacher/admin only.
+		staff.POST("/pre-plans/:id/teacher-review", preplanHandler.TeacherReview)
+}
 
 	// Admin-only routes.
 	admin := v1.Group("")

@@ -149,6 +149,14 @@ func (h *PrePlanHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Verify submitter is a member of the team.
+	submitterID := currentUserIDOr(c, team.LeaderID)
+	var membership models.TeamMember
+	if err := db.Where("team_id = ? AND user_id = ?", req.TeamID, submitterID).First(&membership).Error; err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "submitter is not a member of the team"})
+		return
+	}
+
 	now := time.Now()
 	preplan := models.PrePlan{
 		CompetitionID:   req.CompetitionID,
@@ -169,11 +177,17 @@ func (h *PrePlanHandler) Create(c *gin.Context) {
 		return
 	}
 
+	adminID, hasAdmin := firstAdminID(db)
+	approverIDs := uniqueApprovers(comp.OrganizerID)
+	if hasAdmin {
+		approverIDs = uniqueApprovers(comp.OrganizerID, adminID)
+	}
+
 	if err := createApprovalWorkflow(h.WorkflowService, services.CreateWorkflowInput{
 		Type:        models.WorkflowTypePrePlan,
 		TargetID:    preplan.ID,
-		SubmitterID: currentUserIDOr(c, team.LeaderID),
-		ApproverIDs: uniqueApprovers(comp.OrganizerID),
+		SubmitterID: submitterID,
+		ApproverIDs: approverIDs,
 	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create approval workflow"})
 		return
