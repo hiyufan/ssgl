@@ -1,7 +1,9 @@
 import type { AppRouteRecord } from '@/types/router'
 
 const allRoles = ['student', 'teacher', 'admin']
-const teacherAdmin = ['teacher', 'admin']
+const studentTeacher = ['student', 'teacher']
+const teacherOnly = ['teacher']
+const studentOnly = ['student']
 const adminOnly = ['admin']
 
 function page(
@@ -42,45 +44,45 @@ export const ssglRoutes: AppRouteRecord[] = [
   page('Dashboard', 'dashboard', '概览', 'ri:dashboard-line', allRoles, true),
 
   // 赛事运营
-  group('CompetitionOps', 'competition-ops', '赛事运营', 'ri:trophy-line', allRoles, [
-    page('Competitions', 'competitions', '赛事管理', 'ri:trophy-line', allRoles),
-    page('Calendar', 'calendar', '赛事日历', 'ri:calendar-line', allRoles),
-    page('Teams', 'teams', '团队管理', 'ri:team-line', allRoles)
+  group('CompetitionOps', 'competition-ops', '赛事运营', 'ri:trophy-line', studentTeacher, [
+    page('Competitions', 'competitions', '赛事管理', 'ri:trophy-line', studentTeacher),
+    page('Calendar', 'calendar', '赛事日历', 'ri:calendar-line', studentTeacher),
+    page('Teams', 'teams', '团队管理', 'ri:team-line', studentTeacher)
   ]),
 
   // 流程审批
-  group('Workflow', 'workflow', '流程审批', 'ri:checkbox-line', allRoles, [
-    page('Approvals', 'approvals', '审批中心', 'ri:checkbox-line', teacherAdmin),
-    page('Preplans', 'preplans', '预案管理', 'ri:file-list-3-line', allRoles),
-    page('Registrations', 'registrations', '报名管理', 'ri:file-user-line', teacherAdmin),
-    page('Awards', 'awards', '获奖管理', 'ri:gift-line', teacherAdmin),
-    page('Evaluations', 'evaluations', '学生评价', 'ri:star-line', allRoles),
-    page('Feedback', 'feedback', '赛事反馈', 'ri:message-3-line', allRoles)
+  group('Workflow', 'workflow', '流程审批', 'ri:checkbox-line', studentTeacher, [
+    page('Approvals', 'approvals', '审批中心', 'ri:checkbox-line', teacherOnly),
+    page('Preplans', 'preplans', '预案管理', 'ri:file-list-3-line', studentTeacher),
+    page('Registrations', 'registrations', '报名管理', 'ri:file-user-line', teacherOnly),
+    page('Awards', 'awards', '获奖管理', 'ri:gift-line', teacherOnly),
+    page('Evaluations', 'evaluations', '学生评价', 'ri:star-line', studentTeacher),
+    page('Feedback', 'feedback', '赛事反馈', 'ri:message-3-line', studentTeacher)
   ]),
 
   // 数据洞察
-  group('DataInsights', 'data-insights', '数据洞察', 'ri:bar-chart-line', allRoles, [
-    page('Stats', 'stats', '统计分析', 'ri:bar-chart-line', teacherAdmin),
-    page('Analytics', 'analytics', '数据分析中心', 'ri:line-chart-line', allRoles),
-    page('Kanban', 'kanban', '看板总览', 'ri:kanban-view', teacherAdmin),
-    page('Insights', 'insights', 'AI 洞察', 'ri:lightbulb-line', teacherAdmin),
-    page('Leaderboard', 'leaderboard', '排行榜', 'ri:trophy-line', allRoles),
-    page('Showcase', 'showcase', '成果展示', 'ri:award-line', allRoles),
-    page('AchievementGallery', 'achievement-gallery', '成就展示墙', 'ri:medal-line', allRoles),
-    page('Points', 'points', '积分成就', 'ri:star-smile-line', allRoles),
-    page('Compare', 'compare', '赛事对比', 'ri:git-compare-line', allRoles),
-    page('Growth', 'growth', '成长档案', 'ri:seedling-line', ['student']),
-    page('LearningPath', 'learning-path', '学习路径', 'ri:map-2-line', allRoles),
-    page('AnnualReport', 'annual-report', '年度报告', 'ri:file-chart-line', teacherAdmin)
+  group('DataInsights', 'data-insights', '数据洞察', 'ri:bar-chart-line', studentTeacher, [
+    page('Stats', 'stats', '统计分析', 'ri:bar-chart-line', teacherOnly),
+    page('Analytics', 'analytics', '数据分析中心', 'ri:line-chart-line', teacherOnly),
+    page('Kanban', 'kanban', '看板总览', 'ri:kanban-view', teacherOnly),
+    page('Insights', 'insights', 'AI 洞察', 'ri:lightbulb-line', teacherOnly),
+    page('Leaderboard', 'leaderboard', '排行榜', 'ri:trophy-line', studentTeacher),
+    page('Showcase', 'showcase', '成果展示', 'ri:award-line', studentTeacher),
+    page('AchievementGallery', 'achievement-gallery', '成就展示墙', 'ri:medal-line', studentTeacher),
+    page('Points', 'points', '积分成就', 'ri:star-smile-line', studentOnly),
+    page('Compare', 'compare', '赛事对比', 'ri:git-compare-line', studentTeacher),
+    page('Growth', 'growth', '成长档案', 'ri:seedling-line', studentOnly),
+    page('LearningPath', 'learning-path', '学习路径', 'ri:map-2-line', studentOnly),
+    page('AnnualReport', 'annual-report', '年度报告', 'ri:file-chart-line', teacherOnly)
   ]),
 
   // 智能助手
-  group('AIAssistants', 'ai-assistants', '智能助手', 'ri:magic-line', allRoles, [
-    page('AITools', 'aitools', 'AI 工具箱', 'ri:magic-line', allRoles),
-    page('Coach', 'coach', '赛事陪练', 'ri:target-line', allRoles),
-    page('Assistant', 'assistant', 'AI 助手', 'ri:robot-2-line', allRoles),
-    page('ExecutionMatch', 'execution-match', '执行匹配', 'ri:survey-line', allRoles),
-    page('KnowledgeBase', 'knowledge-base', '知识库管理', 'ri:database-2-line', allRoles)
+  group('AIAssistants', 'ai-assistants', '智能助手', 'ri:magic-line', studentTeacher, [
+    page('AITools', 'aitools', 'AI 工具箱', 'ri:magic-line', studentTeacher),
+    page('Coach', 'coach', '赛事陪练', 'ri:target-line', studentOnly),
+    page('Assistant', 'assistant', 'AI 助手', 'ri:robot-2-line', studentTeacher),
+    page('ExecutionMatch', 'execution-match', '执行匹配', 'ri:survey-line', studentTeacher),
+    page('KnowledgeBase', 'knowledge-base', '知识库管理', 'ri:database-2-line', teacherOnly)
   ]),
 
   // 系统管理

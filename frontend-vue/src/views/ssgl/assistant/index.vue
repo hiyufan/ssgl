@@ -185,7 +185,8 @@
     }
   }
 
-  function handleKeydown(e: KeyboardEvent) {
+  function handleKeydown(e: Event | KeyboardEvent) {
+    if (!(e instanceof KeyboardEvent)) return
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()

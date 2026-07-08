@@ -41,7 +41,7 @@ export class MenuProcessor {
    */
   private async processFrontendMenu(): Promise<AppRouteRecord[]> {
     const userStore = useUserStore()
-    const roles = userStore.info?.roles
+    const roles = userStore.roles
 
     let menuList = [...asyncRoutes]
 
@@ -98,9 +98,9 @@ export class MenuProcessor {
         return item
       })
       .filter((item) => {
-        // 如果定义了 children 属性（即使是空数组），说明这是一个目录菜单，应该保留
+        // 目录菜单只有在仍有可访问子项时才保留，避免角色过滤后留下空入口。
         if ('children' in item) {
-          return true
+          return Boolean(item.children?.length)
         }
 
         // 如果有外链或 iframe，保留

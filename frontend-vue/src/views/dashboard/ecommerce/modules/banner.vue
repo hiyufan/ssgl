@@ -1,7 +1,7 @@
 <template>
   <ArtBasicBanner
     class="justify-center !h-53 mb-5 max-sm:!pt-8 max-sm:!h-48 max-sm:mb-4"
-    :title="`欢迎回来 ${userInfo.userName}`"
+    :title="`欢迎回来 ${displayName}`"
     boxStyle="!bg-theme/10"
     titleColor="var(--art-gray-900)"
     :decoration="false"
@@ -55,6 +55,7 @@
    * 获取当前用户信息
    */
   const userInfo = computed(() => userStore.getUserInfo)
+  const displayName = computed(() => userInfo.value.name || userInfo.value.username || '用户')
 
   /**
    * 处理横幅点击事件

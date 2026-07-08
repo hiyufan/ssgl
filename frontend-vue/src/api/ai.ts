@@ -1,5 +1,9 @@
 import type { AssistantReply, CoachStart, CoachFinal, CoachStartPayload } from '@/types/ssgl'
 import { aiApi, getAccessToken, SSGL_AI_BASE } from './http'
+import {
+  normalizeExecutionMatchResponse,
+  type ExecutionMatchResult
+} from '@/utils/ssgl/aiReports'
 
 function authHeaders(): HeadersInit {
   const token = getAccessToken()
@@ -121,15 +125,9 @@ export const assistantAPI = {
 
 // Execution Match API
 export const executionMatchAPI = {
-  match: async (payload: { pre_plan_id?: number; execution_text: string; plan_text?: string }): Promise<{
-    match_score: number
-    dimension_scores: Record<string, number>
-    gaps: { area: string; severity: string; description: string }[]
-    recommendations: string[]
-    summary: string
-  }> => {
+  match: async (payload: { pre_plan_id?: number; execution_text: string; plan_text?: string }): Promise<ExecutionMatchResult> => {
     const response = await aiApi.post('/review/execution-match', payload)
-    return response.data
+    return normalizeExecutionMatchResponse(response.data)
   }
 }
 

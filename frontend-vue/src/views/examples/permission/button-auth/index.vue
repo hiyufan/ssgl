@@ -428,18 +428,14 @@
 
   // 当前用户角色
   const currentUserRole = computed(() => {
-    return userStore.info?.roles?.[0] || ''
+    return userStore.info?.role || ''
   })
 
   // 当前用户权限码
-  const currentUserPermissions = computed(() => {
-    return userStore.info?.buttons || []
-  })
+  const currentUserPermissions = computed<string[]>(() => [])
 
   // 前端模式权限列表（用户的 buttons 字段）
-  const frontendAuthList = computed(() => {
-    return userStore.info?.buttons || []
-  })
+  const frontendAuthList = computed<string[]>(() => [])
 
   // 后端模式权限列表（路由 meta.authList 配置）
   const backendAuthList = computed(() => {
@@ -486,7 +482,10 @@
     const roleMap: Record<string, 'primary' | 'success' | 'info' | 'warning' | 'danger'> = {
       R_SUPER: 'warning',
       R_ADMIN: 'primary',
-      R_USER: 'success'
+      R_USER: 'success',
+      student: 'success',
+      teacher: 'primary',
+      admin: 'warning'
     }
     return roleMap[role] || 'info'
   }
@@ -496,7 +495,10 @@
     const roleMap: Record<string, string> = {
       R_SUPER: '超级管理员',
       R_ADMIN: '管理员',
-      R_USER: '普通用户'
+      R_USER: '普通用户',
+      student: '学生',
+      teacher: '教师',
+      admin: '管理员'
     }
     return roleMap[role] || '未知角色'
   }

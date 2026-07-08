@@ -373,7 +373,8 @@
     answer.value = ''
   }
 
-  function onAnswerKeydown(e: KeyboardEvent) {
+  function onAnswerKeydown(e: Event | KeyboardEvent) {
+    if (!(e instanceof KeyboardEvent)) return
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       submitAnswer()

@@ -21,21 +21,21 @@
           <div>
             <div class="flex items-start mb-3 last:mb-0">
               <span class="min-w-30 font-semibold">用户名：</span>
-              <span>{{ currentUser.userName || '未登录' }}</span>
+              <span>{{ currentDisplayName }}</span>
             </div>
             <div class="flex items-start mb-3 last:mb-0">
               <span class="min-w-30 font-semibold">角色：</span>
-              <ElTag :type="getRoleTagType(currentUser.roles?.[0])">
-                {{ getRoleDisplayName(currentUser.roles?.[0]) }}
+              <ElTag :type="getRoleTagType(currentRole)">
+                {{ getRoleDisplayName(currentRole) }}
               </ElTag>
             </div>
             <div class="flex items-start mb-3 last:mb-0">
               <span class="min-w-30 font-semibold">权限码：</span>
               <div class="flex flex-wrap gap-2">
-                <ElTag v-for="button in currentUser.buttons" :key="button" size="small" type="info">
+                <ElTag v-for="button in currentPermissions" :key="button" size="small" type="info">
                   {{ button }}
                 </ElTag>
-                <span v-if="!currentUser.buttons?.length" class="italic text-g-500">无权限码</span>
+                <span v-if="!currentPermissions.length" class="italic text-g-500">无权限码</span>
               </div>
             </div>
           </div>
@@ -57,7 +57,7 @@
             :key="account.key"
             class="p-5 border border-g-400 rounded-lg tad-300"
             :class="{
-              'bg-theme/12 !border-theme': currentUser.userName === account.userName
+              'bg-theme/12 !border-theme': currentUsername === account.userName
             }"
           >
             <div class="mb-4">
@@ -72,7 +72,7 @@
             </div>
             <div class="text-right">
               <ElButton
-                v-if="currentUser.userName !== account.userName"
+                v-if="currentUsername !== account.userName"
                 type="primary"
                 @click="switchRole(account)"
                 :loading="switching"
@@ -104,6 +104,10 @@
 
   // 当前用户信息
   const currentUser = computed(() => userStore.info)
+  const currentUsername = computed(() => currentUser.value.username || '')
+  const currentDisplayName = computed(() => currentUser.value.name || currentUser.value.username || '未登录')
+  const currentRole = computed(() => currentUser.value.role || '')
+  const currentPermissions = computed<string[]>(() => [])
 
   // 账号列表 - 与登录页面保持一致
   const accounts = computed(() => [
@@ -142,7 +146,10 @@
     const roleMap: Record<string, 'info' | 'warning' | 'primary' | 'success' | 'danger'> = {
       R_SUPER: 'warning',
       R_ADMIN: 'primary',
-      R_USER: 'success'
+      R_USER: 'success',
+      student: 'success',
+      teacher: 'primary',
+      admin: 'warning'
     }
     return roleMap[role] || 'info'
   }
@@ -153,7 +160,10 @@
     const roleMap: Record<string, string> = {
       R_SUPER: '超级管理员',
       R_ADMIN: '管理员',
-      R_USER: '普通用户'
+      R_USER: '普通用户',
+      student: '学生',
+      teacher: '教师',
+      admin: '管理员'
     }
     return roleMap[role] || '未知角色'
   }

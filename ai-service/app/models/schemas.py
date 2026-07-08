@@ -49,10 +49,13 @@ class PrePlanReview(BaseModel):
 class ExecutionMatch(BaseModel):
     """Request body for execution-plan matching against a pre-plan."""
 
-    pre_plan: PrePlanReview
-    actual_tech: str
-    actual_progress: str
-    deviations: str
+    pre_plan: Optional[PrePlanReview] = None
+    pre_plan_id: Optional[int] = None
+    plan_text: Optional[str] = None
+    execution_text: Optional[str] = None
+    actual_tech: Optional[str] = None
+    actual_progress: Optional[str] = None
+    deviations: Optional[str] = None
 
 
 # ── Tools ──────────────────────────────────────────────────────────────────

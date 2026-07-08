@@ -6,6 +6,7 @@ from app.services.llm_service import llm_service
 from app.services.rag_service import rag_service
 from app.utils.json_parse import parse_json
 from app.utils.prompts import EXECUTION_MATCH_SYSTEM, PRE_PLAN_REVIEW_SYSTEM
+from app.utils.review_contract import normalize_execution_match_result
 
 
 class ReviewService:
@@ -24,7 +25,10 @@ class ReviewService:
 
         # 1. Retrieve similar past projects from the vector store
         query_text = json.dumps(plan, ensure_ascii=False)
-        similar_projects = rag_service.search(query_text, top_k=5, threshold=0.3)
+        try:
+            similar_projects = rag_service.search(query_text, top_k=5, threshold=0.3)
+        except Exception:
+            similar_projects = []
 
         # 2. Build the user message with plan details + similar projects
         context_parts: list[str] = []
@@ -85,7 +89,8 @@ class ReviewService:
             user_message=user_message,
         )
 
-        return parse_json(raw_response)
+        result = parse_json(raw_response)
+        return normalize_execution_match_result(result)
 
 
 # Module-level singleton

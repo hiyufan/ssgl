@@ -7,7 +7,9 @@
 <script setup lang="ts">
   const props = defineProps<{ status: string }>()
 
-  const statusMap: Record<string, { label: string; type: '' | 'success' | 'warning' | 'info' | 'danger' }> = {
+  type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
+  const statusMap: Record<string, { label: string; type: TagType }> = {
     draft: { label: '草稿', type: 'info' },
     published: { label: '已发布', type: 'success' },
     ongoing: { label: '进行中', type: 'warning' },

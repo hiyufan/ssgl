@@ -24,11 +24,11 @@
             <div>
               <h3 class="m-0 mb-2 text-lg font-semibold">您拥有访问此页面的权限</h3>
               <p class="my-1 text-sm text-g-700">
-                当前用户：<strong class="font-semibold">{{ currentUser.userName }}</strong>
+                当前用户：<strong class="font-semibold">{{ currentDisplayName }}</strong>
               </p>
               <p class="my-1 text-sm text-g-700">
                 用户角色：
-                <ElTag type="warning">{{ getRoleDisplayName(currentUser.roles?.[0] || '') }}</ElTag>
+                <ElTag type="warning">{{ getRoleDisplayName(currentRole) }}</ElTag>
               </p>
             </div>
           </div>
@@ -242,13 +242,18 @@
 
   // 当前用户信息
   const currentUser = computed(() => userStore.info)
+  const currentDisplayName = computed(() => currentUser.value.name || currentUser.value.username || '未登录')
+  const currentRole = computed(() => currentUser.value.role || '')
 
   // 获取角色显示名称
   const getRoleDisplayName = (role: string) => {
     const roleMap: Record<string, string> = {
       R_SUPER: '超级管理员',
       R_ADMIN: '管理员',
-      R_USER: '普通用户'
+      R_USER: '普通用户',
+      student: '学生',
+      teacher: '教师',
+      admin: '管理员'
     }
     return roleMap[role] || '未知角色'
   }

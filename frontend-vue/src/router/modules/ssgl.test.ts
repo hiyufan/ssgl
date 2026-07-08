@@ -10,6 +10,23 @@ function flatten(paths: string[], route: any, prefix = ''): string[] {
   return paths
 }
 
+function findRoute(path: string, routes: any[] = ssglRoutes, prefix = ''): any {
+  for (const route of routes) {
+    const full = route.path.startsWith('/')
+      ? route.path
+      : `${prefix}/${route.path}`.replace(/\/+/g, '/')
+    if (full === path) return route
+    const child = findRoute(path, route.children ?? [], full)
+    if (child) return child
+  }
+  return null
+}
+
+function rolesFor(path: string): string[] {
+  const route = findRoute(path)
+  return route?.meta?.roles ?? []
+}
+
 describe('SSGL routes', () => {
   it('contains every migrated business route', () => {
     const paths = ssglRoutes.flatMap((route) => flatten([], route))
@@ -48,5 +65,19 @@ describe('SSGL routes', () => {
         '/account/profile'
       ])
     )
+  })
+
+  it('separates student, teacher, and admin-only surfaces', () => {
+    expect(rolesFor('/workflow/registrations')).toEqual(['teacher'])
+    expect(rolesFor('/workflow/awards')).toEqual(['teacher'])
+    expect(rolesFor('/data-insights/stats')).toEqual(['teacher'])
+    expect(rolesFor('/data-insights/annual-report')).toEqual(['teacher'])
+    expect(rolesFor('/data-insights/growth')).toEqual(['student'])
+    expect(rolesFor('/data-insights/learning-path')).toEqual(['student'])
+    expect(rolesFor('/data-insights/points')).toEqual(['student'])
+    expect(rolesFor('/ai-assistants/knowledge-base')).toEqual(['teacher'])
+    expect(rolesFor('/system-admin/audit-logs')).toEqual(['admin'])
+    expect(rolesFor('/system-admin/diagnostics')).toEqual(['admin'])
+    expect(rolesFor('/account/notifications')).toEqual(['student', 'teacher', 'admin'])
   })
 })

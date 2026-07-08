@@ -23,8 +23,8 @@ export const headerBarConfig: HeaderBarFeatureConfig = {
     description: '页面刷新按钮'
   },
   fastEnter: {
-    enabled: true,
-    description: '快速入口功能，提供常用应用和链接的快速访问'
+    enabled: false,
+    description: '模板快速入口包含非 SSGL 页面，业务系统不展示'
   },
   breadcrumb: {
     enabled: true,
@@ -51,8 +51,8 @@ export const headerBarConfig: HeaderBarFeatureConfig = {
     description: 'SSGL 当前只启用中文界面'
   },
   settings: {
-    enabled: true,
-    description: '系统设置面板'
+    enabled: false,
+    description: 'SSGL 不暴露模板设置面板，避免空弹层和无业务意义配置'
   },
   themeToggle: {
     enabled: true,

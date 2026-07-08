@@ -131,7 +131,12 @@
 
         <!-- 设置按钮 -->
         <div v-if="shouldShowSettings">
-          <ElPopover :visible="showSettingGuide" placement="bottom-start" :width="190" :offset="0">
+          <ElPopover
+            :visible="shouldShowSettings && showSettingGuide"
+            placement="bottom-start"
+            :width="190"
+            :offset="0"
+          >
             <template #reference>
               <div class="flex-cc">
                 <ArtIconButton icon="ri:settings-line" class="setting-btn" @click="openSetting" />
@@ -232,6 +237,9 @@
 
   onMounted(() => {
     initLanguage()
+    if (!shouldShowSettings.value && showSettingGuide.value) {
+      settingStore.hideSettingGuide()
+    }
     document.addEventListener('click', bodyCloseNotice)
   })
 

@@ -116,25 +116,25 @@
       <div class="actions-section">
         <h3 class="section-title">快捷操作</h3>
         <div class="actions-grid">
-          <ElButton v-if="profile.role === 'student'" @click="router.push('/ssgl/teams')">
+          <ElButton v-if="profile.role === 'student'" @click="router.push('/competition-ops/teams')">
             <ElIcon><UserFilled /></ElIcon>我的团队
           </ElButton>
-          <ElButton v-if="profile.role === 'student'" @click="router.push('/ssgl/preplans')">
+          <ElButton v-if="profile.role === 'student'" @click="router.push('/workflow/preplans')">
             <ElIcon><Document /></ElIcon>我的预案
           </ElButton>
-          <ElButton v-if="profile.role === 'student'" @click="router.push('/ssgl/coach')">
+          <ElButton v-if="profile.role === 'student'" @click="router.push('/ai-assistants/coach')">
             <ElIcon><Microphone /></ElIcon>答辩教练
           </ElButton>
-          <ElButton @click="router.push('/ssgl/competitions')">
+          <ElButton @click="router.push('/competition-ops/competitions')">
             <ElIcon><Trophy /></ElIcon>赛事列表
           </ElButton>
-          <ElButton @click="router.push('/ssgl/aitools')">
+          <ElButton @click="router.push('/ai-assistants/aitools')">
             <ElIcon><ChatDotRound /></ElIcon>AI 工具箱
           </ElButton>
-          <ElButton @click="router.push('/ssgl/leaderboard')">
+          <ElButton @click="router.push('/data-insights/leaderboard')">
             <ElIcon><Medal /></ElIcon>排行榜
           </ElButton>
-          <ElButton @click="router.push('/ssgl/showcase')">
+          <ElButton @click="router.push('/data-insights/showcase')">
             <ElIcon><Aim /></ElIcon>成果展示
           </ElButton>
         </div>
@@ -177,7 +177,7 @@
     { label: '获得奖项', value: profile.value?.award_count ?? 0, icon: Medal, color: '#a78bfa' },
   ])
 
-  function roleType(role: string): '' | 'success' | 'warning' | 'info' | 'danger' {
+  function roleType(role: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
     if (role === 'admin') return 'danger'
     if (role === 'teacher') return 'warning'
     return 'info'

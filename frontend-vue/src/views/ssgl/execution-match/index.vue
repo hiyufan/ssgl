@@ -159,9 +159,19 @@
     title: string
     competition_title?: string
     status: string
+    tech_stack?: string
+    target_audience?: string
+    market_analysis?: string
+    innovation?: string
+    expected_outcome?: string
+    timeline?: string
   }
 
   const dimLabels: Record<string, string> = {
+    alignment: '目标一致性',
+    feasibility: '执行可行性',
+    completeness: '覆盖完整度',
+    risk_coverage: '风险覆盖',
     scope_completion: '范围完成度',
     timeline_adherence: '时间遵循度',
     quality_standards: '质量标准',
@@ -188,14 +198,39 @@
         title: p.title || `预案 #${p.id}`,
         competition_title: p.competition?.title,
         status: p.status,
+        tech_stack: p.tech_stack,
+        target_audience: p.target_audience,
+        market_analysis: p.market_analysis,
+        innovation: p.innovation,
+        expected_outcome: p.expected_outcome,
+        timeline: p.timeline,
       }))
     } catch {
       // ignore
     }
   })
 
+  function selectedPlanText() {
+    const plan = plans.value.find(p => p.id === selectedPlan.value)
+    if (!plan) return planText.value.trim()
+
+    return [
+      `项目名称：${plan.title}`,
+      plan.competition_title ? `赛事：${plan.competition_title}` : '',
+      plan.tech_stack ? `技术栈：${plan.tech_stack}` : '',
+      plan.target_audience ? `目标用户：${plan.target_audience}` : '',
+      plan.market_analysis ? `市场分析：${plan.market_analysis}` : '',
+      plan.innovation ? `创新点：${plan.innovation}` : '',
+      plan.expected_outcome ? `预期成果：${plan.expected_outcome}` : '',
+      plan.timeline ? `时间规划：${plan.timeline}` : '',
+    ].filter(Boolean).join('\n')
+  }
+
   async function handleMatch() {
     if (!executionText.value.trim()) { error.value = '请输入执行情况描述'; return }
+    const resolvedPlanText = selectedPlanText()
+    if (!resolvedPlanText) { error.value = '请选择预案或输入预案内容'; return }
+
     loading.value = true
     error.value = ''
     result.value = null
@@ -203,7 +238,7 @@
       result.value = await executionMatchAPI.match({
         pre_plan_id: selectedPlan.value || undefined,
         execution_text: executionText.value,
-        plan_text: planText.value || undefined,
+        plan_text: resolvedPlanText,
       })
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'AI 分析失败，请稍后重试'

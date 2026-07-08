@@ -139,10 +139,10 @@
                 </div>
 
                 <!-- Dimensions -->
-                <div v-if="selected.ai_dimensions?.length" class="mb-6">
+                <div v-if="aiReport.dimensions.length" class="mb-6">
                   <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">分项评分</div>
                   <div class="space-y-3">
-                    <div v-for="dim in selected.ai_dimensions" :key="dim.label">
+                    <div v-for="dim in aiReport.dimensions" :key="dim.key">
                       <div class="flex justify-between items-center mb-1">
                         <span class="text-sm font-medium">{{ dim.label }}</span>
                         <span class="font-mono font-bold text-sm" :style="{ color: scoreColor(dim.score) }">
@@ -163,7 +163,40 @@
                 <div>
                   <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">AI 综合意见</div>
                   <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border text-sm leading-relaxed min-h-[80px]">
-                    {{ selected.ai_review_notes || '—' }}
+                    {{ aiReport.summary || selected.ai_review_notes || '—' }}
+                  </div>
+                </div>
+
+                <div v-if="aiReport.suggestions.length" class="mt-6">
+                  <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">改进建议</div>
+                  <div class="space-y-2">
+                    <div
+                      v-for="(suggestion, index) in aiReport.suggestions"
+                      :key="suggestion"
+                      class="flex gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 text-sm leading-relaxed"
+                    >
+                      <span class="font-mono font-bold text-amber-600">{{ index + 1 }}</span>
+                      <span>{{ suggestion }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="aiReport.similarProjects.length" class="mt-6">
+                  <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">参考相似项目</div>
+                  <div class="space-y-2">
+                    <div
+                      v-for="project in aiReport.similarProjects"
+                      :key="project.id || project.preview"
+                      class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border text-sm leading-relaxed"
+                    >
+                      <div class="flex justify-between gap-3 mb-1">
+                        <span class="font-semibold">相似项目 {{ project.id || '' }}</span>
+                        <span v-if="project.similarity != null" class="text-xs text-gray-400">
+                          {{ Math.round(project.similarity * 100) }}%
+                        </span>
+                      </div>
+                      <div class="text-gray-500">{{ project.preview }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -266,6 +299,7 @@
   import SSGLPageHeader from '@/components/ssgl/SSGLPageHeader.vue'
   import SSGLStatusTag from '@/components/ssgl/SSGLStatusTag.vue'
   import type { PrePlan, Team } from '@/types/ssgl'
+  import { parsePrePlanReviewNotes } from '@/utils/ssgl/aiReports'
 
   defineOptions({ name: 'SSGL_Preplans' })
 
@@ -314,6 +348,10 @@
       { key: 'expected_outcome', label: '预期成果', value: selected.value.expected_outcome },
     ].filter(f => f.value)
   })
+
+  const aiReport = computed(() =>
+    parsePrePlanReviewNotes(selected.value?.ai_review_notes, selected.value?.ai_dimensions || [])
+  )
 
   const scoreColor = (score: number) => {
     if (score >= 80) return '#10b981'

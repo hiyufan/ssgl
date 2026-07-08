@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.models.schemas import ExecutionMatch, PrePlanReview
 from app.services.review_service import review_service
@@ -23,8 +23,9 @@ async def pre_plan_review(body: PrePlanReview) -> dict:
         logger.error("Pre-plan review failed: %s", e)
         return {
             "score": 0,
-            "dimensions": {},
-            "feedback": f"⚠️ AI 评审失败: {str(e)[:200]}。请稍后重试。",
+            "breakdown": {},
+            "summary": f"AI 评审失败: {str(e)[:200]}。请稍后重试。",
+            "suggestions": [],
             "error": True,
         }
 
@@ -32,12 +33,28 @@ async def pre_plan_review(body: PrePlanReview) -> dict:
 @router.post("/execution-match")
 async def execution_match(body: ExecutionMatch) -> dict:
     """Compare an execution plan against its originating pre-plan."""
-    pre_plan = body.pre_plan.model_dump()
+    if body.pre_plan:
+        pre_plan = body.pre_plan.model_dump()
+    else:
+        plan_text = (body.plan_text or "").strip()
+        if not plan_text:
+            raise HTTPException(status_code=400, detail="缺少预案内容")
+        pre_plan = {
+            "pre_plan_id": body.pre_plan_id,
+            "plan_text": plan_text,
+        }
+
+    execution_text = (body.execution_text or "").strip()
     execution = {
-        "actual_tech": body.actual_tech,
-        "actual_progress": body.actual_progress,
-        "deviations": body.deviations,
+        "execution_text": execution_text,
+        "actual_tech": body.actual_tech or "",
+        "actual_progress": body.actual_progress or "",
+        "deviations": body.deviations or "",
     }
+
+    if not any(str(value).strip() for value in execution.values()):
+        raise HTTPException(status_code=400, detail="缺少实际执行情况")
+
     try:
         return await asyncio.to_thread(review_service.match_execution, pre_plan=pre_plan, execution=execution)
     except Exception as e:
