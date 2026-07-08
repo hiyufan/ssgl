@@ -8,9 +8,9 @@ import (
 
 // Award status constants.
 const (
-	AwardStatusPending         = "pending"
-	AwardStatusTeacherConfirm  = "teacher_confirm"
-	AwardStatusSettled         = "settled"
+	AwardStatusPending        = "pending"
+	AwardStatusTeacherConfirm = "teacher_confirm"
+	AwardStatusSettled        = "settled"
 )
 
 // Award represents a prize or award given to a team in a competition.
@@ -22,6 +22,7 @@ type Award struct {
 	RankName      string         `json:"rank_name" gorm:"size:64"`
 	PrizeName     string         `json:"prize_name" gorm:"size:256"`
 	PrizeAmount   float64        `json:"prize_amount" gorm:"not null;default:0"`
+	FinalScore    float64        `json:"final_score" gorm:"not null;default:0"`
 	Status        string         `json:"status" gorm:"size:16;not null;default:pending"`
 	NominatedAt   time.Time      `json:"nominated_at"`
 	SettledAt     *time.Time     `json:"settled_at"`

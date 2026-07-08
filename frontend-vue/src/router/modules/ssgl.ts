@@ -3,6 +3,7 @@ import type { AppRouteRecord } from '@/types/router'
 const allRoles = ['student', 'teacher', 'admin']
 const studentTeacher = ['student', 'teacher']
 const teacherOnly = ['teacher']
+const teacherAdmin = ['teacher', 'admin']
 const studentOnly = ['student']
 const adminOnly = ['admin']
 
@@ -51,11 +52,11 @@ export const ssglRoutes: AppRouteRecord[] = [
   ]),
 
   // 流程审批
-  group('Workflow', 'workflow', '流程审批', 'ri:checkbox-line', studentTeacher, [
-    page('Approvals', 'approvals', '审批中心', 'ri:checkbox-line', teacherOnly),
+  group('Workflow', 'workflow', '流程审批', 'ri:checkbox-line', allRoles, [
+    page('Approvals', 'approvals', '审批中心', 'ri:checkbox-line', teacherAdmin),
     page('Preplans', 'preplans', '预案管理', 'ri:file-list-3-line', studentTeacher),
-    page('Registrations', 'registrations', '报名管理', 'ri:file-user-line', teacherOnly),
-    page('Awards', 'awards', '获奖管理', 'ri:gift-line', teacherOnly),
+    page('Registrations', 'registrations', '报名管理', 'ri:file-user-line', teacherAdmin),
+    page('Awards', 'awards', '获奖管理', 'ri:gift-line', teacherAdmin),
     page('Evaluations', 'evaluations', '学生评价', 'ri:star-line', studentTeacher),
     page('Feedback', 'feedback', '赛事反馈', 'ri:message-3-line', studentTeacher)
   ]),
@@ -68,7 +69,13 @@ export const ssglRoutes: AppRouteRecord[] = [
     page('Insights', 'insights', 'AI 洞察', 'ri:lightbulb-line', teacherOnly),
     page('Leaderboard', 'leaderboard', '排行榜', 'ri:trophy-line', studentTeacher),
     page('Showcase', 'showcase', '成果展示', 'ri:award-line', studentTeacher),
-    page('AchievementGallery', 'achievement-gallery', '成就展示墙', 'ri:medal-line', studentTeacher),
+    page(
+      'AchievementGallery',
+      'achievement-gallery',
+      '成就展示墙',
+      'ri:medal-line',
+      studentTeacher
+    ),
     page('Points', 'points', '积分成就', 'ri:star-smile-line', studentOnly),
     page('Compare', 'compare', '赛事对比', 'ri:git-compare-line', studentTeacher),
     page('Growth', 'growth', '成长档案', 'ri:seedling-line', studentOnly),

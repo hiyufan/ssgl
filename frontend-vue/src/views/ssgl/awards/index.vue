@@ -23,7 +23,9 @@
         >
           <div class="text-center mb-3 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border">
             <div class="font-bold text-sm">{{ award?.team?.name || '—' }}</div>
-            <div class="text-xs text-gray-400 mt-1">{{ award?.prize_name || award?.rank_name }}</div>
+            <div class="text-xs text-gray-400 mt-1">{{
+              award?.prize_name || award?.rank_name
+            }}</div>
             <div class="font-mono font-bold mt-1" :class="podiumColors[i]">
               ¥{{ Number(award?.prize_amount || 0).toLocaleString() }}
             </div>
@@ -62,7 +64,7 @@
                 'text-amber-500': row.rank === 1,
                 'text-gray-600': row.rank === 2,
                 'text-orange-500': row.rank === 3,
-                'text-gray-400': row.rank > 3,
+                'text-gray-400': row.rank > 3
               }"
             >
               #{{ row.rank }}
@@ -88,11 +90,16 @@
               :class="{
                 'text-amber-500': row.rank === 1,
                 'text-gray-600': row.rank === 2,
-                'text-orange-500': row.rank === 3,
+                'text-orange-500': row.rank === 3
               }"
             >
               {{ row.rank_name || '—' }}
             </span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="最终成绩" width="110" align="center">
+          <template #default="{ row }">
+            <span class="font-mono font-bold">{{ Number(row.final_score || 0).toFixed(1) }}</span>
           </template>
         </ElTableColumn>
         <ElTableColumn label="奖金" width="120">
@@ -107,10 +114,20 @@
             <SSGLStatusTag :status="row.status" />
           </template>
         </ElTableColumn>
-        <ElTableColumn label="操作" width="100" fixed="right">
+        <ElTableColumn label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <ElButton
-              v-if="row.status !== 'settled'"
+              v-if="row.status === 'pending'"
+              type="success"
+              link
+              size="small"
+              :loading="confirmingId === row.id"
+              @click="handleTeacherConfirm(row)"
+            >
+              教师确认
+            </ElButton>
+            <ElButton
+              v-if="row.status === 'teacher_confirm'"
               type="primary"
               link
               size="small"
@@ -118,20 +135,35 @@
             >
               结算
             </ElButton>
-            <span v-else class="text-gray-400">—</span>
+            <span v-if="row.status === 'settled'" class="text-gray-400">—</span>
           </template>
         </ElTableColumn>
       </ElTable>
     </ElCard>
 
     <!-- Settle Dialog -->
-    <ElDialog v-model="settleVisible" :title="`结算奖项 · ${settleAward?.team?.name || ''}`" width="440px" destroy-on-close>
+    <ElDialog
+      v-model="settleVisible"
+      :title="`结算奖项 · ${settleAward?.team?.name || ''}`"
+      width="440px"
+      destroy-on-close
+    >
       <div class="text-sm text-gray-400 mb-3">
-        {{ settleAward?.competition?.title || '' }} · {{ settleAward?.rank_name || `第 ${settleAward?.rank} 名` }}
+        {{ settleAward?.competition?.title || '' }} ·
+        {{ settleAward?.rank_name || `第 ${settleAward?.rank} 名` }}
       </div>
       <ElForm @submit.prevent="handleSettle">
         <ElFormItem label="结算奖金（元）">
           <ElInputNumber v-model="settleAmount" :min="0" :precision="2" style="width: 100%" />
+        </ElFormItem>
+        <ElFormItem label="最终成绩">
+          <ElInputNumber
+            v-model="settleScore"
+            :min="0"
+            :max="100"
+            :precision="1"
+            style="width: 100%"
+          />
         </ElFormItem>
       </ElForm>
       <template #footer>
@@ -144,7 +176,11 @@
     <ElDialog v-model="showCreate" title="提名奖项" width="520px" destroy-on-close>
       <ElForm :model="createForm" label-width="100px" @submit.prevent="handleCreate">
         <ElFormItem label="赛事" required>
-          <ElSelect v-model="createForm.competition_id" placeholder="请选择赛事" style="width: 100%">
+          <ElSelect
+            v-model="createForm.competition_id"
+            placeholder="请选择赛事"
+            style="width: 100%"
+          >
             <ElOption v-for="c in allCompetitions" :key="c.id" :label="c.title" :value="c.id" />
           </ElSelect>
         </ElFormItem>
@@ -163,7 +199,21 @@
           <ElInput v-model="createForm.prize_name" placeholder="如：最佳创新奖" />
         </ElFormItem>
         <ElFormItem label="奖金（元）">
-          <ElInputNumber v-model="createForm.prize_amount" :min="0" :precision="2" style="width: 100%" />
+          <ElInputNumber
+            v-model="createForm.prize_amount"
+            :min="0"
+            :precision="2"
+            style="width: 100%"
+          />
+        </ElFormItem>
+        <ElFormItem label="最终成绩">
+          <ElInputNumber
+            v-model="createForm.final_score"
+            :min="0"
+            :max="100"
+            :precision="1"
+            style="width: 100%"
+          />
         </ElFormItem>
       </ElForm>
       <template #footer>
@@ -190,7 +240,9 @@
   const settleVisible = ref(false)
   const settleAward = ref<Award | null>(null)
   const settleAmount = ref(0)
+  const settleScore = ref(0)
   const settling = ref(false)
+  const confirmingId = ref<number | null>(null)
 
   // Create
   const showCreate = ref(false)
@@ -204,13 +256,14 @@
     rank_name: '',
     prize_name: '',
     prize_amount: 0,
+    final_score: 0
   })
 
-  const settledCount = computed(() => awards.value.filter(a => a.status === 'settled').length)
+  const settledCount = computed(() => awards.value.filter((a) => a.status === 'settled').length)
 
   const filteredAwards = computed(() => {
     if (statusTab.value === 'all') return awards.value
-    return awards.value.filter(a => a.status === statusTab.value)
+    return awards.value.filter((a) => a.status === statusTab.value)
   })
 
   // Podium
@@ -226,7 +279,7 @@
   const podiumBg = [
     'bg-gray-200 dark:bg-gray-600 text-gray-400',
     'bg-amber-500 text-amber-950',
-    'bg-orange-300 dark:bg-orange-700 text-orange-800 dark:text-orange-200',
+    'bg-orange-300 dark:bg-orange-700 text-orange-800 dark:text-orange-200'
   ]
 
   const loadAwards = async () => {
@@ -245,16 +298,19 @@
     try {
       const [compRes, teamRes] = await Promise.all([
         competitionsAPI.list().catch(() => ({ competitions: [] })),
-        teamsAPI.list().catch(() => ({ teams: [] })),
+        teamsAPI.list().catch(() => ({ teams: [] }))
       ])
       allCompetitions.value = compRes.competitions || []
       allTeams.value = teamRes.teams || []
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   const openSettle = (award: Award) => {
     settleAward.value = award
     settleAmount.value = Number(award.prize_amount || 0)
+    settleScore.value = Number(award.final_score || 0)
     settleVisible.value = true
   }
 
@@ -262,14 +318,31 @@
     if (!settleAward.value) return
     settling.value = true
     try {
-      const res = await awardsAPI.settle(settleAward.value.id, settleAmount.value)
+      const res = await awardsAPI.settle(
+        settleAward.value.id,
+        settleAmount.value,
+        settleScore.value
+      )
       ElMessage.success('奖项已结算')
-      awards.value = awards.value.map(a => a.id === res.award.id ? res.award : a)
+      awards.value = awards.value.map((a) => (a.id === res.award.id ? res.award : a))
       settleVisible.value = false
     } catch {
       ElMessage.error('结算失败')
     } finally {
       settling.value = false
+    }
+  }
+
+  const handleTeacherConfirm = async (award: Award) => {
+    confirmingId.value = award.id
+    try {
+      const res = await awardsAPI.teacherConfirm(award.id)
+      ElMessage.success('教师已确认奖项')
+      awards.value = awards.value.map((a) => (a.id === res.award.id ? res.award : a))
+    } catch {
+      ElMessage.error('确认失败')
+    } finally {
+      confirmingId.value = null
     }
   }
 
@@ -280,6 +353,7 @@
     createForm.rank_name = ''
     createForm.prize_name = ''
     createForm.prize_amount = 0
+    createForm.final_score = 0
   }
 
   const handleCreate = async () => {
@@ -295,6 +369,7 @@
         rank_name: createForm.rank_name || undefined,
         prize_name: createForm.prize_name || undefined,
         prize_amount: String(createForm.prize_amount || 0),
+        final_score: createForm.final_score || 0
       })
       ElMessage.success('奖项创建成功')
       awards.value = [res.award, ...awards.value]

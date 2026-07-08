@@ -128,6 +128,7 @@ export interface Award {
   rank_name?: string
   prize_name?: string
   prize_amount?: string
+  final_score?: number
   status: 'pending' | 'teacher_confirm' | 'settled'
   nominated_at: string
   settled_at?: string

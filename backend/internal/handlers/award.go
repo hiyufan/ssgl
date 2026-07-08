@@ -8,15 +8,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ssgl/competition-platform/internal/database"
 	"github.com/ssgl/competition-platform/internal/models"
+	"github.com/ssgl/competition-platform/internal/services"
 	"gorm.io/gorm"
 )
 
 // AwardHandler handles award HTTP requests.
-type AwardHandler struct{}
+type AwardHandler struct {
+	WorkflowService *services.WorkflowService
+}
 
 // NewAwardHandler creates a new AwardHandler.
 func NewAwardHandler() *AwardHandler {
-	return &AwardHandler{}
+	return &AwardHandler{WorkflowService: services.NewWorkflowService()}
 }
 
 // CreateAwardRequest is the payload for creating/nominating an award.
@@ -27,19 +30,22 @@ type CreateAwardRequest struct {
 	RankName      string  `json:"rank_name"`
 	PrizeName     string  `json:"prize_name"`
 	PrizeAmount   float64 `json:"prize_amount"`
+	FinalScore    float64 `json:"final_score" binding:"omitempty,min=0,max=100"`
 }
 
 // UpdateAwardRequest is the payload for updating an award.
 type UpdateAwardRequest struct {
-	Rank        *int    `json:"rank" binding:"omitempty,min=1"`
-	RankName    string  `json:"rank_name"`
-	PrizeName   string  `json:"prize_name"`
+	Rank        *int     `json:"rank" binding:"omitempty,min=1"`
+	RankName    string   `json:"rank_name"`
+	PrizeName   string   `json:"prize_name"`
 	PrizeAmount *float64 `json:"prize_amount" binding:"omitempty,min=0"`
+	FinalScore  *float64 `json:"final_score" binding:"omitempty,min=0,max=100"`
 }
 
 // SettleAwardRequest is the payload for settling an award.
 type SettleAwardRequest struct {
 	PrizeAmount float64 `json:"prize_amount" binding:"min=0"`
+	FinalScore  float64 `json:"final_score" binding:"omitempty,min=0,max=100"`
 }
 
 // List handles GET /awards with optional competition_id, team_id, and status filters.
@@ -117,12 +123,27 @@ func (h *AwardHandler) Create(c *gin.Context) {
 		RankName:      req.RankName,
 		PrizeName:     req.PrizeName,
 		PrizeAmount:   req.PrizeAmount,
+		FinalScore:    req.FinalScore,
 		Status:        models.AwardStatusPending,
 		NominatedAt:   now,
 	}
 
 	if err := db.Create(&award).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create award"})
+		return
+	}
+
+	approvers := []uint{comp.OrganizerID}
+	if adminID, ok := firstAdminID(db); ok {
+		approvers = append(approvers, adminID)
+	}
+	if err := createApprovalWorkflow(h.WorkflowService, services.CreateWorkflowInput{
+		Type:        models.WorkflowTypeReward,
+		TargetID:    award.ID,
+		SubmitterID: currentUserIDOr(c, comp.OrganizerID),
+		ApproverIDs: uniqueApprovers(approvers...),
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create approval workflow"})
 		return
 	}
 
@@ -196,6 +217,9 @@ func (h *AwardHandler) Update(c *gin.Context) {
 	}
 	if req.PrizeAmount != nil {
 		updates["prize_amount"] = *req.PrizeAmount
+	}
+	if req.FinalScore != nil {
+		updates["final_score"] = *req.FinalScore
 	}
 
 	if len(updates) == 0 {
@@ -321,6 +345,9 @@ func (h *AwardHandler) Settle(c *gin.Context) {
 	}
 	if req.PrizeAmount > 0 {
 		updates["prize_amount"] = req.PrizeAmount
+	}
+	if req.FinalScore > 0 {
+		updates["final_score"] = req.FinalScore
 	}
 
 	if err := db.Model(&award).Updates(updates).Error; err != nil {

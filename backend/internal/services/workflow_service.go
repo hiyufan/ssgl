@@ -110,6 +110,8 @@ func (s *WorkflowService) Approve(workflowID, approverID uint, comment string) (
 
 	now := time.Now()
 
+	approvedStepOrder := workflow.CurrentStep
+	isFinalStep := workflow.CurrentStep >= workflow.TotalSteps
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// Mark current step as approved.
 		if err := tx.Model(&step).Updates(map[string]interface{}{
@@ -120,20 +122,21 @@ func (s *WorkflowService) Approve(workflowID, approverID uint, comment string) (
 			return err
 		}
 
-		if workflow.CurrentStep >= workflow.TotalSteps {
+		if isFinalStep {
 			// Last step — mark workflow as approved.
 			if err := tx.Model(&workflow).Update("status", models.WorkflowStatusApproved).Error; err != nil {
 				return err
 			}
 		} else {
 			// Advance to next step.
-			if err := tx.Model(&workflow).Update("current_step", workflow.CurrentStep+1).Error; err != nil {
+			nextStepOrder := workflow.CurrentStep + 1
+			if err := tx.Model(&workflow).Update("current_step", nextStepOrder).Error; err != nil {
 				return err
 			}
 
 			// Set next step to pending.
 			var nextStep models.ApprovalStep
-			if err := tx.Where("workflow_id = ? AND step_order = ?", workflowID, workflow.CurrentStep+1).First(&nextStep).Error; err != nil {
+			if err := tx.Where("workflow_id = ? AND step_order = ?", workflowID, nextStepOrder).First(&nextStep).Error; err != nil {
 				return err
 			}
 			if err := tx.Model(&nextStep).Update("action", models.StepActionPending).Error; err != nil {
@@ -141,7 +144,7 @@ func (s *WorkflowService) Approve(workflowID, approverID uint, comment string) (
 			}
 		}
 
-		return nil
+		return s.applyApproveSideEffects(tx, &workflow, approverID, approvedStepOrder, isFinalStep, now)
 	})
 
 	if err != nil {
@@ -202,7 +205,7 @@ func (s *WorkflowService) Reject(workflowID, approverID uint, comment string) (*
 			return err
 		}
 
-		return nil
+		return s.applyRejectSideEffects(tx, &workflow)
 	})
 
 	if err != nil {
@@ -213,6 +216,55 @@ func (s *WorkflowService) Reject(workflowID, approverID uint, comment string) (*
 	db.Preload("Submitter").Preload("Steps.Approver").First(&workflow, workflow.ID)
 
 	return &workflow, nil
+}
+
+func (s *WorkflowService) applyApproveSideEffects(tx *gorm.DB, workflow *models.ApprovalWorkflow, approverID uint, stepOrder int, isFinalStep bool, actedAt time.Time) error {
+	switch workflow.Type {
+	case models.WorkflowTypeRegistration:
+		if !isFinalStep {
+			return nil
+		}
+		return tx.Model(&models.CompetitionRegistration{}).
+			Where("id = ?", workflow.TargetID).
+			Update("status", models.RegStatusApproved).Error
+	case models.WorkflowTypePrePlan:
+		if !isFinalStep {
+			return nil
+		}
+		return tx.Model(&models.PrePlan{}).
+			Where("id = ?", workflow.TargetID).
+			Update("status", models.PrePlanStatusApproved).Error
+	case models.WorkflowTypeReward:
+		if isFinalStep {
+			return tx.Model(&models.Award{}).
+				Where("id = ?", workflow.TargetID).
+				Updates(map[string]interface{}{
+					"status":     models.AwardStatusSettled,
+					"settled_at": actedAt,
+					"settled_by": approverID,
+				}).Error
+		}
+		if stepOrder == 1 {
+			return tx.Model(&models.Award{}).
+				Where("id = ? AND status = ?", workflow.TargetID, models.AwardStatusPending).
+				Update("status", models.AwardStatusTeacherConfirm).Error
+		}
+	}
+	return nil
+}
+
+func (s *WorkflowService) applyRejectSideEffects(tx *gorm.DB, workflow *models.ApprovalWorkflow) error {
+	switch workflow.Type {
+	case models.WorkflowTypeRegistration:
+		return tx.Model(&models.CompetitionRegistration{}).
+			Where("id = ?", workflow.TargetID).
+			Update("status", models.RegStatusRejected).Error
+	case models.WorkflowTypePrePlan:
+		return tx.Model(&models.PrePlan{}).
+			Where("id = ?", workflow.TargetID).
+			Update("status", models.PrePlanStatusRejected).Error
+	}
+	return nil
 }
 
 // GetPendingForUser returns pending workflows where the given user is the approver

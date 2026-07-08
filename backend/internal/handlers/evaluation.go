@@ -122,6 +122,11 @@ func (h *EvaluationHandler) Create(c *gin.Context) {
 	}
 
 	userIDVal, _ := c.Get("user_id")
+	roleVal, _ := c.Get("role")
+	if roleVal != models.RoleStudent {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only students can submit evaluations"})
+		return
+	}
 	studentID := userIDVal.(uint)
 
 	// Verify the teacher exists and has the teacher role.
@@ -136,6 +141,35 @@ func (h *EvaluationHandler) Create(c *gin.Context) {
 	}
 	if teacher.Role != models.RoleTeacher {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "target user is not a teacher"})
+		return
+	}
+
+	var comp models.Competition
+	if err := db.First(&comp, req.CompetitionID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "competition not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch competition"})
+		return
+	}
+	if comp.Status != models.CompStatusCompleted && (comp.EndDate.IsZero() || time.Now().Before(comp.EndDate)) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "evaluations can only be submitted after the competition has ended"})
+		return
+	}
+
+	var participationCount int64
+	db.Model(&models.CompetitionRegistration{}).
+		Where("competition_id = ? AND user_id = ? AND status = ?", req.CompetitionID, studentID, models.RegStatusApproved).
+		Count(&participationCount)
+	if participationCount == 0 {
+		db.Model(&models.TeamMember{}).
+			Joins("INNER JOIN teams ON teams.id = team_members.team_id").
+			Where("teams.competition_id = ? AND team_members.user_id = ?", req.CompetitionID, studentID).
+			Count(&participationCount)
+	}
+	if participationCount == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only participants can evaluate this competition"})
 		return
 	}
 

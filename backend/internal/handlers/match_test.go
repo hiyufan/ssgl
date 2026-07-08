@@ -1,7 +1,16 @@
 package handlers
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
+	"github.com/ssgl/competition-platform/internal/database"
+	"github.com/ssgl/competition-platform/internal/models"
+	"gorm.io/gorm"
 )
 
 func TestNewMatchHandler(t *testing.T) {
@@ -66,8 +75,8 @@ func TestMatchScoreCalculation(t *testing.T) {
 		{"team only", 3, 0, 0, 30},
 		{"awards only", 0, 2, 0, 30},
 		{"preplans only", 0, 0, 4, 32},
-		{"experienced", 2, 3, 5, 100},  // 20+45+40=105 → capped at 100
-		{"balanced", 1, 1, 1, 33},      // 10+15+8=33
+		{"experienced", 2, 3, 5, 100}, // 20+45+40=105 → capped at 100
+		{"balanced", 1, 1, 1, 33},     // 10+15+8=33
 	}
 
 	for _, tt := range tests {
@@ -159,5 +168,136 @@ func TestMatchResultZeroValues(t *testing.T) {
 	}
 	if result.Username != "" {
 		t.Errorf("expected empty Username, got '%s'", result.Username)
+	}
+}
+
+func TestMatchHandler_MatchScoresAndExcludesInSingleQuery(t *testing.T) {
+	oldDB := database.DB
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	database.DB = db
+	t.Cleanup(func() {
+		database.DB = oldDB
+	})
+
+	if err := db.AutoMigrate(
+		&models.User{},
+		&models.Competition{},
+		&models.Team{},
+		&models.TeamMember{},
+		&models.Award{},
+		&models.PrePlan{},
+	); err != nil {
+		t.Fatalf("failed to migrate test db: %v", err)
+	}
+
+	users := []models.User{
+		{Username: "current", Email: "current@example.com", Password: "x", Role: models.RoleStudent, Status: models.StatusActive, Name: "Current"},
+		{Username: "award", Email: "award@example.com", Password: "x", Role: models.RoleStudent, Status: models.StatusActive, Name: "Award Student"},
+		{Username: "planner", Email: "planner@example.com", Password: "x", Role: models.RoleStudent, Status: models.StatusActive, Name: "Planner Student"},
+		{Username: "busy", Email: "busy@example.com", Password: "x", Role: models.RoleStudent, Status: models.StatusActive, Name: "Busy Student"},
+		{Username: "teacher", Email: "teacher@example.com", Password: "x", Role: models.RoleTeacher, Status: models.StatusActive, Name: "Teacher"},
+		{Username: "disabled", Email: "disabled@example.com", Password: "x", Role: models.RoleStudent, Status: models.StatusDisabled, Name: "Disabled"},
+	}
+	for i := range users {
+		if err := db.Create(&users[i]).Error; err != nil {
+			t.Fatalf("failed to create user %d: %v", i, err)
+		}
+	}
+
+	targetComp := models.Competition{Title: "Target", Type: models.CompTypeHackathon, OrganizerID: users[0].ID}
+	otherComp := models.Competition{Title: "Other", Type: models.CompTypeHackathon, OrganizerID: users[0].ID}
+	if err := db.Create(&targetComp).Error; err != nil {
+		t.Fatalf("failed to create target competition: %v", err)
+	}
+	if err := db.Create(&otherComp).Error; err != nil {
+		t.Fatalf("failed to create other competition: %v", err)
+	}
+
+	awardTeam := models.Team{Name: "Award Team", CompetitionID: otherComp.ID, LeaderID: users[1].ID}
+	plannerTeam := models.Team{Name: "Planner Team", CompetitionID: otherComp.ID, LeaderID: users[2].ID}
+	busyTeam := models.Team{Name: "Busy Team", CompetitionID: targetComp.ID, LeaderID: users[3].ID}
+	for _, team := range []*models.Team{&awardTeam, &plannerTeam, &busyTeam} {
+		if err := db.Create(team).Error; err != nil {
+			t.Fatalf("failed to create team: %v", err)
+		}
+	}
+
+	members := []models.TeamMember{
+		{TeamID: awardTeam.ID, UserID: users[1].ID, Role: models.TeamMemberRoleLeader},
+		{TeamID: plannerTeam.ID, UserID: users[2].ID, Role: models.TeamMemberRoleLeader},
+		{TeamID: busyTeam.ID, UserID: users[3].ID, Role: models.TeamMemberRoleLeader},
+	}
+	for i := range members {
+		if err := db.Create(&members[i]).Error; err != nil {
+			t.Fatalf("failed to create member %d: %v", i, err)
+		}
+	}
+
+	awards := []models.Award{
+		{CompetitionID: otherComp.ID, TeamID: awardTeam.ID, Rank: 1, PrizeName: "Gold"},
+		{CompetitionID: otherComp.ID, TeamID: awardTeam.ID, Rank: 2, PrizeName: "Silver"},
+	}
+	if err := db.Create(&awards).Error; err != nil {
+		t.Fatalf("failed to create awards: %v", err)
+	}
+
+	preplans := []models.PrePlan{
+		{CompetitionID: otherComp.ID, TeamID: plannerTeam.ID, Title: "Plan A"},
+		{CompetitionID: otherComp.ID, TeamID: plannerTeam.ID, Title: "Plan B"},
+	}
+	if err := db.Create(&preplans).Error; err != nil {
+		t.Fatalf("failed to create preplans: %v", err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	h := NewMatchHandler()
+	r.GET("/teams/match", func(c *gin.Context) {
+		c.Set("user_id", users[0].ID)
+		h.Match(c)
+	})
+
+	req := httptest.NewRequest("GET", "/teams/match?competition_id="+fmtUint(targetComp.ID)+"&limit=2", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var body struct {
+		Matches []MatchResult `json:"matches"`
+		Total   int           `json:"total"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if body.Total != 2 {
+		t.Fatalf("expected 2 matches, got %d", body.Total)
+	}
+	if body.Matches[0].UserID != users[1].ID {
+		t.Fatalf("expected award student first, got user %d", body.Matches[0].UserID)
+	}
+	if body.Matches[0].AwardCount != 2 || body.Matches[0].Reason != "experienced competitor with awards" {
+		t.Fatalf("unexpected award match: %+v", body.Matches[0])
+	}
+	if body.Matches[1].UserID != users[2].ID {
+		t.Fatalf("expected planner student second, got user %d", body.Matches[1].UserID)
+	}
+	if body.Matches[1].PrePlanCount != 2 || body.Matches[1].Reason != "active planner with pre-plan experience" {
+		t.Fatalf("unexpected planner match: %+v", body.Matches[1])
+	}
+
+	for _, match := range body.Matches {
+		if match.UserID == users[0].ID {
+			t.Fatalf("current user should be excluded")
+		}
+		if match.UserID == users[3].ID {
+			t.Fatalf("student already in target competition should be excluded")
+		}
 	}
 }

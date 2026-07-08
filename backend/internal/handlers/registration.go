@@ -8,14 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ssgl/competition-platform/internal/database"
 	"github.com/ssgl/competition-platform/internal/models"
+	"github.com/ssgl/competition-platform/internal/services"
 )
 
 // RegistrationHandler handles competition registration HTTP requests.
-type RegistrationHandler struct{}
+type RegistrationHandler struct {
+	WorkflowService *services.WorkflowService
+}
 
 // NewRegistrationHandler creates a new RegistrationHandler.
 func NewRegistrationHandler() *RegistrationHandler {
-	return &RegistrationHandler{}
+	return &RegistrationHandler{WorkflowService: services.NewWorkflowService()}
 }
 
 // CompRegistrationRequest is the payload for registering for a competition.
@@ -143,6 +146,16 @@ func (h *RegistrationHandler) Register(c *gin.Context) {
 
 	if err := db.Create(&reg).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register"})
+		return
+	}
+
+	if err := createApprovalWorkflow(h.WorkflowService, services.CreateWorkflowInput{
+		Type:        models.WorkflowTypeRegistration,
+		TargetID:    reg.ID,
+		SubmitterID: userID.(uint),
+		ApproverIDs: uniqueApprovers(comp.OrganizerID),
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create approval workflow"})
 		return
 	}
 
@@ -348,11 +361,11 @@ func (h *RegistrationHandler) BatchApprove(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "batch approve completed",
-		"approved":     approved,
-		"not_found":    notFound,
-		"not_pending":  notPending,
-		"total":        len(req.IDs),
+		"message":     "batch approve completed",
+		"approved":    approved,
+		"not_found":   notFound,
+		"not_pending": notPending,
+		"total":       len(req.IDs),
 	})
 }
 
@@ -402,11 +415,11 @@ func (h *RegistrationHandler) BatchReject(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "batch reject completed",
-		"rejected":     rejected,
-		"not_found":    notFound,
-		"not_pending":  notPending,
-		"total":        len(req.IDs),
+		"message":     "batch reject completed",
+		"rejected":    rejected,
+		"not_found":   notFound,
+		"not_pending": notPending,
+		"total":       len(req.IDs),
 	})
 }
 

@@ -182,6 +182,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 		protected.GET("/pre-plans/:id", preplanHandler.Get)
 		protected.PUT("/pre-plans/:id", preplanHandler.Update)
 		protected.POST("/pre-plans/:id/review", preplanHandler.AIReview)
+		protected.POST("/pre-plans/:id/execution-match", preplanHandler.ExecutionMatch)
 		protected.POST("/pre-plans/:id/teacher-review", preplanHandler.TeacherReview)
 		protected.DELETE("/pre-plans/:id", preplanHandler.Delete)
 

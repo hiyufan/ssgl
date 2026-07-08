@@ -12,7 +12,7 @@ import { setupErrorHandle } from './utils/sys/error-handle'
 document.addEventListener(
   'touchstart',
   function () {},
-  { passive: false }
+  { passive: true }
 )
 
 const app = createApp(App)

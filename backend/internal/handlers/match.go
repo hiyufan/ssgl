@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"sort"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ssgl/competition-platform/internal/database"
@@ -55,89 +54,6 @@ func (h *MatchHandler) Match(c *gin.Context) {
 		return
 	}
 
-	// Get students already in teams for this competition
-	var busyUserIDs []uint
-	db.Raw(`SELECT DISTINCT tm.user_id FROM team_members tm
-		INNER JOIN teams t ON t.id = tm.team_id
-		WHERE t.competition_id = ? AND t.deleted_at IS NULL`, compID).Scan(&busyUserIDs)
-
-	// Build exclusion set (busy users + current user)
-	excludeMap := make(map[uint]bool)
-	excludeMap[currentUserID] = true
-	for _, uid := range busyUserIDs {
-		excludeMap[uid] = true
-	}
-
-	// Find available students
-	var students []models.User
-	db.Where("role = ? AND status = ?", models.RoleStudent, models.StatusActive).Find(&students)
-
-	// Filter out excluded users
-	available := make([]models.User, 0)
-	for _, s := range students {
-		if !excludeMap[s.ID] {
-			available = append(available, s)
-		}
-	}
-
-	// Score each available student
-	results := make([]MatchResult, 0, len(available))
-	for _, s := range available {
-		// Count team memberships
-		var teamCount int64
-		db.Model(&models.TeamMember{}).Where("user_id = ?", s.ID).Count(&teamCount)
-
-		// Count awards (through teams)
-		var awardCount int64
-		db.Raw(`SELECT COUNT(DISTINCT a.id) FROM awards a
-			INNER JOIN team_members tm ON tm.team_id = a.team_id
-			WHERE tm.user_id = ?`, s.ID).Scan(&awardCount)
-
-		// Count pre-plans (through teams)
-		var prePlanCount int64
-		db.Raw(`SELECT COUNT(DISTINCT pp.id) FROM pre_plans pp
-			INNER JOIN team_members tm ON tm.team_id = pp.team_id
-			WHERE tm.user_id = ?`, s.ID).Scan(&prePlanCount)
-
-		// Calculate match score:
-		// - Experience (team memberships): up to 30 points
-		// - Awards: up to 40 points
-		// - Pre-plans (shows planning ability): up to 30 points
-		// Total: 0-100
-		score := float64(teamCount)*10 + float64(awardCount)*15 + float64(prePlanCount)*8
-		if score > 100 {
-			score = 100
-		}
-
-		// Generate reason
-		reason := "available student"
-		if awardCount > 0 {
-			reason = "experienced competitor with awards"
-		} else if prePlanCount > 0 {
-			reason = "active planner with pre-plan experience"
-		} else if teamCount > 0 {
-			reason = "team experience"
-		}
-
-		results = append(results, MatchResult{
-			UserID:       s.ID,
-			Username:     s.Username,
-			Name:         s.Name,
-			Dept:         s.Dept,
-			Avatar:       s.Avatar,
-			TeamCount:    teamCount,
-			AwardCount:   awardCount,
-			PrePlanCount: prePlanCount,
-			MatchScore:   score,
-			Reason:       reason,
-		})
-	}
-
-	// Sort by match score descending
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].MatchScore > results[j].MatchScore
-	})
-
 	// Limit results
 	limit := 10
 	if l := c.Query("limit"); l != "" {
@@ -145,13 +61,94 @@ func (h *MatchHandler) Match(c *gin.Context) {
 			limit = parsed
 		}
 	}
-	if len(results) > limit {
-		results = results[:limit]
+
+	var results []MatchResult
+	if err := db.Raw(`
+		WITH busy_users AS (
+			SELECT DISTINCT tm.user_id
+			FROM team_members tm
+			INNER JOIN teams t ON t.id = tm.team_id
+			WHERE t.competition_id = ? AND t.deleted_at IS NULL
+		),
+		available_students AS (
+			SELECT u.id AS user_id, u.username, u.name, u.dept, u.avatar
+			FROM users u
+			WHERE u.role = ?
+				AND u.status = ?
+				AND u.deleted_at IS NULL
+				AND u.id <> ?
+				AND NOT EXISTS (
+					SELECT 1 FROM busy_users b WHERE b.user_id = u.id
+				)
+		),
+		team_counts AS (
+			SELECT tm.user_id, COUNT(*) AS team_count
+			FROM team_members tm
+			INNER JOIN available_students s ON s.user_id = tm.user_id
+			GROUP BY tm.user_id
+		),
+		award_counts AS (
+			SELECT tm.user_id, COUNT(DISTINCT a.id) AS award_count
+			FROM team_members tm
+			INNER JOIN available_students s ON s.user_id = tm.user_id
+			INNER JOIN awards a ON a.team_id = tm.team_id
+			GROUP BY tm.user_id
+		),
+		preplan_counts AS (
+			SELECT tm.user_id, COUNT(DISTINCT pp.id) AS pre_plan_count
+			FROM team_members tm
+			INNER JOIN available_students s ON s.user_id = tm.user_id
+			INNER JOIN pre_plans pp ON pp.team_id = tm.team_id
+			GROUP BY tm.user_id
+		),
+		scored AS (
+			SELECT
+				s.user_id,
+				s.username,
+				s.name,
+				s.dept,
+				s.avatar,
+				COALESCE(tc.team_count, 0) AS team_count,
+				COALESCE(ac.award_count, 0) AS award_count,
+				COALESCE(pc.pre_plan_count, 0) AS pre_plan_count,
+				COALESCE(tc.team_count, 0) * 10
+					+ COALESCE(ac.award_count, 0) * 15
+					+ COALESCE(pc.pre_plan_count, 0) * 8 AS raw_score
+			FROM available_students s
+			LEFT JOIN team_counts tc ON tc.user_id = s.user_id
+			LEFT JOIN award_counts ac ON ac.user_id = s.user_id
+			LEFT JOIN preplan_counts pc ON pc.user_id = s.user_id
+		)
+		SELECT
+			user_id,
+			username,
+			name,
+			dept,
+			avatar,
+			team_count,
+			award_count,
+			pre_plan_count,
+			CASE
+				WHEN raw_score > 100 THEN 100.0
+				ELSE raw_score
+			END AS match_score,
+			CASE
+				WHEN award_count > 0 THEN 'experienced competitor with awards'
+				WHEN pre_plan_count > 0 THEN 'active planner with pre-plan experience'
+				WHEN team_count > 0 THEN 'team experience'
+				ELSE 'available student'
+			END AS reason
+		FROM scored
+		ORDER BY match_score DESC, user_id ASC
+		LIMIT ?
+	`, compID, models.RoleStudent, models.StatusActive, currentUserID, limit).Scan(&results).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to match teammates"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"matches":       results,
-		"total":         len(results),
+		"matches":        results,
+		"total":          len(results),
 		"competition_id": compID,
 	})
 }

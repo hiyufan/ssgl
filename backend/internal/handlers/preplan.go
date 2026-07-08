@@ -15,12 +15,13 @@ import (
 
 // PrePlanHandler handles pre-plan HTTP requests.
 type PrePlanHandler struct {
-	AIClient *services.AIServiceClient
+	AIClient        *services.AIServiceClient
+	WorkflowService *services.WorkflowService
 }
 
 // NewPrePlanHandler creates a new PrePlanHandler.
 func NewPrePlanHandler(aiClient *services.AIServiceClient) *PrePlanHandler {
-	return &PrePlanHandler{AIClient: aiClient}
+	return &PrePlanHandler{AIClient: aiClient, WorkflowService: services.NewWorkflowService()}
 }
 
 // CreatePrePlanRequest is the payload for creating a pre-plan.
@@ -46,6 +47,14 @@ type UpdatePrePlanRequest struct {
 	ExpectedOutcome *string `json:"expected_outcome"`
 	Timeline        *string `json:"timeline"`
 	Status          *string `json:"status"`
+}
+
+// ExecutionMatchRequest is the payload for comparing actual execution with a pre-plan.
+type ExecutionMatchRequest struct {
+	ExecutionText  string `json:"execution_text"`
+	ActualTech     string `json:"actual_tech"`
+	ActualProgress string `json:"actual_progress"`
+	Deviations     string `json:"deviations"`
 }
 
 // List handles GET /preplans with optional competition_id, team_id, and status filters.
@@ -124,6 +133,22 @@ func (h *PrePlanHandler) Create(c *gin.Context) {
 		return
 	}
 
+	var comp models.Competition
+	if err := db.First(&comp, req.CompetitionID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "competition not found"})
+		return
+	}
+
+	var team models.Team
+	if err := db.First(&team, req.TeamID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "team not found"})
+		return
+	}
+	if team.CompetitionID != req.CompetitionID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "team does not belong to competition"})
+		return
+	}
+
 	now := time.Now()
 	preplan := models.PrePlan{
 		CompetitionID:   req.CompetitionID,
@@ -141,6 +166,16 @@ func (h *PrePlanHandler) Create(c *gin.Context) {
 
 	if err := db.Create(&preplan).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create pre-plan"})
+		return
+	}
+
+	if err := createApprovalWorkflow(h.WorkflowService, services.CreateWorkflowInput{
+		Type:        models.WorkflowTypePrePlan,
+		TargetID:    preplan.ID,
+		SubmitterID: currentUserIDOr(c, team.LeaderID),
+		ApproverIDs: uniqueApprovers(comp.OrganizerID),
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create approval workflow"})
 		return
 	}
 
@@ -280,6 +315,92 @@ func (h *PrePlanHandler) AIReview(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"pre_plan": preplan, "review": result})
 }
 
+// ExecutionMatch handles POST /pre-plans/:id/execution-match — runs AI execution matching and saves the result.
+func (h *PrePlanHandler) ExecutionMatch(c *gin.Context) {
+	db := database.GetDB()
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pre-plan id"})
+		return
+	}
+
+	var req ExecutionMatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.ExecutionText == "" && req.ActualTech == "" && req.ActualProgress == "" && req.Deviations == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "execution content is required"})
+		return
+	}
+
+	var preplan models.PrePlan
+	if err := db.Preload("Competition").Preload("Team").First(&preplan, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pre-plan not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch pre-plan"})
+		return
+	}
+
+	if h.AIClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "AI service not configured"})
+		return
+	}
+
+	payload := map[string]interface{}{
+		"pre_plan_id": preplan.ID,
+		"pre_plan": map[string]interface{}{
+			"title":            preplan.Title,
+			"tech_stack":       preplan.TechStack,
+			"target_audience":  preplan.TargetAudience,
+			"market_analysis":  preplan.MarketAnalysis,
+			"innovation":       preplan.Innovation,
+			"expected_outcome": preplan.ExpectedOutcome,
+			"timeline":         preplan.Timeline,
+		},
+		"execution_text":  req.ExecutionText,
+		"actual_tech":     req.ActualTech,
+		"actual_progress": req.ActualProgress,
+		"deviations":      req.Deviations,
+	}
+
+	result, err := h.AIClient.MatchExecution(payload)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "AI execution match failed", "details": err.Error()})
+		return
+	}
+
+	var score *int
+	if s, ok := result["match_score"].(float64); ok {
+		intScore := int(s)
+		score = &intScore
+	}
+	resultBytes, _ := json.Marshal(result)
+	actualProgress := req.ActualProgress
+	if actualProgress == "" {
+		actualProgress = req.ExecutionText
+	}
+	now := time.Now()
+	executionPlan := models.ExecutionPlan{
+		PrePlanID:      preplan.ID,
+		ActualTech:     req.ActualTech,
+		ActualProgress: actualProgress,
+		Deviations:     string(resultBytes),
+		AIMatchScore:   score,
+		SubmittedAt:    &now,
+	}
+
+	if err := db.Create(&executionPlan).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save execution match"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"execution_plan": executionPlan, "match": result})
+}
+
 // TeacherReview handles POST /pre-plans/:id/teacher-review — teacher approves or rejects a preplan.
 func (h *PrePlanHandler) TeacherReview(c *gin.Context) {
 	db := database.GetDB()
@@ -316,8 +437,8 @@ func (h *PrePlanHandler) TeacherReview(c *gin.Context) {
 
 	now := time.Now()
 	updates := map[string]interface{}{
-		"status":      newStatus,
-		"updated_at":  now,
+		"status":     newStatus,
+		"updated_at": now,
 	}
 	if req.Notes != "" {
 		// Preserve existing AI review notes and append teacher notes

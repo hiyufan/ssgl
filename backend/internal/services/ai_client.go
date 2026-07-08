@@ -79,12 +79,22 @@ func (c *AIServiceClient) circuitRecordFailure() {
 // ReviewPrePlan calls POST /ai/api/v1/review/pre-plan with the plan data
 // and returns the AI review result (score, breakdown, summary, suggestions).
 func (c *AIServiceClient) ReviewPrePlan(plan map[string]interface{}) (map[string]interface{}, error) {
-	body, err := json.Marshal(plan)
+	return c.postJSON("/ai/api/v1/review/pre-plan", plan)
+}
+
+// MatchExecution calls POST /ai/api/v1/review/execution-match with the
+// pre-plan and execution data, returning the AI match result.
+func (c *AIServiceClient) MatchExecution(payload map[string]interface{}) (map[string]interface{}, error) {
+	return c.postJSON("/ai/api/v1/review/execution-match", payload)
+}
+
+func (c *AIServiceClient) postJSON(path string, payload map[string]interface{}) (map[string]interface{}, error) {
+	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("marshal plan: %w", err)
+		return nil, fmt.Errorf("marshal payload: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/ai/api/v1/review/pre-plan", c.BaseURL)
+	url := fmt.Sprintf("%s%s", c.BaseURL, path)
 
 	// Retry up to 2 times with exponential backoff.
 	var lastErr error

@@ -1,9 +1,6 @@
 import type { AssistantReply, CoachStart, CoachFinal, CoachStartPayload } from '@/types/ssgl'
-import { aiApi, getAccessToken, SSGL_AI_BASE } from './http'
-import {
-  normalizeExecutionMatchResponse,
-  type ExecutionMatchResult
-} from '@/utils/ssgl/aiReports'
+import { api, aiApi, getAccessToken, SSGL_AI_BASE } from './http'
+import { normalizeExecutionMatchResponse, type ExecutionMatchResult } from '@/utils/ssgl/aiReports'
 
 function authHeaders(): HeadersInit {
   const token = getAccessToken()
@@ -55,12 +52,21 @@ export const aiToolsAPI = {
         for (const evt of events) {
           if (!evt.startsWith('data:')) continue
           const data = evt.slice(5).replace(/^ /, '')
-          if (data === '[DONE]') { handlers.onDone(); return }
-          if (data === '[ERROR]') { handlers.onError('生成失败'); return }
+          if (data === '[DONE]') {
+            handlers.onDone()
+            return
+          }
+          if (data === '[ERROR]') {
+            handlers.onError('生成失败')
+            return
+          }
           try {
             const parsed = JSON.parse(data)
             if (parsed.chunk) handlers.onChunk(parsed.chunk)
-            if (parsed.error) { handlers.onError(parsed.error); return }
+            if (parsed.error) {
+              handlers.onError(parsed.error)
+              return
+            }
           } catch {
             handlers.onChunk(data)
           }
@@ -87,7 +93,11 @@ export const assistantAPI = {
 
   chatStream: async (
     payload: { message: string; role?: string; context?: string; page?: string },
-    handlers: { onChunk: (text: string) => void; onDone: () => void; onError: (msg: string) => void }
+    handlers: {
+      onChunk: (text: string) => void
+      onDone: () => void
+      onError: (msg: string) => void
+    }
   ): Promise<void> => {
     try {
       const res = await fetch(`${SSGL_AI_BASE}/assistant/chat/stream`, {
@@ -95,7 +105,10 @@ export const assistantAPI = {
         headers: authHeaders(),
         body: JSON.stringify(payload)
       })
-      if (!res.ok || !res.body) { handlers.onError('AI 服务暂时不可用'); return }
+      if (!res.ok || !res.body) {
+        handlers.onError('AI 服务暂时不可用')
+        return
+      }
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
@@ -108,24 +121,50 @@ export const assistantAPI = {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6).trim()
-            if (data === '[DONE]') { handlers.onDone(); return }
-            try { const j = JSON.parse(data); if (j.text || j.chunk) handlers.onChunk(j.text || j.chunk) } catch { handlers.onChunk(data) }
+            if (data === '[DONE]') {
+              handlers.onDone()
+              return
+            }
+            try {
+              const j = JSON.parse(data)
+              if (j.text || j.chunk) handlers.onChunk(j.text || j.chunk)
+            } catch {
+              handlers.onChunk(data)
+            }
           }
         }
       }
       handlers.onDone()
-    } catch (e) { handlers.onError(String(e)) }
+    } catch (e) {
+      handlers.onError(String(e))
+    }
   },
 
-  quickAction: async (action: string, params?: Record<string, unknown>): Promise<AssistantReply> => {
-    const response = await aiApi.post<AssistantReply>('/assistant/quick-action', { action, ...params })
+  quickAction: async (
+    action: string,
+    params?: Record<string, unknown>
+  ): Promise<AssistantReply> => {
+    const response = await aiApi.post<AssistantReply>('/assistant/quick-action', {
+      action,
+      ...params
+    })
     return response.data
   }
 }
 
 // Execution Match API
 export const executionMatchAPI = {
-  match: async (payload: { pre_plan_id?: number; execution_text: string; plan_text?: string }): Promise<ExecutionMatchResult> => {
+  match: async (payload: {
+    pre_plan_id?: number
+    execution_text: string
+    plan_text?: string
+  }): Promise<ExecutionMatchResult> => {
+    if (payload.pre_plan_id) {
+      const response = await api.post(`/pre-plans/${payload.pre_plan_id}/execution-match`, {
+        execution_text: payload.execution_text
+      })
+      return normalizeExecutionMatchResponse(response.data?.match ?? response.data)
+    }
     const response = await aiApi.post('/review/execution-match', payload)
     return normalizeExecutionMatchResponse(response.data)
   }
@@ -177,9 +216,18 @@ export const coachAPI = {
         for (const evt of events) {
           if (!evt.startsWith('data:')) continue
           const data = evt.slice(5).replace(/^ /, '')
-          if (data === '[DONE]') { handlers.onDone(); return }
-          if (data === '[EXPIRED]') { handlers.onExpired(); return }
-          if (data === '[ERROR]') { handlers.onError('回答生成失败'); return }
+          if (data === '[DONE]') {
+            handlers.onDone()
+            return
+          }
+          if (data === '[EXPIRED]') {
+            handlers.onExpired()
+            return
+          }
+          if (data === '[ERROR]') {
+            handlers.onError('回答生成失败')
+            return
+          }
           try {
             handlers.onChunk(JSON.parse(data) as string)
           } catch {
