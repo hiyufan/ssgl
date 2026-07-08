@@ -223,7 +223,7 @@
             <span class="text-sm font-semibold text-teal-700 dark:text-teal-300">AI 智能解析</span>
           </div>
           <div class="flex gap-2">
-            <ElInput v-model="aiParseInput" placeholder="输入项目名称或简要描述，AI 自动填充方案" size="small" />
+            <ElInput v-model="aiParseInput" placeholder="粘贴 Gitee / GitHub 仓库地址，或输入项目描述" size="small" />
             <ElButton type="primary" size="small" :loading="aiParsing" @click="handleAIParse" :disabled="!aiParseInput.trim()">
               {{ aiParsing ? '解析中...' : '一键解析' }}
             </ElButton>
@@ -435,6 +435,8 @@
   }
 
   // Mock AI 解析
+  const isRepoUrl = (text: string) => /github\.com\/[\w\-]+\/[\w\-]+|gitee\.com\/[\w\-]+\/[\w\-]+/i.test(text)
+
   const handleAIParse = async () => {
     if (!aiParseInput.value.trim()) return
     aiParsing.value = true
@@ -442,6 +444,56 @@
 
     const input = aiParseInput.value.trim()
     const lower = input.toLowerCase()
+
+    // 如果是仓库地址，模拟解析仓库信息
+    if (isRepoUrl(input)) {
+      const repoMatch = input.match(/(github|gitee)\.com\/([\w\-]+)\/([\w\-]+)/i)
+      const platform = repoMatch?.[1] || 'GitHub'
+      const owner = repoMatch?.[2] || 'developer'
+      const repoName = repoMatch?.[3] || 'project'
+      const displayName = repoName.replace(/[-_]/g, ' ')
+
+      // 模拟从仓库读取的语言分布
+      const langMap: Record<string, { stack: string; desc: string }> = {
+        python: { stack: 'Python, FastAPI/Django, PostgreSQL, Redis, Docker', desc: '基于Python的全栈Web应用' },
+        javascript: { stack: 'JavaScript, Node.js/Express, React/Vue, MySQL, Docker', desc: 'JavaScript全栈项目' },
+        typescript: { stack: 'TypeScript, Next.js/NestJS, PostgreSQL, Prisma, Docker', desc: 'TypeScript现代化全栈应用' },
+        java: { stack: 'Java, Spring Boot, MyBatis, MySQL, Redis, Docker', desc: 'Java企业级后端服务' },
+        go: { stack: 'Go, Gin/Echo, GORM, PostgreSQL, Redis, Docker', desc: 'Go高性能微服务' },
+        rust: { stack: 'Rust, Actix-Web/Axum, SQLx, PostgreSQL, Docker', desc: 'Rust高性能系统' },
+      }
+      const langs = Object.keys(langMap)
+      const pickedLang = langs[Math.floor(Math.random() * langs.length)]
+      const langInfo = langMap[pickedLang]
+
+      const template: Record<string, string> = {
+        title: displayName,
+        tech_stack: langInfo.stack + `, ${platform} Actions (CI/CD)`,
+        target_audience: `面向${displayName.includes('tool') || displayName.includes('cli') ? '开发者和运维人员' : '用户和开发者'}，${langInfo.desc}，解决实际场景中的问题`,
+        market_analysis: `项目源自 ${platform} 仓库 ${owner}/${repoName}，已有 star 和社区反馈。经过分析，该项目在${pickedLang}生态中具有实用价值，市场需求明确`,
+        innovation: '1. 开源驱动，社区共建；2. 代码质量高，测试覆盖完善；3. 文档齐全，易于二次开发；4. 持续维护，响应及时',
+        expected_outcome: `基于开源项目 ${owner}/${repoName} 进行二次开发，完善功能模块，编写中文文档和使用教程，产出可部署的完整方案`,
+        timeline: '第1周：仓库克隆与代码研读\n第2-3周：核心功能分析与改进\n第4-5周：新功能开发与测试\n第6周：文档编写与部署\n第7周：性能优化\n第8周：答辩准备与演示',
+      }
+
+      createForm.title = template.title
+      await new Promise(r => setTimeout(r, 150))
+      createForm.tech_stack = template.tech_stack
+      await new Promise(r => setTimeout(r, 150))
+      createForm.target_audience = template.target_audience
+      await new Promise(r => setTimeout(r, 150))
+      createForm.market_analysis = template.market_analysis
+      await new Promise(r => setTimeout(r, 150))
+      createForm.innovation = template.innovation
+      await new Promise(r => setTimeout(r, 150))
+      createForm.expected_outcome = template.expected_outcome
+      await new Promise(r => setTimeout(r, 150))
+      createForm.timeline = template.timeline
+
+      ElMessage.success(`已解析 ${platform} 仓库 ${owner}/${repoName}，自动填充完成`)
+      aiParsing.value = false
+      return
+    }
 
     let template: Record<string, string> = {}
     if (lower.includes('ai') || lower.includes('智能') || lower.includes('机器学习') || lower.includes('深度学习')) {
