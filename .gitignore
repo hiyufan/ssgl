@@ -37,6 +37,7 @@ yarn-error.log*
 # Tooling
 .codegraph/
 .cursor/
+.worktrees/
 
 # Python
 __pycache__/
