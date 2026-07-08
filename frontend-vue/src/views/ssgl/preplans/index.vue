@@ -216,6 +216,19 @@
     <!-- Create Dialog -->
     <ElDialog v-model="showCreate" title="新建预计划" width="660px" destroy-on-close>
       <ElForm :model="createForm" label-width="100px" @submit.prevent="handleCreate">
+        <!-- AI 智能解析按钮 -->
+        <div class="mb-4 p-3 rounded-lg border-2 border-dashed border-teal-300 dark:border-teal-600 bg-teal-50 dark:bg-teal-900/20">
+          <div class="flex items-center gap-2 mb-2">
+            <ElIcon class="text-teal-500" :size="18"><MagicStick /></ElIcon>
+            <span class="text-sm font-semibold text-teal-700 dark:text-teal-300">AI 智能解析</span>
+          </div>
+          <div class="flex gap-2">
+            <ElInput v-model="aiParseInput" placeholder="输入项目名称或简要描述，AI 自动填充方案" size="small" />
+            <ElButton type="primary" size="small" :loading="aiParsing" @click="handleAIParse" :disabled="!aiParseInput.trim()">
+              {{ aiParsing ? '解析中...' : '一键解析' }}
+            </ElButton>
+          </div>
+        </div>
         <ElRow :gutter="16">
           <ElCol :span="12">
             <ElFormItem label="团队" required>
@@ -313,6 +326,10 @@
   // Teams for create
   const myTeams = ref<Team[]>([])
 
+  // AI 智能解析
+  const aiParseInput = ref('')
+  const aiParsing = ref(false)
+
   // Create dialog
   const showCreate = ref(false)
   const createForm = reactive({
@@ -401,6 +418,7 @@
     createForm.innovation = ''
     createForm.expected_outcome = ''
     createForm.timeline = ''
+    aiParseInput.value = ''
     showCreate.value = true
   }
 
@@ -414,6 +432,76 @@
     editForm.expected_outcome = selected.value.expected_outcome || ''
     editForm.timeline = selected.value.timeline || ''
     showEdit.value = true
+  }
+
+  // Mock AI 解析
+  const handleAIParse = async () => {
+    if (!aiParseInput.value.trim()) return
+    aiParsing.value = true
+    await new Promise(r => setTimeout(r, 1800))
+
+    const input = aiParseInput.value.trim()
+    const lower = input.toLowerCase()
+
+    let template: Record<string, string> = {}
+    if (lower.includes('ai') || lower.includes('智能') || lower.includes('机器学习') || lower.includes('深度学习')) {
+      template = {
+        title: input.length < 15 ? `${input}——基于深度学习的智能应用系统` : input,
+        tech_stack: 'Python 3.10+, TensorFlow / PyTorch, FastAPI, Vue 3, PostgreSQL, Docker',
+        target_audience: '面向高校学生和科研人员，提供智能化的分析与辅助决策工具，降低专业门槛，提升工作效率',
+        market_analysis: '国内AI应用市场规模已突破5000亿元，年增长率超过30%。教育领域AI工具需求旺盛，但现有产品多为通用型，缺乏针对特定场景的垂直解决方案',
+        innovation: '1. 基于大语言模型的领域知识问答；2. 多模态数据融合分析；3. 可视化决策看板；4. 支持离线部署',
+        expected_outcome: '完成一个可演示的智能应用原型系统，包含Web端界面、API接口文档、模型训练报告。预计申请软件著作权1项',
+        timeline: '第1-2周：需求分析与技术选型\n第3-5周：核心算法开发与模型训练\n第6-7周：前后端开发与联调\n第8周：测试优化与文档撰写',
+      }
+    } else if (lower.includes('电商') || lower.includes('商业') || lower.includes('营销') || lower.includes('创业')) {
+      template = {
+        title: input.length < 15 ? `${input}——数字化营销创新方案` : input,
+        tech_stack: '微信小程序, React, Node.js, MySQL, 微信支付API, ECharts',
+        target_audience: '面向中小型商家和创业团队，提供低成本的数字化营销和客户管理解决方案',
+        market_analysis: '小程序电商市场规模超万亿，中小商家数字化转型需求迫切。70%的中小商家仍在使用传统经营模式，市场空间巨大',
+        innovation: '1. AI智能选品推荐；2. 社交裂变营销引擎；3. 实时数据驾驶舱；4. 低成本SaaS模式',
+        expected_outcome: '完成微信小程序MVP版本，包含商品管理、订单系统、营销工具、数据看板四大模块',
+        timeline: '第1周：市场调研与竞品分析\n第2-3周：产品原型设计\n第4-6周：核心功能开发\n第7周：测试与内测\n第8周：上线推广',
+      }
+    } else if (lower.includes('物联网') || lower.includes('iot') || lower.includes('硬件') || lower.includes('传感器')) {
+      template = {
+        title: input.length < 15 ? `${input}——物联网智能监控系统` : input,
+        tech_stack: 'Arduino / ESP32, MQTT, Python, React, InfluxDB, Grafana',
+        target_audience: '面向智慧校园、智能家居、工业监控等场景，提供实时感知和远程控制能力',
+        market_analysis: '全球IoT市场规模预计2026年达1.5万亿美元，国内市场年增速超25%。智慧校园和智能制造是两大核心应用场景',
+        innovation: '1. 边缘端轻量AI推理；2. LoRa低功耗通信；3. 数字孪生可视化；4. 异常智能预警',
+        expected_outcome: '完成包含3个传感器节点的原型系统，实现数据采集、传输、存储、展示全链路',
+        timeline: '第1-2周：硬件选型与电路设计\n第3-4周：嵌入式程序开发\n第5-6周：云平台搭建\n第7周：系统联调\n第8周：文档撰写',
+      }
+    } else {
+      template = {
+        title: input.length < 15 ? `${input}——创新实践项目方案` : input,
+        tech_stack: 'Vue 3 / React, Python / Java, MySQL / PostgreSQL, Redis, Docker',
+        target_audience: '面向在校大学生和青年创业者，解决日常学习生活中的实际痛点',
+        market_analysis: '当前市场同类产品功能单一，用户体验有待提升。通过差异化定位有望获得竞争优势',
+        innovation: '1. 简洁优雅的交互设计；2. 智能推荐算法；3. 多端同步；4. 开放API接口',
+        expected_outcome: '完成Web端和移动端MVP版本，进行小规模用户测试(N≥50)，产出技术文档和商业计划书',
+        timeline: '第1周：需求调研\n第2-3周：UI/UX设计\n第4-6周：核心功能开发\n第7周：集成测试\n第8周：用户测试与答辩',
+      }
+    }
+
+    createForm.title = template.title
+    await new Promise(r => setTimeout(r, 200))
+    createForm.tech_stack = template.tech_stack
+    await new Promise(r => setTimeout(r, 200))
+    createForm.target_audience = template.target_audience
+    await new Promise(r => setTimeout(r, 200))
+    createForm.market_analysis = template.market_analysis
+    await new Promise(r => setTimeout(r, 200))
+    createForm.innovation = template.innovation
+    await new Promise(r => setTimeout(r, 200))
+    createForm.expected_outcome = template.expected_outcome
+    await new Promise(r => setTimeout(r, 200))
+    createForm.timeline = template.timeline
+
+    ElMessage.success('AI 智能解析完成，已自动填充方案内容')
+    aiParsing.value = false
   }
 
   const handleCreate = async () => {
