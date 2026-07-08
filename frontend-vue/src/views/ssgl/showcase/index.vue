@@ -1,7 +1,7 @@
 <template>
   <section class="ssgl-page" data-page="Showcase">
     <div v-if="loading" class="ssgl-loading">
-      <ElSpin />
+      <ElIcon class="is-loading" :size="32"><Loading /></ElIcon>
     </div>
 
     <template v-else>
