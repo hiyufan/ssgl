@@ -46,6 +46,7 @@ func (h *TeamHandler) List(c *gin.Context) {
 	query := db.Model(&models.Team{}).
 		Preload("Competition").
 		Preload("Leader").
+		Preload("GuideTeacher").
 		Preload("Members.User")
 
 	// Filter by competition_id if provided.
@@ -60,9 +61,11 @@ func (h *TeamHandler) List(c *gin.Context) {
 		query = query.Joins("INNER JOIN team_members ON team_members.team_id = teams.id").
 			Where("team_members.user_id = ?", userID)
 	case models.RoleTeacher:
-		// Teachers see teams in competitions they organize.
-		query = query.Joins("INNER JOIN competitions ON competitions.id = teams.competition_id").
-			Where("competitions.organizer_id = ?", userID)
+		// Teachers see teams they guide OR teams in competitions they organize.
+		query = query.Where(
+			db.Where("guide_teacher_id = ?", userID).
+				Or("teams.competition_id IN (SELECT id FROM competitions WHERE organizer_id = ?)", userID),
+		)
 	case models.RoleAdmin:
 		// Admins see all teams — no additional filter.
 	}
