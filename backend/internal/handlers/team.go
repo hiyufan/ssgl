@@ -42,6 +42,7 @@ func (h *TeamHandler) List(c *gin.Context) {
 
 	userID, _ := c.Get("user_id")
 	role, _ := c.Get("role")
+	uid := userID.(uint)
 
 	query := db.Model(&models.Team{}).
 		Preload("Competition").
@@ -59,12 +60,12 @@ func (h *TeamHandler) List(c *gin.Context) {
 	case models.RoleStudent:
 		// Students see only teams they are a member of.
 		query = query.Joins("INNER JOIN team_members ON team_members.team_id = teams.id").
-			Where("team_members.user_id = ?", userID)
+			Where("team_members.user_id = ?", uid)
 	case models.RoleTeacher:
 		// Teachers see teams they guide OR teams in competitions they organize.
 		query = query.Where(
-			db.Where("guide_teacher_id = ?", userID).
-				Or("teams.competition_id IN (SELECT id FROM competitions WHERE organizer_id = ?)", userID),
+			"guide_teacher_id = ? OR teams.competition_id IN (SELECT id FROM competitions WHERE organizer_id = ?)",
+			uid, uid,
 		)
 	case models.RoleAdmin:
 		// Admins see all teams — no additional filter.
@@ -72,7 +73,7 @@ func (h *TeamHandler) List(c *gin.Context) {
 
 	// Count total matching records.
 	var total int64
-	query.Count(&total)
+	query.Session(&gorm.Session{}).Count(&total)
 
 	// Fetch paginated results.
 	var teams []models.Team
